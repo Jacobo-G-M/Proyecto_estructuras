@@ -24,6 +24,14 @@ class Node:
     self.__id = value
 
   @property
+  def event(self) -> Event:
+    return self.__event
+
+  @event.setter
+  def event(self, value: Node) -> None:
+    self.__event = value
+    
+  @property
   def father(self) -> Node:
     return self.__father
 
