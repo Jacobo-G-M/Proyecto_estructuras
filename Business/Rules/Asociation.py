@@ -1,3 +1,4 @@
+from Business.Event import Event
 class Association:
 
     def __init__(self, assoc_id: int, chosen_reference: Event) -> None:
