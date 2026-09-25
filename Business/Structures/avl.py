@@ -1,4 +1,5 @@
 from tree import Tree
+from ...Models.node import Node
 
 class AVL(Tree):
   # ------------------------
@@ -21,14 +22,100 @@ class AVL(Tree):
   # ------------------------
   #         METHODS
   # ------------------------
-  def balance(self):
-    pass
+  
+  # Protected method to delete a node. It uses a similar logic in the tree class, but it also balances the tree
+  def _delete_helper(self, current: Node | None, key: tuple[int, float, int]) -> Node | None:
+    node = super()._delete_helper(current, key)
+    # Check if the node exists
+    if node is None:
+      return None
+    
+    # If the node exists, it updates its height
+    node.update_height()
+    
+    # If stress mode is active, postpone rotations (keep only BST order)
+    if self.__stress_mode:
+      return node
+    # In normal mode, balance node-by-node
+    return self.balance()
+  
+    # Method to balance a specific node (local balancing)
+  def balance(self, node: Node | None) -> Node | None:
+    if node is None:
+      return None
+
+    # Update node height before checking balance factor
+    node.update_height()
+
+    # Get the balance factor (left_height - right_height)
+    bf = node.balance_factor()
+
+    # Check Left-Heavy cases (bf > 1)
+    if bf > 1:
+      # Left-Right (LR) Case: child is right-heavy
+      if node.left_son and node.left_son.balance_factor() < 0:
+        node.left_son = self.left_rotation(node.left_son)
+      
+      # Left-Left (LL) Case: single right rotation
+      return self.right_rotation(node)
+
+    # Check Right-Heavy cases (bf < -1)
+    if bf < -1:
+      # Right-Left (RL) Case: child is left-heavy
+      if node.right_son and node.right_son.balance_factor() > 0:
+        node.right_son = self.right_rotation(node.right_son)
+      
+      # Right-Right (RR) Case: single left rotation
+      return self.left_rotation(node)
+
+    # If already balanced, return the unchanged node
+    return node
   
   def restore_balance(self):
     pass
   
-  def left_rotation(self):
-    pass
-  
-  def right_rotation(self):
-    pass
+    # Method to perform a right rotation (LL case)
+  def right_rotation(self, node: Node) -> Node:
+    # Identify nodes
+    new_root = node.left_son
+    new_root_right_son = new_root.right_son
+
+    # Reassign children
+    new_root.right_son = node
+    node.left_son = new_root_right_son
+
+    # Reassign parents (father references)
+    new_root.father = node.father
+    node.father = new_root
+    if new_root_right_son is not None:
+      new_root_right_son.father = node
+
+    # Update heights (bottom-up: old root first, then new root)
+    node.update_height()
+    new_root.update_height()
+
+    # Return new subtree root
+    return new_root
+
+  # Method to perform a left rotation (RR case)
+  def left_rotation(self, node: Node) -> Node:
+    # Identify nodes
+    new_root = node.right_son
+    new_root_left_son = new_root.left_son
+
+    # Reassign children
+    new_root.left_son = node
+    node.right_son = new_root_left_son
+
+    # Reassign parents (father references)
+    new_root.father = node.father
+    node.father = new_root
+    if new_root_left_son is not None:
+      new_root_left_son.father = node
+
+    # Update heights (bottom-up: old root first, then new root)
+    node.update_height()
+    new_root.update_height()
+
+    # Step 5: Return new subtree root
+    return new_root
