@@ -21,18 +21,30 @@ class Geographical_map:
             raise TypeError("all items in zones must be instances of Zone.")
         self._zones = value
 
+    def __repr__(self) -> str:
+        zone_ids = [z.id for z in self._zones if hasattr(z, "id")]
+        return f"Geographical_map(zones_ids={zone_ids})"
+
+    #--- methods ---
+
+    #method to add a zone
     def add_zone(self, zone):
         if not isinstance(zone, zone_module.Zone):
             raise TypeError("zone must be an instance of Zone.")
-        if zone not in self._zones:
-            self._zones.append(zone)
+        
+        if any(z.id == zone.id for z in self._zones):
+            raise ValueError(f"Zone with ID {zone.id} already exists in the map.")
 
+        self._zones.append(zone)
+
+    #method to remove a zone
     def remove_zone(self, zone):
         if not isinstance(zone, zone_module.Zone):
             raise TypeError("zone must be an instance of Zone.")
         if zone in self._zones:
-            self._zones.remove(zone)
+            self._zones.remove(zone)  
 
+    #method to search a zone by id
     def get_zone_by_id(self, zone_id: int):
         if not isinstance(zone_id, int) or isinstance(zone_id, bool):
             raise TypeError("zone_id must be an integer.")
@@ -40,7 +52,6 @@ class Geographical_map:
             if zone.id == zone_id:
                 return zone
         return None
-
-    def __repr__(self) -> str:
-        zone_ids = [z.id for z in self._zones if hasattr(z, "id")]
-        return f"Geographical_map(zones_ids={zone_ids})"
+    
+    def is_in_populated_zone(self, x: float, y: float):
+        pass
