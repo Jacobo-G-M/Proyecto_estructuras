@@ -21,3 +21,11 @@ class Report_Queue:
   # ------------------------
   #         METHODS
   # ------------------------
+  
+  # Method to enqueue a report
+  def enqueue(self, report: Report) -> None:
+    self.__current_reports.append(report)
+  
+  # Method to dequeue and get the first report added
+  def dequeue(self) -> Report:
+    return self.__current_reports.pop(0)
