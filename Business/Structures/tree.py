@@ -47,6 +47,10 @@ class Tree(ABC):
     else:
       # Uses the private method to apply the rest of the logic
       self._delete_helper(deleted_node, key)
+      
+      # If the root has changed, it has to updates its father to None
+      if self.__root is not None:
+        self.__root.father = None
       # Returns the deleted node to use it in the undo stack
       return deleted_node
   
@@ -72,9 +76,13 @@ class Tree(ABC):
         return None
       # Case 2: It only has a child
       elif current.left_son is None:
+        # Update its father
+        current.right_son.father = current.father
         # Only has a right son. Returns the right son
         return current.right_son
       elif current.right_son is None:
+        # Update its father
+        current.left_son = current.father
         # Only has a left son. Returns the left son
         return current.left_son
       # Case 3: It has two children
