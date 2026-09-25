@@ -43,7 +43,7 @@ class Tree(ABC):
   def inorder(self):
     pass
 
-    #posroder traversal METHOD -----
+    #posorder traversal METHOD -----
   def postorder(self):
     if self.root is None:
       print("Tree is empty")
