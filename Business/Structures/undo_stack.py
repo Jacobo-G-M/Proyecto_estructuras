@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+try:
+    from Models.action import Action
+except ImportError:
+    from ...Models.action import Action
+
 class Undo_stack:
     def __init__(self) -> None:
         # Internal list to represent the stack of actions
@@ -36,3 +43,9 @@ class Undo_stack:
 
     def is_empty(self) -> bool:
         return len(self._actions) == 0
+
+    # ----- methods -----
+
+    #method to get de cant of items on the undo_stack
+    def size(self) -> int:
+        return len(self._actions)
