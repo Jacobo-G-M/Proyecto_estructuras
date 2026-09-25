@@ -34,7 +34,7 @@ class Tree(ABC):
   def insert(self):
     pass
 
-  @abstractmethod
+  # Public method to delete a node. It returns a node to save it in the undo stack
   def delete(self, key: tuple[int, float, int]) -> Node | None:
     # Check if the tree is empty
     if self.__root is None:
@@ -49,7 +49,8 @@ class Tree(ABC):
       self._delete_helper(deleted_node, key)
       # Returns the deleted node to use it in the undo stack
       return deleted_node
-    
+  
+  # Protected method to delete a node.
   def _delete_helper(self, current: Node | None, key: tuple[int, float, int]) -> Node | None:
     # Base case: if the node is empty, it does not have to delete anything
     if current is None:
@@ -104,6 +105,7 @@ class Tree(ABC):
   def search_node(self, key: tuple[int, float, int]) -> Node | None:
     return self._search_node_helper(self.__root, key)
 
+  # Protected method to search a node by key
   def _search_node_helper(self, current: Node | None, key: tuple[int, float, int]) -> Node | None:
     # Base case 1: Empty tree or we came to an empty branch
     if current is None:
@@ -130,20 +132,20 @@ class Tree(ABC):
     # The list that we will return the method
     result = []
     # Use the private method that contains the rest of the logic
-    self.__inorder(self.__root, result)
+    self._inorder(self.__root, result)
     return result
     
-  # Private method for in-order iteration. It uses recursion
-  def __inorder(self, node: Node, result: list[Node]) -> None:
+  # Protected method for in-order iteration. It uses recursion
+  def _inorder(self, node: Node, result: list[Node]) -> None:
     # Check if the current node exists
     if node is None:
       return
     # Apply recursion to the left son of the node
-    self.__inorder(node.left_son, result)
+    self._inorder(node.left_son, result)
     # Add the current node to the result list
     result.append(node)
     # Apply recursion to the right son of the node
-    self.__inorder(node.right_son, result)
+    self._inorder(node.right_son, result)
 
 
   def postorder(self):
