@@ -53,9 +53,17 @@ class Tree(ABC):
 
   def delete(self):
     pass
+  
+  def preorder(self) -> list[Node]:
+    result_list: list[Node] = []
+    self._preorder_recursive(self.root, result_list)
+    return result_list
 
-  def preorder(self):
-    pass
+  def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
+    if current is not None:
+      result.append(current)
+      self._preorder_recursive(current.left_son, result)
+      self._preorder_recursive(current.right_son, result)
 
   def inorder(self):
     pass
