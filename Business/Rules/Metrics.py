@@ -70,5 +70,23 @@ class Metrics:
             return len(self._observatory.historic.archived)
         return 0
 
-    def events_by_priority(self) -> None:
-        pass
+        #method for a diccionary with the counts of the events depending the priority
+    def events_by_priority(self) -> dict[int, int]:
+        counts = {3:0, 2:0, 1:0}
+
+        if self._observatory is None:
+            return counts
+
+        tree = self._observatory.tree
+        if isinstance(tree, list):
+            tree = tree[0] if len(tree) > 0 else None
+
+        if tree is not None and hasattr(tree, "width"):
+            active_nodes = tree.width()
+            for node in active_nodes:
+                priority = node.get_key()[0]
+                if priority in counts:
+                    counts[priority] += 1
+                else:
+                    counts[priority] = 1
+        return counts
