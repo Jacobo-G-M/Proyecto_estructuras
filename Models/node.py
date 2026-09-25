@@ -70,7 +70,7 @@ class Node:
     return left_h - right_h
 
   # --------------------------------------------------------
-  # MÉTODOS MÁGICOS DE COMPARACIÓN (SOBRECARGA DE OPERADORES)
+  # Dunder methods for comparison based on the key (priority, magnitude, id)
   # --------------------------------------------------------
 
   def __lt__(self, other: Node) -> bool:
