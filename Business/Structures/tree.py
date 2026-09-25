@@ -34,14 +34,33 @@ class Tree(ABC):
   def insert(self):
     pass
 
-  def delete(self):
+  @abstractmethod
+  def delete(self, id_event: int) -> None:
     pass
 
   def preorder(self):
     pass
+  
+  # Method to do a in-order iteration in a tree
+  def inorder(self) -> list[Node]:
+    # The list that we will return the method
+    result = []
+    # Use the private method that contains the rest of the logic
+    self.__inorder(self.__root, result)
+    return result
+    
+  # Private method for in-order iteration. It uses recursion
+  def __inorder(self, node: Node, result: list[Node]) -> None:
+    # Check if the current node exists
+    if node is None:
+      return
+    # Apply recursion to the left son of the node
+    self.__inorder(node.left_son, result)
+    # Add the current node to the result list
+    result.append(node)
+    # Apply recursion to the right son of the node
+    self.__inorder(node.right_son, result)
 
-  def inorder(self):
-    pass
 
   def postorder(self):
     pass
