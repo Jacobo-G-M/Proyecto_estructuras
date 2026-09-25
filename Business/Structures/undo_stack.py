@@ -22,14 +22,14 @@ class Undo_stack:
     def _is_valid_action(self, action: Action) -> bool:
         return type(action).__name__ == 'Action'
 
-    def push(self, action: Action) -> None:
+    def stack(self, action: Action) -> None:
         if self._is_valid_action(action):
             self._actions.append(action)
             print("Action successfully pushed to the undo stack.")
         else:
             raise TypeError("Error: The inserted object is not of class Action.")
 
-    def pop(self) -> Action:
+    def unstack(self) -> Action:
         if not self.is_empty():
             return self._actions.pop()
         else:
