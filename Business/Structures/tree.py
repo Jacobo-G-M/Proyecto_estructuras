@@ -45,10 +45,10 @@ class Tree(ABC):
       current.right_son = self._insert_recursive(current.right_son, new_node)
     else:
       return current
-    return self._balance_node(current)
+    return self._post_process(current)
 
   @abstractmethod
-  def _balance_node(self, node: Node) -> Node:
+  def _post_process(self, node: Node) -> Node:
     pass
 
   # Public method to delete a node. It returns a node to save it in the undo stack
