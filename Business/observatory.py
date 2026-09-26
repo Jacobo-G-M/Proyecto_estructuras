@@ -403,8 +403,35 @@ class Observatory:
         print(f"Event {event_id} corregido. Clave actualizada: {key_changed}.")
         return event_to_edit
 
-	def remove_event(self) -> None:
-		pass
+	def remove_event(self, event_id: int) -> None:
+		#Validation: Check if the event exists in the active catalog
+        if not hasattr(self, 'events_dict') or event_id not in self.events_dict:
+            print(f"Error: El evento {event_id} no se encuentra en el catálogo activo.")
+            return None
+
+        event_to_remove = self.events_dict[event_id]
+
+        print(f"Preparando para eliminar el evento activo: ID={event_id}, K=(P:{event_to_remove.priority}, M:{event_to_remove.magnitude})")
+
+		# Remove from the tree if it exists
+        if hasattr(self, 'tree') and self.tree is not None:
+            self.tree.delete(event_to_remove.get_key())
+
+        del self.events_dict[event_id]
+
+	
+        if self.historic is not None:
+            self.historic.delete_event(event_to_remove)
+
+		# TODO: Handle associations: Remove this event from any Association objects where it is referenced.
+		# Update metrics if applicable
+        if self.metrics is not None:
+            self.metrics.active_events -= 1
+
+        # TODO: Registrar acción completa en undo_stack (Deep Copy)
+
+        print(f"Eliminación completada: El identificador {event_id} ha sido retirado del catálogo.")
+        return event_to_remove
 
 	def archive_event(self) -> None:
 		pass

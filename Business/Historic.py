@@ -38,6 +38,7 @@ class Historic:
 
     def archive_event(self, event: Event) -> None:
         if self._is_valid_event(event):
+            event.status = "Archived"
             self._archived.append(event)
             print("Evento archivado con éxito.")
         else:
@@ -45,6 +46,7 @@ class Historic:
 
     def delete_event(self, event: Event) -> None:
         if self._is_valid_event(event):
+            event.status = "Deleted"
             self._deleted.append(event)
             print("Evento eliminado con éxito.")
         else:
