@@ -1,4 +1,3 @@
-from __future__ import annotations
 from datetime import datetime
 from Historic import Historic
 from Structures.report_queue import Report_Queue
@@ -32,6 +31,8 @@ class Observatory:
 		self.stations = []
 		self.associations = []
 		self.tree= []
+		#auxiliary dictionary for O(1) access to events by ID
+		self.events_dict: dict[int, Event] = {}
 
 	# Getter of clock_simulation attribute
 	@property
@@ -278,12 +279,11 @@ class Observatory:
 		# 4. INSERT INTO TREE (AVL)
 		# -----------------------------------------------------------------
 		new_node = Node(id=event_id, event=new_event)
-		
+		self.events_dict[event_id] = new_event
 		# If self.tree is an AVL instance, insert into it
 		if hasattr(self, 'tree') and self.tree is not None:
 			if hasattr(self.tree, 'insert'):
 				self.tree.insert(new_node)
-
 		# -----------------------------------------------------------------
 		# 5. REGISTER STATION AND UNDO ACTION
 		# -----------------------------------------------------------------
@@ -322,8 +322,58 @@ class Observatory:
 	def process_report(self) -> None:
 		pass
 
-	def edit_event(self) -> None:
-		pass
+    def edit_event(
+        self,
+        event_id: int,
+        new_magnitude: float,
+        new_depth: float,
+        new_epicenter: tuple[float, float],
+        new_date_time: datetime
+    ) -> Event | None:
+        if event_id not in self.events_dict:
+            print(f"Error: Event ID {event_id} no se encuentra en el catálogo activo.")
+            return None
+
+        event_to_edit = self.events_dict[event_id]
+
+        if not (-2.0 <= new_magnitude <= 10.0):
+            print("Error: La magnitud debe estar entre -2.0 y 10.0.")
+            return None
+        if not (0.0 <= new_depth <= 700.0):
+            print("Error: La profundidad debe estar entre 0.0 y 700.0 km.")
+            return None
+        if new_date_time > self.clock_simulation:
+            print("Error: El tiempo de ocurrencia no puede ser futuro.")
+            return None
+
+        # Calculate the new priority
+        old_priority = event_to_edit.priority
+        old_magnitude = event_to_edit.magnitude
+        new_priority = self.calculate_priority(new_magnitude, new_depth, new_epicenter)
+
+        # Check whether the key K = (P, M, I) will change
+        key_changed = (old_priority != new_priority) or (old_magnitude != new_magnitude)
+
+        if key_changed and self.tree is not None:
+            self.tree.delete(event_id)
+
+		# Updating Event Attributes
+        event_to_edit.magnitude = round(new_magnitude, 1)
+        event_to_edit.depth = round(new_depth, 1)
+        event_to_edit.epicenter = new_epicenter
+        event_to_edit.date_time = new_date_time
+        event_to_edit.priority = new_priority
+        event_to_edit.attention_state = "Pending"
+        event_to_edit.review += 1
+
+        # Reinsert into the tree if the key has changed
+        if key_changed and self.tree is not None:
+            updated_node = Node(id=event_id, event=event_to_edit)
+            self.tree.insert(updated_node)
+		#Pendientes en el Notion
+
+        print(f"Event {event_id} corregido. Clave actualizada: {key_changed}.")
+        return event_to_edit
 
 	def remove_event(self) -> None:
 		pass
