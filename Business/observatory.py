@@ -339,24 +339,6 @@ class Observatory:
 
 	def undo_action(self) -> None:
 		pass
-
-	def is_in_populated_zone(self, epicenter: tuple[float, float]) -> bool:
-		# Check if epicenter exists
-		if epicenter is None:
-			return False
-		# Check if geographical map exists
-		if self.geographical_map is None:
-			return False
-		# Stores the existing zones in zones variable
-		zones = self._geographical_map.zones
-		# Stores the coordinates in two variables
-		x, y = epicenter
-
-		# Iterate every existing zone, checking if is inside or on the border of a zone
-		for zone in zones:
-			if zone.is_populated and zone.contains(x, y):
-				return True
-		return False
-
+        
 	def get_costly_access(self) -> list[int]:
 		pass
