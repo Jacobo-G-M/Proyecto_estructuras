@@ -18,11 +18,6 @@ class AVL(Tree):
   def stress_mode(self) -> bool:
     return self.__stress_mode
 
-<<<<<<< HEAD
-    @stress_mode.setter
-    def stress_mode(self, value: bool) -> None:
-        self.__stress_mode = value
-=======
   @stress_mode.setter
   def _stress_mode(self, value: bool) -> None:
     self.__stress_mode = value
@@ -34,14 +29,9 @@ class AVL(Tree):
   @property
   def turns(self) -> dict[str, int]:
     return self._turns
->>>>>>> feat/Business/Structures/new-methods-tree
   # ------------------------
   #         METHODS
   # ------------------------
-<<<<<<< HEAD
-  def balance(self):
-    pass
-
   #main method for retores_balace after stress_mode -----
   def restore_balance(self) -> None:
 
@@ -84,16 +74,6 @@ class AVL(Tree):
 
     return current_node
 
-  
-  def left_rotation(self):
-    pass
-  
-  def right_rotation(self):
-    pass
-
-
-  
-=======
   
   # Protected method to delete a node. It uses a similar logic in the tree class, but it also balances the tree
   def _delete_helper(self, current: Node | None, key: tuple[int, float, int]) -> Node | None:
@@ -147,9 +127,6 @@ class AVL(Tree):
     # If already balanced, return the unchanged node
     return node
   
-  def restore_balance(self):
-    pass
-  
     # Method to perform a right rotation (LL case)
   def right_rotation(self, node: Node) -> Node:
     # Identify nodes
@@ -199,4 +176,3 @@ class AVL(Tree):
 
     # Step 5: Return new subtree root
     return new_root
->>>>>>> feat/Business/Observatory

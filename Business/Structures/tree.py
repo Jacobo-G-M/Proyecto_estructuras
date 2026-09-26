@@ -51,10 +51,6 @@ class Tree(ABC):
   def _balance_node(self, node: Node) -> Node:
     pass
 
-<<<<<<< HEAD
-  @abstractmethod
-  def delete(self, id_event: int) -> None:
-=======
   # Public method to delete a node. It returns a node to save it in the undo stack
   def delete(self, key: tuple[int, float, int]) -> Node | None:
     # Check if the tree is empty
@@ -152,16 +148,19 @@ class Tree(ABC):
     # Goes to the right son
     else:
       return self._search_node_helper(current.right_son, key)
-
-  def preorder(self):
->>>>>>> feat/Business/Observatory
-    pass
   
   def preorder(self) -> list[Node]:
     result_list: list[Node] = []
     self._preorder_recursive(self.root, result_list)
     return result_list
+  
+  def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
+    if current is not None:
+      result.append(current)
+      self._preorder_recursive(current.left_son, result)
+      self._preorder_recursive(current.right_son, result)
 
+      
   # Method to do a in-order iteration in a tree
   def inorder(self) -> list[Node]:
     # The list that we will return the method
@@ -180,16 +179,10 @@ class Tree(ABC):
     # Add the current node to the result list
     result.append(node)
     # Apply recursion to the right son of the node
-<<<<<<< HEAD
     self.__inorder(node.right_son, result)
-  def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
-    if current is not None:
-      result.append(current)
-      self._preorder_recursive(current.left_son, result)
-      self._preorder_recursive(current.right_son, result)
-=======
-    self._inorder(node.right_son, result)
->>>>>>> feat/Business/Observatory
+
+
+
 
 
     #posorder traversal METHOD -----

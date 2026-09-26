@@ -21,7 +21,6 @@ class Report_Queue:
   # ------------------------
   #         METHODS
   # ------------------------
-<<<<<<< HEAD
   
   # Method to enqueue a report
   def enqueue(self, report: Report) -> None:
@@ -30,7 +29,6 @@ class Report_Queue:
   # Method to dequeue and get the first report added
   def dequeue(self) -> Report:
     return self.__current_reports.pop(0)
-=======
 
     #verifies if the queue is empty or not -----
   def is_empty(self) -> bool:
@@ -49,6 +47,3 @@ class Report_Queue:
       raise IndexError("Position is out of bounds for the current queue.")
     
     self.__current_reports.insert(position, report)
-
-  
->>>>>>> 2e5bd19d12ab082fb8f48be20abed8682690fb30
