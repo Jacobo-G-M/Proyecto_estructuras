@@ -11,18 +11,8 @@ import Business.tree as Tree
 import Business.event as Event
 import Business.Version as Version
 
-from Business import Geographical_map, Historic
-from Business.Rules import Metrics
-from Business.Rules.Asociation import Association
-from Models.event import Event
-from Models.node import Node
-from Models.station import Station
-from Models.zone import Zone
-from Structures.report_queue import Report_Queue
-from Structures.undo_stack import Undo_stack
 
 class Observatory:
-<<<<<<< HEAD
     def __init__(self) -> None:
         self.clock_simulation = datetime.now()
         self.limit = 3
@@ -37,22 +27,6 @@ class Observatory:
         self.undo_stack = None
         self.metrics = Metrics(self)
         self.geographical_map = None
-=======
-	def __init__(self) -> None:
-		self.clock_simulation = datetime.now()
-		self.limit = 3
-		self.max_time = 0.0
-		self.distance_epicenter = 0.0
-		self.max_tree_age = 0
-		self.stress_mode = False
->>>>>>> feat/Business/Observatory
-
-		# 1:1 Relationships
-		self.historic = None
-		self.report_queue = None
-		self.undo_stack = None
-		self.metrics = None
-		self.geographical_map = None
 
 		# 1:N Relationships
 		self.stations = []
@@ -145,7 +119,6 @@ class Observatory:
 	def historic(self) -> Historic :
 		return self._historic
 
-<<<<<<< HEAD
     # Setter for historic attribute
     @historic.setter
     def historic(self, value) -> None:
@@ -153,22 +126,12 @@ class Observatory:
             self._historic = value
         else:
             raise TypeError("Historic attribute must be of type Historic.")
-=======
-	# Setter for historic attribute
-	@historic.setter
-	def historic(self, value: Historic ) -> None:
-		if value is type(value).__name__ ==Historic:
-			self._historic = value
-		else:
-			raise TypeError("Historic attribute must be of type Historic.")
->>>>>>> feat/Business/Observatory
 
 	# Getter of report_queue attribute
 	@property
 	def report_queue(self) -> Report_Queue:
 		return self._report_queue
 
-<<<<<<< HEAD
     # Setter for report_queue attribute
     @report_queue.setter
     def report_queue(self, value) -> None:
@@ -189,35 +152,12 @@ class Observatory:
             self._undo_stack = value
         else:
             raise TypeError("Must be of type Undo_stack.")
-=======
-	# Setter for report_queue attribute
-	@report_queue.setter
-	def report_queue(self, value: Report_Queue) -> None:
-		if value is type(value).__name__ == Report_Queue:
-			self._report_queue = value
-		else:
-			raise TypeError("Must be of type Report_queue.")
-
-	# Getter of undo_stack attribute
-	@property
-	def undo_stack(self) -> Undo_stack :
-		return self._undo_stack
-
-	# Setter for undo_stack attribute
-	@undo_stack.setter
-	def undo_stack(self, value:Undo_stack ) -> None:
-		if value is type(value).__name__ == Undo_stack:
-			self._undo_stack = value
-		else:
-			raise TypeError("Must be of type Undo_stack.")
->>>>>>> feat/Business/Observatory
 
 	# Getter of metrics attribute
 	@property
 	def metrics(self) -> Metrics:
 		return self._metrics
 
-<<<<<<< HEAD
     # Setter for metrics attribute
     @metrics.setter
     def metrics(self, value) -> None:
@@ -225,22 +165,12 @@ class Observatory:
             self._metrics = value
         else:
             raise TypeError("Must be of type Metrics.")
-=======
-	# Setter for metrics attribute
-	@metrics.setter
-	def metrics(self, value: Metrics) -> None:
-		if value is type(value).__name__ == Metrics:
-			self._metrics = value
-		else:
-			raise TypeError("Must be of type Metrics.")
->>>>>>> feat/Business/Observatory
 
 	# Getter of geographical_map attribute
 	@property
 	def geographical_map(self) -> Geographical_map:
 		return self._geographical_map
 
-<<<<<<< HEAD
     # Setter for geographical_map attribute
     @geographical_map.setter
     def geographical_map(self, value) -> None:
@@ -248,15 +178,6 @@ class Observatory:
             self._geographical_map = value
         else:
             raise TypeError("Must be of type Geographical_map.")
-=======
-	# Setter for geographical_map attribute
-	@geographical_map.setter
-	def geographical_map(self, value: Geographical_map) -> None:
-		if value is type(value).__name__ == Geographical_map:
-			self._geographical_map = value
-		else:
-			raise TypeError("Must be of type Geographical_map.")
->>>>>>> feat/Business/Observatory
 
 	# --- 1:N Relationships Getters & Setters ---
 
