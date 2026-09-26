@@ -78,5 +78,7 @@ class Zone:
 
     #--- method ---
 
-    def contains(self, x: float, y: float):
-        pass
+def contains(self, x: float, y: float) -> bool:
+    x_min, x_max = self.ubication_x
+    y_min, y_max = self.ubication_y
+    return (x_min <= x <= x_max) and (y_min <= y <= y_max)
