@@ -207,6 +207,10 @@ class Observatory:
 			self._associations = value
 		else:
 			raise TypeError("Associations must be a list.")
+	
+	@property
+	def events_dict(self) -> dict[int, Event]:
+    return self._events_dict
 
 	# ------------------------
   #         METHODS
