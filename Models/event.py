@@ -76,7 +76,7 @@ class Event:
 
   @property
   def attention_state(self) -> str:
-    return self.__attention_state()
+    return self.__attention_state
 
   @attention_state.setter
   def attention_state(self, value: str) -> None:
