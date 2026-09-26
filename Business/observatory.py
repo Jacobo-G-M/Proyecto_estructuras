@@ -433,8 +433,98 @@ class Observatory:
         print(f"Eliminación completada: El identificador {event_id} ha sido retirado del catálogo.")
         return event_to_remove
 
-	def archive_event(self) -> None:
-		pass
+	def archive_subtree(self) -> None:
+
+        if self.tree is None or self.tree.root is None:
+            print("El catálogo activo está vacío. No hay nada que archivar.")
+            return
+
+        # Search for the best branch to archive based on the defined rules
+        best_root_node, nodes_to_archive = self._find_best_branch()
+
+        if not nodes_to_archive:
+            print("No existe ninguna rama que cumpla los criterios para ser archivada.")
+            return
+
+        ids_afectados = [n.id for n in nodes_to_archive]
+        print(f"Archivando subárbol con raíz ID={best_root_node.id}.")
+        print(f"Eventos afectados ({len(ids_afectados)}): {ids_afectados}")
+        print(f"Justificación: Todos los eventos tienen P=1 y antigüedad > {self.max_tree_age} horas.")
+
+        #extract the events from the nodes and archive them
+        for node in nodes_to_archive:
+            event_id = node.id
+            
+            if event_id in self.events_dict:
+                event_to_archive = self.events_dict[event_id]
+                
+                self.tree.delete(event_id)
+                
+                del self.events_dict[event_id]
+                
+                if self.historic is not None:
+                    self.historic.archive_event(event_to_archive)
+
+		if self.metrics is not None:
+			self.metrics.active_events -= len(nodes_to_archive)
+
+        print("Archivo masivo ejecutado con éxito.")
+
+    # --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
+
+    def _find_best_branch(self) -> tuple:
+        """
+        Traverse the tree to find the branch that meets the strict rules.
+        Apply the tie-breaking criteria using tuple comparisons.
+        """
+        # Obtenemos todos los nodos del árbol junto con su profundidad real (raíz = 0)
+        all_nodes_with_depth = self._get_all_nodes_with_depth(self.tree.root, 0)
+        
+        best_root = None
+        best_nodes_list = []
+        # Tupla para guardar el puntaje máximo: (cantidad_nodos, profundidad_raiz, id_raiz)
+        best_score = (0, -1, -1) 
+
+        for current_node, depth in all_nodes_with_depth:
+            # Extraemos todos los descendientes de este nodo (incluyéndolo a él)
+            subtree_nodes = self.tree.preorder(current_node)
+            
+            # Validamos la regla: TODOS deben tener prioridad 1 y antigüedad > T horas
+            is_eligible = True
+            for n in subtree_nodes:
+                event = n.__event() 
+
+                age_timedelta = self.clock_simulation - event.date_time
+                age_in_hours = age_timedelta.total_seconds() / 3600.0
+                
+                if event.priority != 1 or age_in_hours <= self.max_tree_age:
+                    is_eligible = False
+                    break # Si un solo nodo incumple, la rama entera se descarta
+            
+            # Si la rama completa pasó la prueba, calculamos su puntaje de desempate
+            if is_eligible:
+                current_score = (len(subtree_nodes), depth, current_node.id)
+                
+                # En Python, esto compara mágicamente cantidad, luego profundidad, luego ID
+                if current_score > best_score:
+                    best_score = current_score
+                    best_root = current_node
+                    best_nodes_list = subtree_nodes
+
+        return best_root, best_nodes_list
+
+    def _get_all_nodes_with_depth(self, current_node, current_depth: int) -> list[tuple]:
+		"""
+        Traverse the entire tree and return a list of tuples: (Node, Depth).
+        The depth of the root node is 0, its children are 1, and so on.
+        """
+        if current_node is None:
+            return []
+            
+        nodes = [(current_node, current_depth)]
+        nodes.extend(self._get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
+        nodes.extend(self._get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
+        return nodes
 
 	def archive_subtree(self) -> None:
 		pass
