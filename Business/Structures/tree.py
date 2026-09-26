@@ -60,10 +60,6 @@ class Tree(ABC):
     self._preorder_recursive(self.root, result_list)
     return result_list
 
-<<<<<<< HEAD
-  def preorder(self):
-    pass
-  
   # Method to do a in-order iteration in a tree
   def inorder(self) -> list[Node]:
     # The list that we will return the method
@@ -83,13 +79,11 @@ class Tree(ABC):
     result.append(node)
     # Apply recursion to the right son of the node
     self.__inorder(node.right_son, result)
-=======
   def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
     if current is not None:
       result.append(current)
       self._preorder_recursive(current.left_son, result)
       self._preorder_recursive(current.right_son, result)
->>>>>>> aa182eb935454049a78332935d3ce39af4d975c7
 
 
   def postorder(self):
