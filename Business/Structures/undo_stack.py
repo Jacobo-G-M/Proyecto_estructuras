@@ -37,3 +37,9 @@ class Undo_stack:
 
     def is_empty(self) -> bool:
         return len(self._actions) == 0
+
+    # ----- methods -----
+
+    #method to get de cant of items on the undo_stack
+    def size(self) -> int:
+        return len(self._actions)

@@ -55,8 +55,11 @@ class Node:
 #         METHODS
 # ------------------------
 
+  #update his own height atribute
   def update_height(self):
-    pass
+    left_h = self.__left_son.height if self.__left_son is not None else -1
+    right_h = self.__right_son.height if self.__right_son is not None else -1
+    self.__height = max(left_h, right_h) + 1
 
   def is_leaf(self) -> bool:
     return self.__left_son is None and self.__right_son is None

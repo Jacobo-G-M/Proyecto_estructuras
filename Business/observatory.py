@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 from Business.historic import Historic
 from Business.report_queue import Report_queue
@@ -23,7 +24,7 @@ class Observatory:
         self.historic = None
         self.report_queue = None
         self.undo_stack = None
-        self.metrics = None
+        self.metrics = Metrics(self)
         self.geographical_map = None
 
         # 1:N Relationships 
@@ -119,8 +120,8 @@ class Observatory:
 
     # Setter for historic attribute
     @historic.setter
-    def historic(self, value: Historic ) -> None:
-        if value is type(value).__name__ ==Historic:
+    def historic(self, value) -> None:
+        if value is None or type(value).__name__ == "Historic":
             self._historic = value
         else:
             raise TypeError("Historic attribute must be of type Historic.")
@@ -132,21 +133,21 @@ class Observatory:
 
     # Setter for report_queue attribute
     @report_queue.setter
-    def report_queue(self, value: Report_queue) -> None:
-        if value is type(value).__name__ == Report_queue:
+    def report_queue(self, value) -> None:
+        if value is None or type(value).__name__ in ("Report_queue", "Report_Queue"):
             self._report_queue = value
         else:
             raise TypeError("Must be of type Report_queue.")
 
     # Getter of undo_stack attribute
     @property
-    def undo_stack(self) -> Undo_stack :
+    def undo_stack(self) -> Undo_stack:
         return self._undo_stack
 
     # Setter for undo_stack attribute
     @undo_stack.setter
-    def undo_stack(self, value:Undo_stack ) -> None:
-        if value is type(value).__name__ == Undo_stack:
+    def undo_stack(self, value) -> None:
+        if value is None or type(value).__name__ in ("Undo_stack", "Undo_Stack"):
             self._undo_stack = value
         else:
             raise TypeError("Must be of type Undo_stack.")
@@ -158,8 +159,8 @@ class Observatory:
 
     # Setter for metrics attribute
     @metrics.setter
-    def metrics(self, value: Metrics) -> None:
-        if value is type(value).__name__ == Metrics:
+    def metrics(self, value) -> None:
+        if value is None or type(value).__name__ == "Metrics":
             self._metrics = value
         else:
             raise TypeError("Must be of type Metrics.")
@@ -171,8 +172,8 @@ class Observatory:
 
     # Setter for geographical_map attribute
     @geographical_map.setter
-    def geographical_map(self, value: Geographical_map) -> None:
-        if value is type(value).__name__ == Geographical_map:
+    def geographical_map(self, value) -> None:
+        if value is None or type(value).__name__ in ("Geographical_map", "Geographical_Map"):
             self._geographical_map = value
         else:
             raise TypeError("Must be of type Geographical_map.")
