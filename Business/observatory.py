@@ -1,14 +1,14 @@
 from __future__ import annotations
 from datetime import datetime
-from Business.historic import Historic
-from Business.report_queue import Report_queue
-from Business.undo_stack import Undo_stack
-from Business.metrics import Metrics
-from Business.geographical_map import Geographical_map
-from Business.station import Station
-from Business.association import Association
-import Business.tree as Tree
-import Business.event as Event
+from Historic import Historic
+from Structures.report_queue import Report_Queue
+from Structures.undo_stack import Undo_stack
+from Rules.Metrics import Metrics
+from Geographical_map import Geographical_map
+from ..Models.station import Station
+from Rules.Asociation import Association
+from Structures.tree import Tree
+from ..Models.event import Event
 import Business.Version as Version
 
 
