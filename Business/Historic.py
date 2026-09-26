@@ -1,3 +1,4 @@
+from Business.Event import Event
 class Historic:
     def __init__(self) -> None:
         #Attributes

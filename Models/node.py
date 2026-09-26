@@ -68,3 +68,18 @@ class Node:
     left_h = self.__left_son.__height if self.__left_son else -1
     right_h = self.__right_son.__height if self.__right_son else -1
     return left_h - right_h
+
+  # --------------------------------------------------------
+  # Dunder methods for comparison based on the key (priority, magnitude, id)
+  # --------------------------------------------------------
+
+  def __lt__(self, other: Node) -> bool:
+    return self.get_key() < other.get_key()
+
+  def __gt__(self, other: Node) -> bool:
+    return self.get_key() > other.get_key()
+
+  def __eq__(self, other: object) -> bool:
+    if not isinstance(other, Node):
+        return False
+    return self.get_key() == other.get_key()

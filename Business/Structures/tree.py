@@ -31,13 +31,36 @@ class Tree(ABC):
   # ------------------------
   #         METHODS
   # ------------------------
-  def insert(self):
+  def insert(self, new_node: Node) -> None:
+    self.root = self._insert_recursive(self.root, new_node)
+
+  def _insert_recursive(self, current: Node, new_node: Node) -> Node:
+    #Base case: if the current node is None, we found the position to insert the new node
+    if current is None:
+      return new_node
+    #Comparison: decide whether to go left or right in the tree based on the new node's value
+    if new_node < current:
+      current.left_son = self._insert_recursive(current.left_son, new_node)
+    elif new_node > current:
+      current.right_son = self._insert_recursive(current.right_son, new_node)
+    else:
+      return current
+    return self._balance_node(current)
+
+  @abstractmethod
+  def _balance_node(self, node: Node) -> Node:
     pass
 
   @abstractmethod
   def delete(self, id_event: int) -> None:
     pass
+  
+  def preorder(self) -> list[Node]:
+    result_list: list[Node] = []
+    self._preorder_recursive(self.root, result_list)
+    return result_list
 
+<<<<<<< HEAD
   def preorder(self):
     pass
   
@@ -60,6 +83,13 @@ class Tree(ABC):
     result.append(node)
     # Apply recursion to the right son of the node
     self.__inorder(node.right_son, result)
+=======
+  def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
+    if current is not None:
+      result.append(current)
+      self._preorder_recursive(current.left_son, result)
+      self._preorder_recursive(current.right_son, result)
+>>>>>>> aa182eb935454049a78332935d3ce39af4d975c7
 
 
   def postorder(self):
