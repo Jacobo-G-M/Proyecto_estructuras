@@ -8,17 +8,27 @@ class AVL(Tree):
   def __init__(self, id: int, stress_mode: bool = False):
     super().__init__(id)
     self.__stress_mode: bool = stress_mode
+    self.__cases = {"LL": 0, "RR": 0, "LR": 0, "RL": 0}
+    self.__turns = {"left": 0, "right": 0}
     
   # ------------------------
   #   GETTERS AND SETTERS
   # ------------------------
-    @property
-    def stress_mode(self) -> bool:
-        return self.__stress_mode
+  @property
+  def stress_mode(self) -> bool:
+    return self.__stress_mode
 
-    @stress_mode.setter
-    def _stress_mode(self, value: bool) -> None:
-        self.__stress_mode = value
+  @stress_mode.setter
+  def _stress_mode(self, value: bool) -> None:
+    self.__stress_mode = value
+    
+  @property
+  def cases(self) -> dict[str, int]:
+    return self._cases
+
+  @property
+  def turns(self) -> dict[str, int]:
+    return self._turns
   # ------------------------
   #         METHODS
   # ------------------------
@@ -37,7 +47,7 @@ class AVL(Tree):
     if self.__stress_mode:
       return node
     # In normal mode, balance node-by-node
-    return self.balance()
+    return self.balance(node)
   
     # Method to balance a specific node (local balancing)
   def balance(self, node: Node | None) -> Node | None:
@@ -54,19 +64,23 @@ class AVL(Tree):
     if bf > 1:
       # Left-Right (LR) Case: child is right-heavy
       if node.left_son and node.left_son.balance_factor() < 0:
+        self._cases["LR"] += 1
         node.left_son = self.left_rotation(node.left_son)
-      
       # Left-Left (LL) Case: single right rotation
-      return self.right_rotation(node)
+      else:
+        self._cases["LL"] += 1
+        return self.right_rotation(node)
 
     # Check Right-Heavy cases (bf < -1)
     if bf < -1:
       # Right-Left (RL) Case: child is left-heavy
       if node.right_son and node.right_son.balance_factor() > 0:
+        self._cases["RL"] += 1
         node.right_son = self.right_rotation(node.right_son)
-      
       # Right-Right (RR) Case: single left rotation
-      return self.left_rotation(node)
+      else:
+        self._cases["RR"] += 1
+        return self.left_rotation(node)
 
     # If already balanced, return the unchanged node
     return node
@@ -93,6 +107,8 @@ class AVL(Tree):
     # Update heights (bottom-up: old root first, then new root)
     node.update_height()
     new_root.update_height()
+    # Update counter for right turns
+    self.__turns["right"] += 1
 
     # Return new subtree root
     return new_root
@@ -116,6 +132,8 @@ class AVL(Tree):
     # Update heights (bottom-up: old root first, then new root)
     node.update_height()
     new_root.update_height()
+    # Update counter for left turns
+    self._turns["left"] += 1
 
     # Step 5: Return new subtree root
     return new_root
