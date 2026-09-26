@@ -383,7 +383,7 @@ class Observatory:
         key_changed = (old_priority != new_priority) or (old_magnitude != new_magnitude)
 
         if key_changed and self.tree is not None:
-            self.tree.delete(event_id)
+            deleted_node = self.tree.delete(event_id)
 
 		# Updating Event Attributes
         event_to_edit.magnitude = round(new_magnitude, 1)
@@ -396,7 +396,7 @@ class Observatory:
 
         # Reinsert into the tree if the key has changed
         if key_changed and self.tree is not None:
-            updated_node = Node(id=event_id, event=event_to_edit)
+            deleted_node = Node(id=event_id, event=event_to_edit)
             self.tree.insert(updated_node)
 		#Pendientes en el Notion
 
