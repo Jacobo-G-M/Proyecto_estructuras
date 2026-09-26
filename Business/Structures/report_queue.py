@@ -24,10 +24,14 @@ class Report_Queue:
   
   # Method to enqueue a report
   def enqueue(self, report: Report) -> None:
+    if type(report).__name__ != "Report":
+      raise TypeError("Item must be an instance of Report.")
     self.__current_reports.append(report)
   
   # Method to dequeue and get the first report added
   def dequeue(self) -> Report:
+    if self.is_empty():
+      raise IndexError("Error: Cannot dequeue from an empty report queue.")
     return self.__current_reports.pop(0)
 
     #verifies if the queue is empty or not -----

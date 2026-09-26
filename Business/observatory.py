@@ -283,8 +283,6 @@ class Observatory:
 		if hasattr(self, 'tree') and self.tree is not None:
 			if hasattr(self.tree, 'insert'):
 				self.tree.insert(new_node)
-		elif hasattr(self, 'avl') and self.avl is not None:
-			self.avl.insert(new_node)
 
 		# -----------------------------------------------------------------
 		# 5. REGISTER STATION AND UNDO ACTION

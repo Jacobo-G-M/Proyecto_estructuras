@@ -172,7 +172,7 @@ class AVL(Tree):
     node.update_height()
     new_root.update_height()
     # Update counter for left turns
-    self._turns["left"] += 1
+    self.__turns["left"] += 1
 
     # Step 5: Return new subtree root
     return new_root
