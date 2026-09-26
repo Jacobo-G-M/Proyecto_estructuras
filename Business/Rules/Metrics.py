@@ -4,18 +4,19 @@ class Metrics:
         self._corrections_accepted: int = 0
         self._discarded_reports: int = 0
         self._observatory = observatory
+        self._active_events: int = 0
 
-		# GETTER for _corrections_accepted
-		@property
-		def corrections_accepted(self) -> int:
-				return self._corrections_accepted
-		# SETTER for _corrections_accepted
-		@corrections_accepted.setter
-		def corrections_accepted(self, value: int) -> None:
-				if isinstance(value, int) and value >= 0:
-						self._corrections_accepted = value
-				else:
-						raise ValueError("corrections_accepted must be a non-negative integer.")
+	# GETTER for _corrections_accepted
+	@property
+	def corrections_accepted(self) -> int:
+		return self._corrections_accepted
+	# SETTER for _corrections_accepted
+	@corrections_accepted.setter
+	def corrections_accepted(self, value: int) -> None:
+		if isinstance(value, int) and value >= 0:
+			self._corrections_accepted = value
+		else:
+			raise ValueError("corrections_accepted must be a non-negative integer.")
 
     # GETTER for _discarded_reports
     @property
@@ -33,7 +34,17 @@ class Metrics:
     @property
     def observatory(self):
         return self._observatory
-
+    #GETTER for _active_events
+    @property
+    def active_events(self) -> int:
+        return self._active_events
+    #SETTER for _active_events
+    @active_events.setter
+    def active_events(self, value: int) -> None:
+        if isinstance(value, int) and value >= 0:
+            self._active_events = value
+        else:
+            raise ValueError("active_events must be a non-negative integer.")
 
     # --- Methods ---
 
