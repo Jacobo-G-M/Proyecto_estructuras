@@ -160,7 +160,7 @@ class Tree(ABC):
       self._preorder_recursive(current.left_son, result)
       self._preorder_recursive(current.right_son, result)
 
-      
+
   # Method to do a in-order iteration in a tree
   def inorder(self) -> list[Node]:
     # The list that we will return the method
@@ -180,9 +180,6 @@ class Tree(ABC):
     result.append(node)
     # Apply recursion to the right son of the node
     self.__inorder(node.right_son, result)
-
-
-
 
 
     #posorder traversal METHOD -----
@@ -229,11 +226,6 @@ class Tree(ABC):
         queue.append(node.right_son)
   
     return traversal
-
-    #update height of specific Nodes from Tree
-  def update_height(self, node: Node):
-    if node is not None:
-      node.update_height
 
     #height of the Tree
   def height(self):
