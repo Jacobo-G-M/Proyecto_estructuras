@@ -90,7 +90,10 @@ class AVL(Tree):
       return node
     # In normal mode, balance node-by-node
     return self.balance(node)
-  
+    #Template Method Hook
+    def _post_process(self, node: Node) -> Node:
+      return self.balance(node)
+
     # Method to balance a specific node (local balancing)
   def balance(self, node: Node | None) -> Node | None:
     if node is None:
@@ -172,7 +175,7 @@ class AVL(Tree):
     node.update_height()
     new_root.update_height()
     # Update counter for left turns
-    self._turns["left"] += 1
+    self.__turns["left"] += 1
 
     # Step 5: Return new subtree root
     return new_root

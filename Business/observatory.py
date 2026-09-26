@@ -1,15 +1,16 @@
 from __future__ import annotations
 from datetime import datetime
-from Business.historic import Historic
-from Business.report_queue import Report_queue
-from Business.undo_stack import Undo_stack
-from Business.metrics import Metrics
-from Business.geographical_map import Geographical_map
-from Business.station import Station
-from Business.association import Association
-import Business.tree as Tree
-import Business.event as Event
+from Historic import Historic
+from Structures.report_queue import Report_Queue
+from Structures.undo_stack import Undo_stack
+from Rules.Metrics import Metrics
+from Geographical_map import Geographical_map
+from ..Models.station import Station
+from Rules.Asociation import Association
+from Structures.tree import Tree
+from ..Models.event import Event
 import Business.Version as Version
+
 
 class Observatory:
     def __init__(self) -> None:
@@ -282,8 +283,6 @@ class Observatory:
 		if hasattr(self, 'tree') and self.tree is not None:
 			if hasattr(self.tree, 'insert'):
 				self.tree.insert(new_node)
-		elif hasattr(self, 'avl') and self.avl is not None:
-			self.avl.insert(new_node)
 
 		# -----------------------------------------------------------------
 		# 5. REGISTER STATION AND UNDO ACTION
@@ -340,24 +339,6 @@ class Observatory:
 
 	def undo_action(self) -> None:
 		pass
-
-	def is_in_populated_zone(self, epicenter: tuple[float, float]) -> bool:
-		# Check if epicenter exists
-		if epicenter is None:
-			return False
-		# Check if geographical map exists
-		if self.geographical_map is None:
-			return False
-		# Stores the existing zones in zones variable
-		zones = self._geographical_map.zones
-		# Stores the coordinates in two variables
-		x, y = epicenter
-
-		# Iterate every existing zone, checking if is inside or on the border of a zone
-		for zone in zones:
-			if zone.is_populated and zone.contains(x, y):
-				return True
-		return False
-
+        
 	def get_costly_access(self) -> list[int]:
 		pass

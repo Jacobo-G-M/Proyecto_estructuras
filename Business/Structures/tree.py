@@ -45,10 +45,10 @@ class Tree(ABC):
       current.right_son = self._insert_recursive(current.right_son, new_node)
     else:
       return current
-    return self._balance_node(current)
+    return self._post_process(current)
 
   @abstractmethod
-  def _balance_node(self, node: Node) -> Node:
+  def _post_process(self, node: Node) -> Node:
     pass
 
   # Public method to delete a node. It returns a node to save it in the undo stack
@@ -63,7 +63,7 @@ class Tree(ABC):
       return None
     else:
       # Uses the private method to apply the rest of the logic
-      self._delete_helper(deleted_node, key)
+      self._delete_helper(self.__root, key)
       
       # If the root has changed, it has to updates its father to None
       if self.__root is not None:
@@ -99,7 +99,7 @@ class Tree(ABC):
         return current.right_son
       elif current.right_son is None:
         # Update its father
-        current.left_son = current.father
+        current.left_son.father = current.father
         # Only has a left son. Returns the left son
         return current.left_son
       # Case 3: It has two children
@@ -111,6 +111,8 @@ class Tree(ABC):
         current.event = succesor.event
         # Delete the copied succesor
         current.left_son = self._delete_helper(current.left_son, succesor.get_key())
+        if current.left_son is not None:
+          current.left_son.father = current
     
     # Returns the current node
     return current
@@ -179,7 +181,7 @@ class Tree(ABC):
     # Add the current node to the result list
     result.append(node)
     # Apply recursion to the right son of the node
-    self.__inorder(node.right_son, result)
+    self._inorder(node.right_son, result)
 
 
     #posorder traversal METHOD -----

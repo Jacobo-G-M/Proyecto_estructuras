@@ -54,4 +54,9 @@ class Geographical_map:
         return None
     
     def is_in_populated_zone(self, x: float, y: float):
-        pass
+        if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+            raise TypeError("x and y must be numbers.")
+        for zone in self._zones:
+            if zone.is_populated and zone.contains(x, y):
+                return True
+        return False
