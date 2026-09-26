@@ -326,6 +326,30 @@ class Observatory:
 	def process_report(self) -> None:
 		pass
 
+	def calculate_priority(self, magnitude: float, depth: float, epicenter: tuple[float, float]) -> int:
+        """
+		3 (High): M ≥ 6.0, or (M ≥ 4.5 and H ≤ 30.0 km in a populated area)
+        2 (Medium): M ≥ 4.5 (and does not meet the criteria for High)
+        1 (Low): Does not meet any of the above criteria
+        """
+        x, y = epicenter
+        is_populated = False
+        
+        if self.geographical_map is not None:
+            is_populated = self.geographical_map.is_in_populated_zone(x, y)
+
+        # Priority 3 (High)
+        if magnitude >= 6.0 or (magnitude >= 4.5 and depth <= 30.0 and is_populated):
+            return 3
+            
+        # Priority 2 (Medium)
+        elif magnitude >= 4.5:
+            return 2
+            
+        # Priority 1 (Low)
+        else:
+            return 1
+
     def edit_event(
         self,
         event_id: int,
