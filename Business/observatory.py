@@ -619,26 +619,26 @@ class Observatory:
 
 		print("Archivo masivo ejecutado con éxito.")
 
-	# --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
+	# --- HELPER METHODS FOR BULK ARCHIVING ---
 
 	def _find_best_branch(self) -> tuple:
 		"""
 		Traverse the tree to find the branch that meets the strict rules.
 		Apply the tie-breaking criteria using tuple comparisons.
 		"""
-		# Obtenemos todos los nodos del árbol junto con su profundidad real (raíz = 0)
+		# Get all tree nodes along with their actual depth (root = 0)
 		all_nodes_with_depth = self._get_all_nodes_with_depth(self.tree.root, 0)
 		
 		best_root = None
 		best_nodes_list = []
-		# Tupla para guardar el puntaje máximo: (cantidad_nodos, profundidad_raiz, id_raiz)
+		# Tuple to store the maximum score: (node_count, root_depth, root_id)
 		best_score = (0, -1, -1) 
 
 		for current_node, depth in all_nodes_with_depth:
-			# Extraemos todos los descendientes de este nodo (incluyéndolo a él)
+			# Extract all descendants of this node (including itself)
 			subtree_nodes = self.tree.preorder(current_node)
 			
-			# Validamos la regla: TODOS deben tener prioridad 1 y antigüedad > T horas
+			# Validate the rule: ALL must have priority 1 and age > T hours
 			is_eligible = True
 			for n in subtree_nodes:
 				event = n.event if hasattr(n, 'event') else None
@@ -649,13 +649,13 @@ class Observatory:
 					
 					if event.priority != 1 or age_in_hours <= self.max_tree_age:
 						is_eligible = False
-						break # Si un solo nodo incumple, la rama entera se descarta
+						break # If a single node fails, the entire branch is discarded
 			
-			# Si la rama completa pasó la prueba, calculamos su puntaje de desempate
+			# If the entire branch passed the check, calculate its tie-breaking score
 			if is_eligible:
 				current_score = (len(subtree_nodes), depth, current_node.id)
 				
-				# En Python, esto compara mágicamente cantidad, luego profundidad, luego ID
+				# In Python, this compares count, then depth, then ID
 				if current_score > best_score:
 					best_score = current_score
 					best_root = current_node
