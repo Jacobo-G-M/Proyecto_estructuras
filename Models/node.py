@@ -1,3 +1,4 @@
+from __future__ import annotations
 from event import Event
 
 class Node:
@@ -28,7 +29,7 @@ class Node:
     return self.__event
 
   @event.setter
-  def event(self, value: Node) -> None:
+  def event(self, value: Event) -> None:
     self.__event = value
     
   @property
