@@ -1,7 +1,6 @@
 class Metrics:
-
-    def __init__(self, observatory) -> None:
-        self._observatory = observatory
+    def __init__(self) -> None:
+        # Cumulative business counters
         self._corrections_accepted: int = 0
         self._discarded_reports: int = 0
         self._conflicts: int = 0
@@ -9,7 +8,13 @@ class Metrics:
         self._removed_events: int = 0
         self._archived_events: int = 0
 
-    # GETTER for _corrections_accepted
+        # Cumulative AVL rotation counters (centralized)
+        self._cases: dict[str, int] = {"LL": 0, "RR": 0, "LR": 0, "RL": 0}
+        self._turns: dict[str, int] = {"left": 0, "right": 0}
+
+    # --- Business Getters and Setters ---
+
+    # Getter and Setter for _corrections_accepted
     @property
     def corrections_accepted(self) -> int:
         return self._corrections_accepted
@@ -87,28 +92,37 @@ class Metrics:
         else:
             raise ValueError("archived_events must be a non-negative integer.")
 
-    # GETTER for observatory
+    # GETTER for __cases
     @property
-    def observatory(self):
-        return self._observatory
+    def cases(self) -> dict[str, int]:
+        return dict(self._cases)
 
-    # SETTER for observatory
-    @observatory.setter
-    def observatory(self, value) -> None:
-        self._observatory = value
+    # GETTER for __turns
+    @property
+    def turns(self) -> dict[str, int]:
+        return dict(self._turns)
 
-    # --- Methods ---
+	# ------------------------
+	#         METHODS
+	# ------------------------
 
+    # Registers a detected imbalance case (LL, RR, LR, RL)
+    def register_case(self, case_type: str) -> None:
+        if case_type in self._cases:
+            self._cases[case_type] += 1
 
-
+    # Registers an elementary turn (left, right)
+    def register_turn(self, turn_type: str) -> None:
+        if turn_type in self._turns:
+            self._turns[turn_type] += 1
+            
     # Method to count active events pending review
     def pending_events(self, nodes: list) -> int:
         if not nodes:
             return 0
         return sum(
-            1 for node in nodes if
-            node.event and
-            str(node.event.attention_state).strip().lower() in ("pending", "pendiente")
+            1 for node in nodes
+            if node.event and str(node.event.attention_state).strip().lower() in ("pending", "pendiente")
         )
 
     # Method to count active events already reviewed
@@ -116,28 +130,22 @@ class Metrics:
         if not nodes:
             return 0
         return sum(
-            1 for node in nodes if
-            node.event and
-            str(node.event.attention_state).strip().lower() in ("reviewed", "revisado")
+            1 for node in nodes
+            if node.event and str(node.event.attention_state).strip().lower() in ("reviewed", "revisado")
         )
 
-    # Method for a dictionary with the counts of the events depending on the priority
-    def events_by_priority(self) -> dict[int, int]:
+    # Method to count active events grouped by priority
+    def events_by_priority(self, nodes: list) -> dict[int, int]:
         counts = {3: 0, 2: 0, 1: 0}
-
-        if self._observatory is None:
+        if not nodes:
             return counts
-
-        tree = self._observatory.tree
-        if isinstance(tree, list):
-            tree = tree[0] if len(tree) > 0 else None
-
-        if tree is not None and hasattr(tree, "width"):
-            active_nodes = tree.width()
-            for node in active_nodes:
-                priority = node.get_key()[0]
-                if priority in counts:
-                    counts[priority] += 1
-                else:
-                    counts[priority] = 1
+        for node in nodes:
+            priority = node.get_key()[0]
+            counts[priority] = counts.get(priority, 0) + 1
         return counts
+
+    # Method to count leaf nodes in a given list of nodes
+    def cant_leaves(self, nodes: list) -> int:
+        if not nodes:
+            return 0
+        return sum(1 for node in nodes if node.is_leaf())
