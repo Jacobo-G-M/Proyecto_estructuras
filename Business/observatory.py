@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from Historic import Historic
 from Structures.report_queue import Report_Queue
 from Structures.undo_stack import Undo_stack
@@ -674,8 +674,35 @@ class Observatory:
 		nodes.extend(self._get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
 		return nodes
 
-	def update_clock(self) -> None:
-		pass
+	def update_clock(self, new_time: datetime | None = None, hours: float = 0.0) -> datetime | None:
+		"""
+		Advances the simulation clock according to project Section 3 and Section 13.
+		- new_time: Specific future datetime to advance the clock to.
+		- hours: Optional increment in hours to advance relative to current clock.
+		Validates that time only moves forward and constitutes an undoable action.
+		"""
+		if new_time is None:
+			if hours <= 0:
+				print("Error: You must provide a valid future datetime or a positive number of hours.")
+				return None
+			target_time = self.clock_simulation + timedelta(hours=hours)
+		else:
+			target_time = new_time
+
+		if not isinstance(target_time, datetime):
+			print("Error: Target time must be an instance of datetime.")
+			return None
+
+		if target_time <= self.clock_simulation:
+			print(f"Error: The clock can only advance to a future time. Current: {self.clock_simulation.isoformat()}, Target: {target_time.isoformat()}")
+			return None
+
+		# Save previous time for undo/traceability
+		previous_time = self.clock_simulation
+		self.clock_simulation = target_time
+
+		print(f"Clock advanced successfully: {previous_time.isoformat()} -> {self.clock_simulation.isoformat()}")
+		return self.clock_simulation
 
 	def undo_action(self) -> None:
 		pass
