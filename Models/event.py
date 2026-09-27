@@ -14,6 +14,7 @@ class Event:
     self.__review: int = review
     self.__attention_state: str = attention_state
     self.__status: str = status
+    self.__origin_stations: list = []
 
   # ------------------------
   #   GETTERS AND SETTERS
@@ -87,9 +88,30 @@ class Event:
     return self.__status
 
   @status.setter
-  def _status(self, value: str) -> None:
+  def status(self, value: str) -> None:
     self.__status = value
+
+  @property
+  def origin_stations(self) -> list:
+    return self.__origin_stations
+
+  @origin_stations.setter
+  def origin_stations(self, value: list) -> None:
+    if isinstance(value, list):
+      self.__origin_stations = value
+    else:
+      raise TypeError("origin_stations must be a list.")
+
+  # Alias for compatibility with singular references
+  @property
+  def origin_station(self) -> list:
+    return self.__origin_stations
 
 # ------------------------
 #         METHODS
 # ------------------------
+
+  def add_origin_station(self, station) -> None:
+    """Adds an origin station to the event if not already present."""
+    if station not in self.__origin_stations:
+      self.__origin_stations.append(station)
