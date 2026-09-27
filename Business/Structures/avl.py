@@ -1,8 +1,8 @@
+from ...Models.node import Node
 try:
   from .tree import Tree
 except ImportError:
   from tree import Tree
-from ...Models.node import Node
 from typing import Callable
 
 class AVL(Tree):

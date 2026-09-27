@@ -1,5 +1,11 @@
 from abc import ABC, abstractmethod
-from ...Models.node import Node
+try:
+  from ...Models.node import Node
+except (ImportError, ValueError):
+  try:
+    from Models.node import Node
+  except ImportError:
+    from node import Node
 
 class Tree(ABC):
   # ------------------------
@@ -151,12 +157,11 @@ class Tree(ABC):
     else:
       return self._search_node_helper(current.right_son, key)
   
-  def preorder(self, current: Node) -> list[Node]:
+  def preorder(self, current: Node | None = None) -> list[Node]:
     result_list: list[Node] = []
-    if current is not None:
-      self._preorder_recursive(current, result_list)
-      return result_list
-    self._preorder_recursive(self.root, result_list)
+    target = self.root if current is None else current
+    if target is not None:
+      self._preorder_recursive(target, result_list)
     return result_list
   
   def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
@@ -235,3 +240,22 @@ class Tree(ABC):
     #height of the Tree
   def height(self):
     return self.root.height if self.root is not None else -1
+
+  # Traverses the tree and returns a list of tuples: (Node, Depth)
+  def get_all_nodes_with_depth(self, current_node: Node | None = None, current_depth: int = 0) -> list[tuple[Node, int]]:
+    """
+    Traverses the tree and returns a list of tuples: (Node, Depth).
+    The root node has depth 0, its children depth 1, and so on.
+    If current_node is omitted, traversal starts from self.root.
+    """
+    if current_node is None:
+      current_node = self.root
+    if current_node is None:
+      return []
+
+    nodes: list[tuple[Node, int]] = [(current_node, current_depth)]
+    if current_node.left_son is not None:
+      nodes.extend(self.get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
+    if current_node.right_son is not None:
+      nodes.extend(self.get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
+    return nodes
