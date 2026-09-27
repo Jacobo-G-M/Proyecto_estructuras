@@ -7,6 +7,7 @@ from Geographical_map import Geographical_map
 from ..Models.station import Station
 from Rules.Asociation import Association
 from Structures.tree import Tree
+from Structures.avl import AVL
 from ..Models.event import Event
 from ..Models.report import Report
 from ..Models.node import Node
@@ -26,14 +27,14 @@ class Observatory:
 		self.historic = None
 		self.report_queue = None
 		self.undo_stack = None
-		self.metrics = Metrics(self)
+		self.metrics = Metrics()
 		self.geographical_map = None
 
 		# 1:N Relationships
 		self.stations = []
 		self.associations = []
-		self.tree= []
-		#auxiliary dictionary for O(1) access to events by ID
+		self.tree: Tree = AVL(id=1, on_rotation=self._handle_tree_rotation)
+		# Auxiliary dictionary for O(1) access to events by ID
 		self.events_dict: dict[int, Event] = {}
 
 	# Getter of clock_simulation attribute
@@ -122,65 +123,65 @@ class Observatory:
 	def historic(self) -> Historic :
 		return self._historic
 
-    # Setter for historic attribute
-    @historic.setter
-    def historic(self, value) -> None:
-        if value is None or type(value).__name__ == "Historic":
-            self._historic = value
-        else:
-            raise TypeError("Historic attribute must be of type Historic.")
+	# Setter for historic attribute
+	@historic.setter
+	def historic(self, value) -> None:
+		if value is None or type(value).__name__ == "Historic":
+			self._historic = value
+		else:
+			raise TypeError("Historic attribute must be of type Historic.")
 
 	# Getter of report_queue attribute
 	@property
 	def report_queue(self) -> Report_Queue:
 		return self._report_queue
 
-    # Setter for report_queue attribute
-    @report_queue.setter
-    def report_queue(self, value) -> None:
-        if value is None or type(value).__name__ in ("Report_queue", "Report_Queue"):
-            self._report_queue = value
-        else:
-            raise TypeError("Must be of type Report_queue.")
+	# Setter for report_queue attribute
+	@report_queue.setter
+	def report_queue(self, value) -> None:
+		if value is None or type(value).__name__ in ("Report_queue", "Report_Queue"):
+			self._report_queue = value
+		else:
+			raise TypeError("Must be of type Report_queue.")
 
-    # Getter of undo_stack attribute
-    @property
-    def undo_stack(self) -> Undo_stack:
-        return self._undo_stack
+	# Getter of undo_stack attribute
+	@property
+	def undo_stack(self) -> Undo_stack:
+		return self._undo_stack
 
-    # Setter for undo_stack attribute
-    @undo_stack.setter
-    def undo_stack(self, value) -> None:
-        if value is None or type(value).__name__ in ("Undo_stack", "Undo_Stack"):
-            self._undo_stack = value
-        else:
-            raise TypeError("Must be of type Undo_stack.")
+	# Setter for undo_stack attribute
+	@undo_stack.setter
+	def undo_stack(self, value) -> None:
+		if value is None or type(value).__name__ in ("Undo_stack", "Undo_Stack"):
+			self._undo_stack = value
+		else:
+			raise TypeError("Must be of type Undo_stack.")
 
 	# Getter of metrics attribute
 	@property
 	def metrics(self) -> Metrics:
 		return self._metrics
 
-    # Setter for metrics attribute
-    @metrics.setter
-    def metrics(self, value) -> None:
-        if value is None or type(value).__name__ == "Metrics":
-            self._metrics = value
-        else:
-            raise TypeError("Must be of type Metrics.")
+	# Setter for metrics attribute
+	@metrics.setter
+	def metrics(self, value) -> None:
+		if value is None or type(value).__name__ == "Metrics":
+			self._metrics = value
+		else:
+			raise TypeError("Must be of type Metrics.")
 
 	# Getter of geographical_map attribute
 	@property
 	def geographical_map(self) -> Geographical_map:
 		return self._geographical_map
 
-    # Setter for geographical_map attribute
-    @geographical_map.setter
-    def geographical_map(self, value) -> None:
-        if value is None or type(value).__name__ in ("Geographical_map", "Geographical_Map"):
-            self._geographical_map = value
-        else:
-            raise TypeError("Must be of type Geographical_map.")
+	# Setter for geographical_map attribute
+	@geographical_map.setter
+	def geographical_map(self, value) -> None:
+		if value is None or type(value).__name__ in ("Geographical_map", "Geographical_Map"):
+			self._geographical_map = value
+		else:
+			raise TypeError("Must be of type Geographical_map.")
 
 	# --- 1:N Relationships Getters & Setters ---
 
@@ -301,6 +302,15 @@ class Observatory:
 
 		print(f"Event {event_id} successfully created with priority {priority}.")
 		return new_event
+
+	# Callback handler to register AVL rotations into Metrics
+	def _handle_tree_rotation(self, case: str | None = None, turn: str | None = None) -> None:
+		if self.metrics is None:
+			return
+		if case:
+			self.metrics.register_case(case)
+		if turn:
+			self.metrics.register_turn(turn)
 
 	# Method to verify if an event ID is already taken
 	def _is_id_registered(self, event_id: int) -> bool:
@@ -669,6 +679,20 @@ class Observatory:
 
 	def undo_action(self) -> None:
 		pass
-        
+	# Method to identify high-priority events whose node depth exceeds limit L
 	def get_costly_access(self) -> list[int]:
-		pass
+		"""
+		Returns a list of IDs of high-priority events (priority = 3)
+		whose depth in the active AVL tree is strictly greater than limit L.
+		"""
+		if self.tree is None or self.tree.root is None:
+			return []
+
+		costly_ids: list[int] = []
+		all_nodes_with_depth = self._get_all_nodes_with_depth(self.tree.root, 0)
+
+		for node, depth in all_nodes_with_depth:
+			if node.event is not None and node.event.priority == 3 and depth > self.limit:
+				costly_ids.append(node.id)
+
+		return costly_ids
