@@ -6,7 +6,7 @@ try:
 except ImportError:
     try:
         from Structures.tree import Tree
-        from ..Models.node import Node
+        from ...Models.node import Node
     except ImportError:
         from tree import Tree
         from node import Node
