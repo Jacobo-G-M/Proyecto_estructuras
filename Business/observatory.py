@@ -575,6 +575,7 @@ class Observatory:
 		# Update metrics if applicable
 		if self.metrics is not None:
 			self.metrics.active_events -= 1
+			self.metrics.removed_events += 1
 
 		# TODO: Registrar acción completa en undo_stack (Deep Copy)
 
@@ -614,6 +615,7 @@ class Observatory:
 
 		if self.metrics is not None:
 			self.metrics.active_events -= len(nodes_to_archive)
+			self.metrics.archived_events += len(nodes_to_archive)
 
 		print("Archivo masivo ejecutado con éxito.")
 

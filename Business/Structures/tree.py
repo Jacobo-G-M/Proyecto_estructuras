@@ -151,12 +151,11 @@ class Tree(ABC):
     else:
       return self._search_node_helper(current.right_son, key)
   
-  def preorder(self, current: Node) -> list[Node]:
+  def preorder(self, current: Node=self.root) -> list[Node]:
     result_list: list[Node] = []
     if current is not None:
       self._preorder_recursive(current, result_list)
       return result_list
-    self._preorder_recursive(self.root, result_list)
     return result_list
   
   def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
