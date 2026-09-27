@@ -6,6 +6,7 @@ from Rules.Metrics import Metrics
 from Geographical_map import Geographical_map
 from ..Models.station import Station
 from Rules.Asociation import Association
+from Rules.SubtreeArchiver import SubtreeArchiver
 from Structures.tree import Tree
 from Structures.avl import AVL
 from ..Models.event import Event
@@ -622,57 +623,20 @@ class Observatory:
 	def _find_best_branch(self) -> tuple:
 		"""
 		Traverse the tree to find the branch that meets the strict rules.
-		Apply the tie-breaking criteria using tuple comparisons.
+		Delegates evaluation and tie-breaking to SubtreeArchiver.
 		"""
-		# Obtenemos todos los nodos del árbol junto con su profundidad real (raíz = 0)
-		all_nodes_with_depth = self._get_all_nodes_with_depth(self.tree.root, 0)
-		
-		best_root = None
-		best_nodes_list = []
-		# Tupla para guardar el puntaje máximo: (cantidad_nodos, profundidad_raiz, id_raiz)
-		best_score = (0, -1, -1) 
+		return SubtreeArchiver.find_best_branch(
+			tree=self.tree,
+			max_age_hours=self.max_tree_age,
+			simulation_clock=self.clock_simulation
+		)
 
-		for current_node, depth in all_nodes_with_depth:
-			# Extraemos todos los descendientes de este nodo (incluyéndolo a él)
-			subtree_nodes = self.tree.preorder(current_node)
-			
-			# Validamos la regla: TODOS deben tener prioridad 1 y antigüedad > T horas
-			is_eligible = True
-			for n in subtree_nodes:
-				event = n.event if hasattr(n, 'event') else None
-
-				if event is not None:
-					age_timedelta = self.clock_simulation - event.date_time
-					age_in_hours = age_timedelta.total_seconds() / 3600.0
-					
-					if event.priority != 1 or age_in_hours <= self.max_tree_age:
-						is_eligible = False
-						break # Si un solo nodo incumple, la rama entera se descarta
-			
-			# Si la rama completa pasó la prueba, calculamos su puntaje de desempate
-			if is_eligible:
-				current_score = (len(subtree_nodes), depth, current_node.id)
-				
-				# En Python, esto compara mágicamente cantidad, luego profundidad, luego ID
-				if current_score > best_score:
-					best_score = current_score
-					best_root = current_node
-					best_nodes_list = subtree_nodes
-
-		return best_root, best_nodes_list
-
-	def _get_all_nodes_with_depth(self, current_node, current_depth: int) -> list[tuple]:
-		"""
-		Traverse the entire tree and return a list of tuples: (Node, Depth).
-		The depth of the root node is 0, its children are 1, and so on.
-		"""
-		if current_node is None:
+	# Public method: it checks first if there is a existing tree, then executes the
+	# method in tree
+	def _get_all_nodes_with_depth(self, current_node = None, current_depth: int = 0) -> list[tuple]:
+		if self.tree is None:
 			return []
-			
-		nodes = [(current_node, current_depth)]
-		nodes.extend(self._get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
-		nodes.extend(self._get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
-		return nodes
+		return self.tree.get_all_nodes_with_depth(current_node, current_depth)
 
 	def update_clock(self, new_time: datetime | None = None, hours: float = 0.0) -> datetime | None:
 		"""
