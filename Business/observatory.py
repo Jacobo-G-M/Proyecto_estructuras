@@ -8,24 +8,26 @@ from ..Models.station import Station
 from Rules.Asociation import Association
 from Structures.tree import Tree
 from ..Models.event import Event
+from ..Models.report import Report
+from ..Models.node import Node
 import Business.Version as Version
 
 
 class Observatory:
-    def __init__(self) -> None:
-        self.clock_simulation = datetime.now()
-        self.limit = 3
-        self.max_time = 0.0
-        self.distance_epicenter = 0.0
-        self.max_tree_age = 0
-        self.stress_mode = False
-        
-        # 1:1 Relationships
-        self.historic = None
-        self.report_queue = None
-        self.undo_stack = None
-        self.metrics = Metrics(self)
-        self.geographical_map = None
+	def __init__(self) -> None:
+		self.clock_simulation = datetime.now()
+		self.limit = 3
+		self.max_time = 0.0
+		self.distance_epicenter = 0.0
+		self.max_tree_age = 0
+		self.stress_mode = False
+		
+		# 1:1 Relationships
+		self.historic = None
+		self.report_queue = None
+		self.undo_stack = None
+		self.metrics = Metrics(self)
+		self.geographical_map = None
 
 		# 1:N Relationships
 		self.stations = []
@@ -210,11 +212,11 @@ class Observatory:
 	
 	@property
 	def events_dict(self) -> dict[int, Event]:
-    return self._events_dict
+		return self._events_dict
 
 	# ------------------------
-  #         METHODS
-  # ------------------------
+	#         METHODS
+	# ------------------------
 
 	# Method to manually create an active event
 	def create_event(
@@ -323,211 +325,344 @@ class Observatory:
 
 		return False
 
+	#method to process all report_queue reports -------------------------------------------------
 	def process_report(self) -> None:
-		pass
+		"""
+		Processes reports from the queue
+		"""
 
+		#checks if the queue is empty
+		if self.report_queue is None or self.report_queue.is_empty():
+			print("No reports in the queue to process.")
+			return
+
+		#unqueue all reports one by one from report_queue
+		while not self.report_queue.is_empty():
+			report = self.report_queue.dequeue()
+
+			# Check if the report ID corresponds to a permanently deleted event
+			#it discards a report from an event that was previously delted
+			if self.historic is not None and report.id in self.historic.deleted:
+				print(f"Report ID {report.id} discarded: Event was previously deleted.")
+				if self.metrics is not None:
+					self.metrics.discarded_reports += 1
+				continue
+
+			event, is_archived = self._find_event(report.id)
+			self._apply_report_rules(report, event, is_archived)
+
+	#method to check if the event is active or is archived
+	def _find_event(self, event_id: int) -> tuple[Event | None, bool]:
+		"""
+		Locates an event by ID across active and archived catalogs.
+		Returns a tuple (Event, is_archived).
+		"""
+		if event_id in self.events_dict:
+			return self.events_dict[event_id], False
+
+		if self.historic is not None and event_id in self.historic.archived:
+			return self.historic.archived[event_id], True
+
+		return None, False
+
+	#ckecks if a report and an event has the same information
+	def _has_same_physical_data(self, report: Report, event: Event) -> bool:
+		"""
+		Checks if physical parameters (magnitude, depth, epicenter, date_time)
+		match between a report and an event (rounded to 1 decimal place).
+		"""
+		rep_mag = round(report.magnitude, 1)
+		ev_mag = round(event.magnitude, 1)
+		rep_depth = round(report.depth, 1)
+		ev_depth = round(event.depth, 1)
+		rep_epi = (round(report.epicenter[0], 1), round(report.epicenter[1], 1))
+		ev_epi = (round(event.epicenter[0], 1), round(event.epicenter[1], 1))
+
+		return (
+			rep_mag == ev_mag and
+			rep_depth == ev_depth and
+			rep_epi == ev_epi and
+			report.date_time == event.date_time
+		)
+
+	#method that compares revision ids
+	def _apply_report_rules(self, report: Report, event: Event | None, is_archived: bool) -> None:
+		"""
+		Applies the 5 comparison rules between an incoming report and an existing event.
+		"""
+		# Rule 1: Unknown ID -> Create new active event
+		#if its not an archived or deleted event, event is None, so its a new event
+		if event is None:
+			#gets the station that gender the report or None to give him one
+			station = report.origin_station[0] if report.origin_station else None
+			created_event = self.create_event(
+				event_id=report.id,
+				magnitude=report.magnitude,
+				depth=report.depth,
+				epicenter=report.epicenter,
+				date_time=report.date_time,
+				station=station
+			)
+			if created_event is not None:
+				# A new event can enter with review >= 1
+				#updates the review to match with the report
+				created_event.review = report.review
+				# Register origin stations from report to the new event
+				if report.origin_station:
+					for st in report.origin_station:
+						created_event.add_origin_station(st)
+			return
+
+		# Rule 2: Higher revision -> Accepted correction
+		if report.review > event.review:
+			# If the event was archived, reactivate it into the active catalog
+			if is_archived and self.historic is not None:
+				reactivated = self.historic.unarchive_event(event.id)
+				if reactivated is not None:
+					#adds to active events
+					self.events_dict[reactivated.id] = reactivated
+					#inserts again to tree
+					if hasattr(self, 'tree') and self.tree is not None:
+						new_node = Node(id=reactivated.id, event=reactivated)
+						self.tree.insert(new_node)
+					event = reactivated
+
+			#edits the event with the new information
+			self.edit_event(
+				event_id=event.id,
+				new_magnitude=report.magnitude,
+				new_depth=report.depth,
+				new_epicenter=report.epicenter,
+				new_date_time=report.date_time
+			)
+			# Update to the report's revision
+			event.review = report.review
+			if self.metrics is not None:
+				self.metrics.corrections_accepted += 1
+			print(f"Correction accepted for Event {event.id}. Updated to review {event.review}.")
+			return
+
+		# Rule 3 & 4: Same revision
+		if report.review == event.review:
+			if self._has_same_physical_data(report, event):
+				# Rule 3: Confirmation -> Add origin stations
+				#add stations from report to the stations of the event
+				if report.origin_station:
+					for st in report.origin_station:
+						event.add_origin_station(st)
+				print(f"Report confirmed for Event {event.id}. Station(s) registered.")
+			else:
+				# Rule 4: Conflict -> Reject report, don't modify event
+				if self.metrics is not None:
+					self.metrics.conflicts += 1
+				print(f"Conflict detected for Event {event.id} at review {report.review}. Report rejected.")
+			return
+
+		# Rule 5: Lower revision -> Discard old report
+		if report.review < event.review:
+			if self.metrics is not None:
+				self.metrics.discarded_reports += 1
+			print(f"Report discarded for Event {event.id}: Review {report.review} is older than current {event.review}.")
+			return
+
+	#general method to calculate priority --------------------------------------------------------------------------------------------
 	def calculate_priority(self, magnitude: float, depth: float, epicenter: tuple[float, float]) -> int:
-        """
+		"""
 		3 (High): M ≥ 6.0, or (M ≥ 4.5 and H ≤ 30.0 km in a populated area)
-        2 (Medium): M ≥ 4.5 (and does not meet the criteria for High)
-        1 (Low): Does not meet any of the above criteria
-        """
-        x, y = epicenter
-        is_populated = False
-        
-        if self.geographical_map is not None:
-            is_populated = self.geographical_map.is_in_populated_zone(x, y)
+		2 (Medium): M ≥ 4.5 (and does not meet the criteria for High)
+		1 (Low): Does not meet any of the above criteria
+		"""
+		x, y = epicenter
+		is_populated = False
+		
+		if self.geographical_map is not None:
+			is_populated = self.geographical_map.is_in_populated_zone(x, y)
 
-        # Priority 3 (High)
-        if magnitude >= 6.0 or (magnitude >= 4.5 and depth <= 30.0 and is_populated):
-            return 3
-            
-        # Priority 2 (Medium)gi
-        elif magnitude >= 4.5:
-            return 2
-            
-        # Priority 1 (Low)
-        else:
-            return 1
+		# Priority 3 (High)
+		if magnitude >= 6.0 or (magnitude >= 4.5 and depth <= 30.0 and is_populated):
+			return 3
+			
+		# Priority 2 (Medium)
+		elif magnitude >= 4.5:
+			return 2
+			
+		# Priority 1 (Low)
+		else:
+			return 1
 
-    def edit_event(
-        self,
-        event_id: int,
-        new_magnitude: float,
-        new_depth: float,
-        new_epicenter: tuple[float, float],
-        new_date_time: datetime
-    ) -> Event | None:
-        if event_id not in self.events_dict:
-            print(f"Error: Event ID {event_id} no se encuentra en el catálogo activo.")
-            return None
+	def edit_event(
+		self,
+		event_id: int,
+		new_magnitude: float,
+		new_depth: float,
+		new_epicenter: tuple[float, float],
+		new_date_time: datetime
+	) -> Event | None:
+		if event_id not in self.events_dict:
+			print(f"Error: Event ID {event_id} no se encuentra en el catálogo activo.")
+			return None
 
-        event_to_edit = self.events_dict[event_id]
+		event_to_edit = self.events_dict[event_id]
 
-        if not (-2.0 <= new_magnitude <= 10.0):
-            print("Error: La magnitud debe estar entre -2.0 y 10.0.")
-            return None
-        if not (0.0 <= new_depth <= 700.0):
-            print("Error: La profundidad debe estar entre 0.0 y 700.0 km.")
-            return None
-        if new_date_time > self.clock_simulation:
-            print("Error: El tiempo de ocurrencia no puede ser futuro.")
-            return None
+		if not (-2.0 <= new_magnitude <= 10.0):
+			print("Error: La magnitud debe estar entre -2.0 y 10.0.")
+			return None
+		if not (0.0 <= new_depth <= 700.0):
+			print("Error: La profundidad debe estar entre 0.0 y 700.0 km.")
+			return None
+		if new_date_time > self.clock_simulation:
+			print("Error: El tiempo de ocurrencia no puede ser futuro.")
+			return None
 
-        # Calculate the new priority
-        old_priority = event_to_edit.priority
-        old_magnitude = event_to_edit.magnitude
-        new_priority = self.calculate_priority(new_magnitude, new_depth, new_epicenter)
+		# Calculate the new priority
+		old_priority = event_to_edit.priority
+		old_magnitude = event_to_edit.magnitude
+		new_priority = self.calculate_priority(new_magnitude, new_depth, new_epicenter)
 
-        # Check whether the key K = (P, M, I) will change
-        key_changed = (old_priority != new_priority) or (old_magnitude != new_magnitude)
+		# Check whether the key K = (P, M, I) will change
+		key_changed = (old_priority != new_priority) or (old_magnitude != new_magnitude)
 
-        if key_changed and self.tree is not None:
-            deleted_node = self.tree.delete(event_id)
+		if key_changed and self.tree is not None:
+			deleted_node = self.tree.delete(event_id)
 
 		# Updating Event Attributes
-        event_to_edit.magnitude = round(new_magnitude, 1)
-        event_to_edit.depth = round(new_depth, 1)
-        event_to_edit.epicenter = new_epicenter
-        event_to_edit.date_time = new_date_time
-        event_to_edit.priority = new_priority
-        event_to_edit.attention_state = "Pending"
-        event_to_edit.review += 1
+		event_to_edit.magnitude = round(new_magnitude, 1)
+		event_to_edit.depth = round(new_depth, 1)
+		event_to_edit.epicenter = new_epicenter
+		event_to_edit.date_time = new_date_time
+		event_to_edit.priority = new_priority
+		event_to_edit.attention_state = "Pending"
+		event_to_edit.review += 1
 
-        # Reinsert into the tree if the key has changed
-        if key_changed and self.tree is not None:
-            deleted_node = Node(id=event_id, event=event_to_edit)
-            self.tree.insert(updated_node)
-		#Pendientes en el Notion
+		# Reinsert into the tree if the key has changed
+		if key_changed and self.tree is not None:
+			updated_node = Node(id=event_id, event=event_to_edit)
+			self.tree.insert(updated_node)
 
-        print(f"Event {event_id} corregido. Clave actualizada: {key_changed}.")
-        return event_to_edit
+		print(f"Event {event_id} corregido. Clave actualizada: {key_changed}.")
+		return event_to_edit
 
 	def remove_event(self, event_id: int) -> None:
-		#Validation: Check if the event exists in the active catalog
-        if not hasattr(self, 'events_dict') or event_id not in self.events_dict:
-            print(f"Error: El evento {event_id} no se encuentra en el catálogo activo.")
-            return None
+		# Validation: Check if the event exists in the active catalog
+		if not hasattr(self, 'events_dict') or event_id not in self.events_dict:
+			print(f"Error: El evento {event_id} no se encuentra en el catálogo activo.")
+			return None
 
-        event_to_remove = self.events_dict[event_id]
+		event_to_remove = self.events_dict[event_id]
 
-        print(f"Preparando para eliminar el evento activo: ID={event_id}, K=(P:{event_to_remove.priority}, M:{event_to_remove.magnitude})")
+		print(f"Preparando para eliminar el evento activo: ID={event_id}, K=(P:{event_to_remove.priority}, M:{event_to_remove.magnitude})")
 
 		# Remove from the tree if it exists
-        if hasattr(self, 'tree') and self.tree is not None:
-            self.tree.delete(event_to_remove.get_key())
+		if hasattr(self, 'tree') and self.tree is not None:
+			self.tree.delete(event_to_remove.get_key())
 
-        del self.events_dict[event_id]
+		del self.events_dict[event_id]
 
-	
-        if self.historic is not None:
-            self.historic.delete_event(event_to_remove)
+		if self.historic is not None:
+			self.historic.delete_event(event_to_remove)
 
 		# TODO: Handle associations: Remove this event from any Association objects where it is referenced.
 		# Update metrics if applicable
-        if self.metrics is not None:
-            self.metrics.active_events -= 1
+		if self.metrics is not None:
+			self.metrics.active_events -= 1
 
-        # TODO: Registrar acción completa en undo_stack (Deep Copy)
+		# TODO: Registrar acción completa en undo_stack (Deep Copy)
 
-        print(f"Eliminación completada: El identificador {event_id} ha sido retirado del catálogo.")
-        return event_to_remove
+		print(f"Eliminación completada: El identificador {event_id} ha sido retirado del catálogo.")
+		return event_to_remove
 
 	def archive_subtree(self) -> None:
+		if self.tree is None or self.tree.root is None:
+			print("El catálogo activo está vacío. No hay nada que archivar.")
+			return
 
-        if self.tree is None or self.tree.root is None:
-            print("El catálogo activo está vacío. No hay nada que archivar.")
-            return
+		# Search for the best branch to archive based on the defined rules
+		best_root_node, nodes_to_archive = self._find_best_branch()
 
-        # Search for the best branch to archive based on the defined rules
-        best_root_node, nodes_to_archive = self._find_best_branch()
+		if not nodes_to_archive:
+			print("No existe ninguna rama que cumpla los criterios para ser archivada.")
+			return
 
-        if not nodes_to_archive:
-            print("No existe ninguna rama que cumpla los criterios para ser archivada.")
-            return
+		ids_afectados = [n.id for n in nodes_to_archive]
+		print(f"Archivando subárbol con raíz ID={best_root_node.id}.")
+		print(f"Eventos afectados ({len(ids_afectados)}): {ids_afectados}")
+		print(f"Justificación: Todos los eventos tienen P=1 y antigüedad > {self.max_tree_age} horas.")
 
-        ids_afectados = [n.id for n in nodes_to_archive]
-        print(f"Archivando subárbol con raíz ID={best_root_node.id}.")
-        print(f"Eventos afectados ({len(ids_afectados)}): {ids_afectados}")
-        print(f"Justificación: Todos los eventos tienen P=1 y antigüedad > {self.max_tree_age} horas.")
-
-        #extract the events from the nodes and archive them
-        for node in nodes_to_archive:
-            event_id = node.id
-            
-            if event_id in self.events_dict:
-                event_to_archive = self.events_dict[event_id]
-                
-                self.tree.delete(event_id)
-                
-                del self.events_dict[event_id]
-                
-                if self.historic is not None:
-                    self.historic.archive_event(event_to_archive)
+		# extract the events from the nodes and archive them
+		for node in nodes_to_archive:
+			event_id = node.id
+			
+			if event_id in self.events_dict:
+				event_to_archive = self.events_dict[event_id]
+				
+				self.tree.delete(event_id)
+				
+				del self.events_dict[event_id]
+				
+				if self.historic is not None:
+					self.historic.archive_event(event_to_archive)
 
 		if self.metrics is not None:
 			self.metrics.active_events -= len(nodes_to_archive)
 
-        print("Archivo masivo ejecutado con éxito.")
+		print("Archivo masivo ejecutado con éxito.")
 
-    # --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
+	# --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
 
-    def _find_best_branch(self) -> tuple:
-        """
-        Traverse the tree to find the branch that meets the strict rules.
-        Apply the tie-breaking criteria using tuple comparisons.
-        """
-        # Obtenemos todos los nodos del árbol junto con su profundidad real (raíz = 0)
-        all_nodes_with_depth = self._get_all_nodes_with_depth(self.tree.root, 0)
-        
-        best_root = None
-        best_nodes_list = []
-        # Tupla para guardar el puntaje máximo: (cantidad_nodos, profundidad_raiz, id_raiz)
-        best_score = (0, -1, -1) 
-
-        for current_node, depth in all_nodes_with_depth:
-            # Extraemos todos los descendientes de este nodo (incluyéndolo a él)
-            subtree_nodes = self.tree.preorder(current_node)
-            
-            # Validamos la regla: TODOS deben tener prioridad 1 y antigüedad > T horas
-            is_eligible = True
-            for n in subtree_nodes:
-                event = n.__event() 
-
-                age_timedelta = self.clock_simulation - event.date_time
-                age_in_hours = age_timedelta.total_seconds() / 3600.0
-                
-                if event.priority != 1 or age_in_hours <= self.max_tree_age:
-                    is_eligible = False
-                    break # Si un solo nodo incumple, la rama entera se descarta
-            
-            # Si la rama completa pasó la prueba, calculamos su puntaje de desempate
-            if is_eligible:
-                current_score = (len(subtree_nodes), depth, current_node.id)
-                
-                # En Python, esto compara mágicamente cantidad, luego profundidad, luego ID
-                if current_score > best_score:
-                    best_score = current_score
-                    best_root = current_node
-                    best_nodes_list = subtree_nodes
-
-        return best_root, best_nodes_list
-
-    def _get_all_nodes_with_depth(self, current_node, current_depth: int) -> list[tuple]:
+	def _find_best_branch(self) -> tuple:
 		"""
-        Traverse the entire tree and return a list of tuples: (Node, Depth).
-        The depth of the root node is 0, its children are 1, and so on.
-        """
-        if current_node is None:
-            return []
-            
-        nodes = [(current_node, current_depth)]
-        nodes.extend(self._get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
-        nodes.extend(self._get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
-        return nodes
+		Traverse the tree to find the branch that meets the strict rules.
+		Apply the tie-breaking criteria using tuple comparisons.
+		"""
+		# Obtenemos todos los nodos del árbol junto con su profundidad real (raíz = 0)
+		all_nodes_with_depth = self._get_all_nodes_with_depth(self.tree.root, 0)
+		
+		best_root = None
+		best_nodes_list = []
+		# Tupla para guardar el puntaje máximo: (cantidad_nodos, profundidad_raiz, id_raiz)
+		best_score = (0, -1, -1) 
 
-	def archive_subtree(self) -> None:
-		pass
+		for current_node, depth in all_nodes_with_depth:
+			# Extraemos todos los descendientes de este nodo (incluyéndolo a él)
+			subtree_nodes = self.tree.preorder(current_node)
+			
+			# Validamos la regla: TODOS deben tener prioridad 1 y antigüedad > T horas
+			is_eligible = True
+			for n in subtree_nodes:
+				event = n.event if hasattr(n, 'event') else None
+
+				if event is not None:
+					age_timedelta = self.clock_simulation - event.date_time
+					age_in_hours = age_timedelta.total_seconds() / 3600.0
+					
+					if event.priority != 1 or age_in_hours <= self.max_tree_age:
+						is_eligible = False
+						break # Si un solo nodo incumple, la rama entera se descarta
+			
+			# Si la rama completa pasó la prueba, calculamos su puntaje de desempate
+			if is_eligible:
+				current_score = (len(subtree_nodes), depth, current_node.id)
+				
+				# En Python, esto compara mágicamente cantidad, luego profundidad, luego ID
+				if current_score > best_score:
+					best_score = current_score
+					best_root = current_node
+					best_nodes_list = subtree_nodes
+
+		return best_root, best_nodes_list
+
+	def _get_all_nodes_with_depth(self, current_node, current_depth: int) -> list[tuple]:
+		"""
+		Traverse the entire tree and return a list of tuples: (Node, Depth).
+		The depth of the root node is 0, its children are 1, and so on.
+		"""
+		if current_node is None:
+			return []
+			
+		nodes = [(current_node, current_depth)]
+		nodes.extend(self._get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
+		nodes.extend(self._get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
+		return nodes
 
 	def update_clock(self) -> None:
 		pass
