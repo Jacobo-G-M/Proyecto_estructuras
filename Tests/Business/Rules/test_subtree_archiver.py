@@ -10,7 +10,7 @@ MODELS_DIR = os.path.join(PROJECT_ROOT, 'Models')
 if MODELS_DIR not in sys.path:
     sys.path.insert(0, MODELS_DIR)
 
-from Business.Rules.SubtreeArchiver import SubtreeArchiver
+from Business.Rules.sub_tree_archiver import SubtreeArchiver
 from Business.Structures.avl import AVL
 from Models.event import Event
 from Models.node import Node
