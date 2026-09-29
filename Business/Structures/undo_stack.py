@@ -1,4 +1,4 @@
-from ...Models.action import Action
+from Models.action import Action
 class Undo_stack:
     def __init__(self) -> None:
         # Internal list to represent the stack of actions

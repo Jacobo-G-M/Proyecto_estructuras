@@ -1,4 +1,4 @@
-from ..Models.event import Event
+from Models.event import Event
 class Historic:
     def __init__(self) -> None:
         #Attributes
