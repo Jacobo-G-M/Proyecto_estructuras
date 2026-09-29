@@ -261,7 +261,7 @@ class Observatory:
 		# -----------------------------------------------------------------
 		# 2. CHECK ID UNIQUENESS (Active, Archived, or Deleted)
 		# -----------------------------------------------------------------
-		if self._is_id_registered(event_id):
+		if self._events_dict.get(event_id) is not None or (self.historic and event_id in self.historic.archived) or ( event_id in self.historic.deleted):
 			print(f"Error: Event ID {event_id} already exists in active, archived, or deleted catalog.")
 			return None
 
@@ -312,29 +312,6 @@ class Observatory:
 			self.metrics.register_case(case)
 		if turn:
 			self.metrics.register_turn(turn)
-
-	# Method to verify if an event ID is already taken
-	def _is_id_registered(self, event_id: int) -> bool:
-		# Check in historic (archived and deleted)
-		if self.historic is not None:
-			# Check the archived events
-			for ev in self.historic.archived:
-				if ev.id == event_id:
-					return True
-			# Check the deleted events
-			for ev in self.historic.deleted:
-				if ev.id == event_id:
-					return True
-
-		# Check in active tree
-		if hasattr(self, 'tree') and self.tree is not None:
-			for node in self.tree.inorder():
-				# Extract the event ID from get_key(): (priority, magnitude, event_id)
-				_, _, current_event_id = node.get_key()
-				if current_event_id == event_id:
-					return True
-
-		return False
 
 	#method to process all report_queue reports -------------------------------------------------
 	def process_report(self) -> None:
