@@ -75,9 +75,6 @@ class Zone:
                 f"is_populated={self._is_populated}, "
                 f"ubication_x={self._ubication_x}, ubication_y={self._ubication_y})")
 
-
-    #--- method ---
-
     def contains(self, x: float, y: float) -> bool:
         x_min, x_max = self.ubication_x
         y_min, y_max = self.ubication_y

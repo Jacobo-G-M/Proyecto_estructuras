@@ -1,0 +1,1 @@
+# Tests.Business.Structures package

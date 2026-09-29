@@ -3,8 +3,12 @@ import sys
 import os
 from datetime import datetime
 
-# Ensure project root is in sys.path for test discovery
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+MODELS_DIR = os.path.join(PROJECT_ROOT, 'Models')
+if MODELS_DIR not in sys.path:
+    sys.path.insert(0, MODELS_DIR)
 
 from Business.historic import Historic
 from Models.event import Event
