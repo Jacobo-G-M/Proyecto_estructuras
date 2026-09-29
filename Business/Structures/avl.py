@@ -30,6 +30,8 @@ class AVL(Tree):
   # ------------------------
   # Hook for template method in Tree: rebalances after recursive insertion
   def _post_process(self, node: Node) -> Node:
+    if self.__stress_mode:
+      return node  # Skip balancing in stress mode
     return self.balance(node)
 
   # Main method to restore balance after stress mode
