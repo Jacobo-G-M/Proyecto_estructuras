@@ -534,7 +534,7 @@ class Observatory:
 		key_changed = (old_priority != new_priority) or (old_magnitude != new_magnitude)
 
 		if key_changed and self.tree is not None:
-			deleted_node = self.tree.delete(event_id)
+			deleted_node = self.tree.delete(event_to_edit.get_key())
 
 		# Updating Event Attributes
 		event_to_edit.magnitude = round(new_magnitude, 1)
@@ -606,7 +606,7 @@ class Observatory:
 			if event_id in self.events_dict:
 				event_to_archive = self.events_dict[event_id]
 				
-				self.tree.delete(event_id)
+				self.tree.delete(event_to_archive.get_key())
 				
 				del self.events_dict[event_id]
 				
