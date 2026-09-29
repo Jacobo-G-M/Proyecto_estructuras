@@ -6,7 +6,7 @@ from Rules.metrics import Metrics
 from geographical_map import Geographical_map
 from ..Models.station import Station
 from Rules.asociation import Association
-from Rules.SubtreeArchiver import SubtreeArchiver
+from Rules.sub_tree_archiver import SubtreeArchiver
 from Structures.tree import Tree
 from Structures.avl import AVL
 from ..Models.event import Event
