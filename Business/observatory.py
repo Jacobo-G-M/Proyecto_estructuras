@@ -1,18 +1,18 @@
 from datetime import datetime, timedelta
-from Historic import Historic
+from historic import Historic
 from Structures.report_queue import Report_Queue
 from Structures.undo_stack import Undo_stack
-from Rules.Metrics import Metrics
-from Geographical_map import Geographical_map
+from Rules.metrics import Metrics
+from geographical_map import Geographical_map
 from ..Models.station import Station
-from Rules.Asociation import Association
+from Rules.asociation import Association
 from Rules.SubtreeArchiver import SubtreeArchiver
 from Structures.tree import Tree
 from Structures.avl import AVL
 from ..Models.event import Event
 from ..Models.report import Report
 from ..Models.node import Node
-import Business.Version as Version
+import Business.version as Version
 
 
 class Observatory:
