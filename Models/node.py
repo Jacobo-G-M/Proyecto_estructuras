@@ -77,8 +77,8 @@ class Node:
     return self.__event.get_key()
   
   def balance_factor(self) -> int:
-    left_h = self.__left_son.__height if self.__left_son else -1
-    right_h = self.__right_son.__height if self.__right_son else -1
+    left_h = self.__left_son.height if self.__left_son else -1
+    right_h = self.__right_son.height if self.__right_son else -1
     return left_h - right_h
 
   # --------------------------------------------------------

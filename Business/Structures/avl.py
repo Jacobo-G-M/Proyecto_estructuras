@@ -1,7 +1,7 @@
 from ...Models.node import Node
 try:
   from .tree import Tree
-except ImportError:
+except (ImportError, ValueError):
   from tree import Tree
 from typing import Callable
 
