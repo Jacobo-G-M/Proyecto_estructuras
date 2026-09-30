@@ -686,3 +686,63 @@ class Observatory:
             pass # TODO: self.metrics.mark_reviewed_count += 1
         print(f"El evento {event_id} ha sido marcado exitosamente como 'Reviewed'.")
         return True
+	
+	def query_event(self, event_id: int) -> dict | None:
+        # 1. Search in the Active Catalog
+        if hasattr(self, 'events_dict') and event_id in self.events_dict:
+            event = self.events_dict[event_id]
+            
+            # Obtain node metrics (depth, height, balance factor) from the AVL tree
+            node_metrics = self._get_node_metrics(event_id)
+            
+            # Check if the epicenter is in a populated zone
+            is_populated = False
+            if getattr(self, 'geographical_map', None) is not None:
+                is_populated = self.geographical_map.is_in_populated_zone(event.epicenter[0], event.epicenter[1])
+
+            return {
+                "id": event.id,
+                "status": "Active",
+                "current_data": {
+                    "magnitude": event.magnitude,
+                    "depth": event.depth,
+                    "epicenter": event.epicenter,
+                    "date_time": event.date_time
+                },
+				"priority": event.priority,
+                "review": event.review,
+                "stations": getattr(event, "stations", []),
+                "is_in_populated_zone": is_populated,
+                "key_K": (event.priority, event.magnitude, event.id),
+                "attention_state": event.attention_state,
+                "node_depth": node_metrics.get("depth", 0),
+                "height": node_metrics.get("height", 0),
+                "balance_factor": node_metrics.get("balance_factor", 0),
+                #"associations": self._get_event_associations(event_id) PENDING: Implement association retrieval if needed
+            }
+
+        # 2. Search in the Historical Catalog (Archived or Deleted)
+        if getattr(self, 'historic', None) is not None:
+            if hasattr(self.historic, 'archived') and event_id in self.historic.archived:
+                event = self.historic.archived[event_id]
+                return {"id": event_id, "status": "Archived", "event_data": event}
+            
+            if hasattr(self.historic, 'deleted') and event_id in self.historic.deleted:
+                event = self.historic.deleted[event_id]
+                return {"id": event_id, "status": "Deleted", "event_data": event}
+
+        print(f"Error: El identificador {event_id} no existe en ningún catálogo.")
+        return None
+
+	def _get_node_metrics(self, event_id: int) -> dict:
+        """
+		Retrieves the depth, height, and balance factor of the node corresponding to the given event_id in the AVL tree.
+        """
+    	if event_id not in self.events_dict or self.tree is None:
+            return {"depth": 0, "height": 0, "balance_factor": 0}
+            
+        event = self.events_dict[event_id]
+
+        search_key = event.get_key()
+        
+        return self.tree.get_node_metrics(search_key)
