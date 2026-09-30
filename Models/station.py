@@ -1,7 +1,4 @@
-try:
-    import Models.report as report_module
-except ImportError:
-    import report as report_module
+import Models.report as report_module
 
 class Station:
     def __init__(

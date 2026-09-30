@@ -1,5 +1,5 @@
 from __future__ import annotations
-from event import Event
+from Models.event import Event
 
 class Node:
   # ------------------------

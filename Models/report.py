@@ -1,9 +1,6 @@
 from datetime import datetime
 
-try:
-    import Models.station as station_module
-except ImportError:
-    import station as station_module
+import Models.station as station_module
 
 class Report:
     def __init__(

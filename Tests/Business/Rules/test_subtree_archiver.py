@@ -17,7 +17,6 @@ from Models.node import Node
 
 
 class TestSubtreeArchiver(unittest.TestCase):
-    """Unit tests for Section 10 SubtreeArchiver branch evaluation and tie-breaking rules."""
 
     def setUp(self):
         self.clock = datetime(2026, 3, 15, 12, 0, 0)

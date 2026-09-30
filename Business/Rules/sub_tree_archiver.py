@@ -1,15 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
-try:
-    from Business.Structures.tree import Tree
-    from Models.node import Node
-except ImportError:
-    try:
-        from Structures.tree import Tree
-        from ...Models.node import Node
-    except ImportError:
-        from tree import Tree
-        from node import Node
+from Business.Structures.tree import Tree
+from Models.node import Node
 
 class SubtreeArchiver:
     """

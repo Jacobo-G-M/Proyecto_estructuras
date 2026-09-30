@@ -1,11 +1,5 @@
 from abc import ABC, abstractmethod
-try:
-  from ...Models.node import Node
-except (ImportError, ValueError):
-  try:
-    from Models.node import Node
-  except ImportError:
-    from node import Node
+from Models.node import Node
 
 class Tree(ABC):
   # ------------------------

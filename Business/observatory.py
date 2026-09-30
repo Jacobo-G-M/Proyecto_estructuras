@@ -1,17 +1,18 @@
 from datetime import datetime, timedelta
-from historic import Historic
-from Structures.report_queue import Report_Queue
-from Structures.undo_stack import Undo_stack
-from Rules.metrics import Metrics
-from geographical_map import Geographical_map
-from ..Models.station import Station
-from Rules.asociation import Association
-from Rules.sub_tree_archiver import SubtreeArchiver
-from Structures.tree import Tree
-from Structures.avl import AVL
-from ..Models.event import Event
-from ..Models.report import Report
-from ..Models.node import Node
+from Business.historic import Historic
+from Business.Structures.report_queue import Report_Queue
+from Business.Structures.undo_stack import Undo_stack
+from Business.Rules.metrics import Metrics
+from Business.geographical_map import Geographical_map
+from Models.station import Station
+from Business.Rules.asociation import Association
+from Business.Rules.sub_tree_archiver import SubtreeArchiver
+from Business.Rules.queries import Queries
+from Business.Structures.tree import Tree
+from Business.Structures.avl import AVL
+from Models.event import Event
+from Models.report import Report
+from Models.node import Node
 import Business.version as Version
 
 
@@ -670,6 +671,7 @@ class Observatory:
 
 	def undo_action(self) -> None:
 		pass
+
 	# Method to identify high-priority events whose node depth exceeds limit L
 	def get_costly_access(self) -> list[int]:
 		"""
@@ -687,3 +689,36 @@ class Observatory:
 				costly_ids.append(node.id)
 
 		return costly_ids
+
+	# ------------------------
+	# Section 11 Queries Facade Delegation Methods
+	# ------------------------
+	def query_top_k_pending(self, k: int) -> tuple[list[Event], int]:
+		"""Delegates to Queries.top_k_pending."""
+		return Queries.top_k_pending(self.tree, k)
+
+	def query_events_by_filters(
+		self,
+		min_mag: float | None = None,
+		max_mag: float | None = None,
+		max_depth: float | None = None,
+		start_date: datetime | None = None,
+		end_date: datetime | None = None
+	) -> tuple[list[Event], int]:
+		"""Delegates to Queries.events_by_filters."""
+		return Queries.events_by_filters(self.tree, min_mag, max_mag, max_depth, start_date, end_date)
+
+	def query_event_associations(
+		self,
+		event_id: int,
+		max_time_hours: float | None = None,
+		max_distance_km: float | None = None
+	) -> tuple[dict, int]:
+		"""Delegates to Queries.event_associations."""
+		max_t = max_time_hours if max_time_hours is not None else self.max_time
+		max_d = max_distance_km if max_distance_km is not None else self.distance_epicenter
+		return Queries.event_associations(self.tree, self.historic, self.associations, event_id, max_t, max_d)
+
+	def query_costly_high_priority_events(self) -> tuple[list[dict], int]:
+		"""Delegates to Queries.costly_high_priority_events."""
+		return Queries.costly_high_priority_events(self.tree, self.limit)

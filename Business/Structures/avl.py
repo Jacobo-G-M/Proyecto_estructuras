@@ -1,9 +1,6 @@
-from ...Models.node import Node
-try:
-  from .tree import Tree
-except (ImportError, ValueError):
-  from tree import Tree
 from typing import Callable
+from Business.Structures.tree import Tree
+from Models.node import Node
 
 class AVL(Tree):
   # ------------------------
