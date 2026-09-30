@@ -664,3 +664,25 @@ class Observatory:
 				costly_ids.append(node.id)
 
 		return costly_ids
+	def mark_as_reviewed(self, event_id: int) -> bool:
+        # 1. Search for the event in the active catalog
+        if not hasattr(self, 'events_dict') or event_id not in self.events_dict:
+            print(f"Error: El evento con ID {event_id} no se encuentra en el catálogo activo.")
+            return False
+
+        event = self.events_dict[event_id]
+        # 2. Validate that the event is not already marked as "Reviewed"
+        if event.attention_state == "Reviewed":
+            print(f"Aviso: El evento {event_id} ya se encuentra marcado como 'Reviewed'.")
+            return True
+
+        # TODO: Registrar el estado actual en self.undo_stack (Patrón Memento / Deep Copy) antes de modificar
+
+        # 3. Change the attention state
+        event.attention_state = "Reviewed"
+
+        # 4. Update metrics if applicable
+        if self.metrics is not None:
+            pass # TODO: self.metrics.mark_reviewed_count += 1
+        print(f"El evento {event_id} ha sido marcado exitosamente como 'Reviewed'.")
+        return True
