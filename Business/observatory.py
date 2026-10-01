@@ -739,6 +739,10 @@ class Observatory:
 		"""Delegates atomic topology load and validation to ScenarioPersistence."""
 		return ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
 
-	def load_scenario_by_insertions(self, filepath: str) -> dict:
+	def load_scenario_by_insertions(self, filepath: str, adopt_avl: bool = False) -> dict:
 		"""Delegates sequential insertion comparison to ScenarioPersistence."""
-		return ScenarioPersistence.load_by_insertions(filepath, self.geographical_map)
+		result = ScenarioPersistence.load_by_insertions(filepath, self.geographical_map)
+		if adopt_avl and result.get("avl") is not None:
+			self.tree = result["avl"]
+			self.events_dict = {ev.id: ev for ev in result.get("events", [])}
+		return result
