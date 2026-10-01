@@ -154,7 +154,7 @@ class ScenarioPersistence:
         stress_mode_override: bool | None = None,
     ) -> list[str]:
         """
-        Validates the JSON scenario data according to all Section 12 criteria:
+        Validates the JSON scenario data according to all criteria:
         1. Required fields and data formatting.
         2. ID uniqueness (active, archived, and deleted events must be disjoint).
         3. Pointer integrity and cycle detection (valid tree graph with single parent per child).
@@ -378,7 +378,7 @@ class ScenarioPersistence:
         if not has_cycle and len(visited) == len(nodes_dict):
             _verify_metrics(root_id)
 
-        # 7. Stress Mode rule (Section 12)
+        # 7. Stress Mode rule
         # An unbalanced tree (|BF| > 1) can ONLY be loaded with stress_mode = True
         file_stress = bool(data.get("stress_mode", False))
         effective_stress = file_stress if stress_mode_override is None else stress_mode_override
@@ -398,7 +398,7 @@ class ScenarioPersistence:
     ) -> tuple[bool, list[str]]:
         """
         Loads and reconstructs an operational scenario from a JSON file using direct topology reconstruction.
-        Validates all Section 12 invariants atomically:
+        Validates all invariants atomically:
         - If any error is detected, the current scenario remains 100% UNCHANGED, and (False, errors) is returned.
         - If valid, updates the entire observatory state atomically and returns (True, []).
         """
@@ -513,13 +513,22 @@ class ScenarioPersistence:
                 cur_node.right_son = right_node
                 right_node.father = cur_node
 
-            cur_node.update_height()
-
         if root_id is not None and root_id in nodes_map:
             new_tree.root = nodes_map[root_id]
             new_tree.root.father = None
         else:
             new_tree.root = None
+
+        # Update node heights bottom-up (post-order) so parents compute accurate heights
+        def _post_order_heights(node: Node | None) -> None:
+            if node is None:
+                return
+            _post_order_heights(node.left_son)
+            _post_order_heights(node.right_son)
+            node.update_height()
+
+        if new_tree.root is not None:
+            _post_order_heights(new_tree.root)
 
         observatory.tree = new_tree
         observatory.events_dict = events_dict
