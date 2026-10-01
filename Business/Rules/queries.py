@@ -181,7 +181,7 @@ class Queries:
                         if rep not in replicas:
                             replicas.append(rep)
 
-        # 3. Discover candidate references (Section 7 criteria: higher magnitude, strictly earlier, time <= W, dist <= R)
+        # 3. Discover candidate references (higher magnitude, strictly earlier, time <= W, dist <= R)
         candidates_raw: list[tuple[Event, str]] = []
 
         # Check in active tree

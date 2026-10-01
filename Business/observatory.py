@@ -8,6 +8,7 @@ from Models.station import Station
 from Business.Rules.asociation import Association
 from Business.Rules.sub_tree_archiver import SubtreeArchiver
 from Business.Rules.queries import Queries
+from Business.scenario_persistence import ScenarioPersistence
 from Business.Structures.tree import Tree
 from Business.Structures.avl import AVL
 from Models.event import Event
@@ -37,7 +38,7 @@ class Observatory:
 		self.associations = []
 		self.tree: Tree = AVL(id=1, on_rotation=self._handle_tree_rotation)
 		# Auxiliary dictionary for O(1) access to events by ID
-		self.events_dict: dict[int, Event] = {}
+		self._events_dict: dict[int, Event] = {}
 
 	# Getter of clock_simulation attribute
 	@property
@@ -216,6 +217,13 @@ class Observatory:
 	@property
 	def events_dict(self) -> dict[int, Event]:
 		return self._events_dict
+
+	@events_dict.setter
+	def events_dict(self, value: dict[int, Event]) -> None:
+		if isinstance(value, dict):
+			self._events_dict = value
+		else:
+			raise TypeError("events_dict must be a dictionary.")
 
 	# ------------------------
 	#         METHODS
@@ -722,3 +730,15 @@ class Observatory:
 	def query_costly_high_priority_events(self) -> tuple[list[dict], int]:
 		"""Delegates to Queries.costly_high_priority_events."""
 		return Queries.costly_high_priority_events(self.tree, self.limit)
+
+	def save_scenario(self, filepath: str) -> None:
+		"""Delegates full structural scenario export to ScenarioPersistence."""
+		ScenarioPersistence.export_to_json(self, filepath)
+
+	def load_scenario_by_topology(self, filepath: str, stress_mode_override: bool | None = None) -> tuple[bool, list[str]]:
+		"""Delegates atomic topology load and validation to ScenarioPersistence."""
+		return ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+
+	def load_scenario_by_insertions(self, filepath: str) -> dict:
+		"""Delegates sequential insertion comparison to ScenarioPersistence."""
+		return ScenarioPersistence.load_by_insertions(filepath, self.geographical_map)
