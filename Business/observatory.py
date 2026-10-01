@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta
 from Business.historic import Historic
 from Business.Structures.report_queue import Report_Queue
@@ -75,9 +76,11 @@ class Observatory:
 	@max_time.setter
 	def max_time(self, value: float) -> None:
 		if isinstance(value, (int, float)) and value >= 0:
-			self._max_time = float(value)
-		else:
-			raise ValueError("Max time must be a non-negative number.")
+    		self._max_time = float(value)
+    		if hasattr(self, 'events_dict'):
+        		self.update_associations()
+	else:
+    	raise ValueError("Max time must be a non-negative number.")
 
 	# Getter of distance_epicenter attribute
 	@property
@@ -89,6 +92,8 @@ class Observatory:
 	def distance_epicenter(self, value: float) -> None:
 		if isinstance(value, (int, float)) and value >= 0:
 			self._distance_epicenter = float(value)
+			if hasattr(self, 'events_dict'):
+        		self.update_associations()
 		else:
 			raise ValueError("Distance must be a non-negative number.")
 
@@ -308,7 +313,7 @@ class Observatory:
 		# (e.g., station.my_reports.append(...) or add to event accepted stations)
 
 		# TODO: Record action in self.undo_stack to allow undoing this creation
-		# TODO: Recalculate associations if needed
+		self.update_associations()
 
 		print(f"Event {event_id} successfully created with priority {priority}.")
 		return new_event
@@ -558,7 +563,7 @@ class Observatory:
 		if key_changed and self.tree is not None:
 			updated_node = Node(id=event_id, event=event_to_edit)
 			self.tree.insert(updated_node)
-
+		self.update_associations()
 		print(f"Event {event_id} corregido. Clave actualizada: {key_changed}.")
 		return event_to_edit
 
@@ -581,7 +586,7 @@ class Observatory:
 		if self.historic is not None:
 			self.historic.delete_event(event_to_remove)
 
-		# TODO: Handle associations: Remove this event from any Association objects where it is referenced.
+		self.update_associations()
 		# Update metrics if applicable
 		if self.metrics is not None:
 			self.metrics.active_events -= 1
@@ -882,3 +887,86 @@ class Observatory:
             reporte.append("Auditoría Exitosa: El árbol cumple todas las propiedades matemáticas de estructura y orden.")
 
         return reporte
+	# ---------------------------------------------------------
+	# ASSOCIATION LOGIC (REPLICAS AND REFERENCES)
+	# ---------------------------------------------------------
+
+	def update_associations(self) -> None:
+		"""
+		Recalculates all associations in the system.
+		Must be called upon completion of create_event, edit_event, remove_event, or when changing max_time / distance_epicenter.
+		"""
+		# 1. Clear current associations
+		self.associations = []
+		
+		# 2. Retrieve all valid events (Active and Archived, excluding Deleted)
+		valid_events = self._get_valid_events_for_associations()
+		
+		if not valid_events:
+			return
+
+		# Temporary dictionary to build associations (Key: Parent ID)
+		assoc_dict: dict[int, Association] = {}
+
+		# 3. Evaluate each event to find its best parent (reference)
+		for child in valid_events:
+			best_parent = self._find_best_candidate(child, valid_events)
+			
+			if best_parent is not None:
+				# If the parent does not have an association created yet, create it
+				if best_parent.id not in assoc_dict:
+					assoc_dict[best_parent.id] = Association(assoc_id=best_parent.id, chosen_reference=best_parent)
+				
+				# Add the child to the parent's list of replicas
+				# Internal print of add_replica can be silenced if many, or kept for traceability
+				assoc_dict[best_parent.id].add_replica(child)
+
+		# 4. Save the resulting associations in the official list
+		self.associations = list(assoc_dict.values())
+		print(f"Asociaciones actualizadas: {len(self.associations)} eventos de referencia detectados.")
+
+	def _get_valid_events_for_associations(self) -> list[Event]:
+		"""
+		Returns a flat list with all active and archived events.
+		Deleted events are excluded according to business rules.
+		"""
+		events = list(self.events_dict.values())
+		
+		if self.historic is not None and hasattr(self.historic, 'archived'):
+			events.extend(self.historic.archived.values())
+			
+		return events
+
+	def _find_best_candidate(self, child: Event, valid_events: list[Event]) -> Event | None:
+		"""
+		Finds the best reference event for a given child event.
+		Applies restrictive rules and a deterministic tie-breaking criterion.
+		"""
+		best_parent = None
+		# Tuple to store the minimum score: (distance, time_difference, -magnitude, -id)
+		best_score = None
+
+		for parent in valid_events:
+			# Avoid comparing an event with itself
+			if parent.id == child.id:
+				continue
+
+			# Instantiate a temporary association to leverage the existing validation method
+			temp_assoc = Association(assoc_id=parent.id, chosen_reference=parent)
+			
+			if temp_assoc.verify_association(child, self.max_time, self.distance_epicenter):
+				# If it passes strict verification (M_parent > M_child, valid time and distance)
+				# Compute exact values for deterministic tie-breaking
+				time_diff = (child.date_time - parent.date_time).total_seconds() / 3600.0
+				dx = parent.epicenter[0] - child.epicenter[0]
+				dy = parent.epicenter[1] - child.epicenter[1]
+				distance = math.sqrt(dx**2 + dy**2)
+
+				current_score = (distance, time_diff, -parent.magnitude, -parent.id)
+
+				if best_score is None or current_score < best_score:
+					best_score = current_score
+					best_parent = parent
+
+		return best_parent
+
