@@ -746,3 +746,78 @@ class Observatory:
         search_key = event.get_key()
         
         return self.tree.get_node_metrics(search_key)
+	def verify_structure(self) -> list[str]:
+        """
+        Audits the structure of the active catalog.
+        Returns a list of errors or inconsistencies found.
+        """
+        reporte = []
+        
+        if self.tree is None or getattr(self.tree, 'root', None) is None:
+            return ["Auditoría: El árbol activo está vacío."]
+
+        ids_visitados = set()
+        # Use a mutable dictionary or list to maintain the state of the previous node during recursion
+        estado_auditoria = {"clave_previa": None}
+
+    	def auditar_nodo(nodo) -> int:
+            """
+            Recursive function that traverses the tree in in-order.
+            Returns the recalculated height of the node.
+            """
+            # Rule: Height of an empty tree is -1
+            if nodo is None:
+                return -1
+
+            # 1. Audit left subtree
+            altura_izq = auditar_nodo(nodo.left_son)
+
+            # 2. Verify uniqueness and references (cycles)
+            if nodo.id in ids_visitados:
+                reporte.append(f"Error Crítico: Identificador duplicado o ciclo de punteros detectado en ID {nodo.id}.")
+            else:
+                ids_visitados.add(nodo.id)
+
+            # 3. Verify global lexicographical order K=(P, M, I) via in-order traversal
+            clave_actual = nodo.get_key()
+            if estado_auditoria["clave_previa"] is not None:
+                if clave_actual <= estado_auditoria["clave_previa"]:
+                    reporte.append(f"Error de Orden: El nodo {clave_actual} es menor o igual a su predecesor {estado_auditoria['clave_previa']}.")
+            estado_auditoria["clave_previa"] = clave_actual
+
+            # 4. Audit right subtree
+            altura_der = auditar_nodo(nodo.right_son)
+
+            # 5. Recalculate and verify heights
+            # Rule: Actual height = 1 + max(left_height, right_height)
+            altura_real = 1 + max(altura_izq, altura_der)
+            if nodo.height != altura_real:
+                reporte.append(f"Error de Metadatos (ID {nodo.id}): Altura guardada={nodo.height}, Altura real={altura_real}.")
+
+            # 6. Calculate and verify balance factor
+            # Rule: Balance factor = left_height - right_height
+            factor_calculado = altura_izq - altura_der
+            
+            if not self.stress_mode:
+                # In normal mode, the balance factor must strictly be in {-1, 0, 1}
+                if factor_calculado not in (-1, 0, 1):
+                    reporte.append(f"Error de Balance (Modo Normal): ID {nodo.id} tiene un factor de {factor_calculado}.")
+            else:
+                # In stress mode, imbalance is allowed but should be reported
+                if factor_calculado not in (-1, 0, 1):
+                    reporte.append(f"Aviso (Modo Estrés): Desbalance esperado en ID {nodo.id} con factor {factor_calculado}.")
+
+            return altura_real
+
+        # Start traversal from the root
+        auditar_nodo(self.tree.root)
+
+        # 7. Cross-check with auxiliary O(1) structure
+        if hasattr(self, 'events_dict'):
+            if len(ids_visitados) != len(self.events_dict):
+                reporte.append(f"Error de Integridad: El árbol tiene {len(ids_visitados)} nodos, pero el diccionario activo tiene {len(self.events_dict)}.")
+
+        if not reporte:
+            reporte.append("Auditoría Exitosa: El árbol cumple todas las propiedades matemáticas de estructura y orden.")
+
+        return reporte
