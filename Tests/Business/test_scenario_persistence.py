@@ -22,7 +22,6 @@ from Business.scenario_persistence import ScenarioPersistence
 
 class TestScenarioPersistence(unittest.TestCase):
     """
-    Comprehensive unit tests for Section 12 ScenarioPersistence:
     - Structural export and atomic topology reconstruction (round-trip).
     - Validation checks: BST global order, cycles, duplicate IDs, height/BF mismatches, priority checks.
     - Stress mode enforcement on unbalanced topologies.
@@ -280,7 +279,7 @@ class TestScenarioPersistence(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_load_by_topology_stress_mode_handling(self):
         """
-        Section 12: An ordered but unbalanced topology (|BF| > 1) can ONLY be loaded
+        An ordered but unbalanced topology (|BF| > 1) can ONLY be loaded
         when stress_mode is enabled.
         """
         # Create an unbalanced linear chain: 3 -> left 2 -> left 1 (|BF| at root = 2)
@@ -391,7 +390,7 @@ class TestScenarioPersistence(unittest.TestCase):
     # Test 9: Load by Insertions Invalidation on Duplicate ID
     # -------------------------------------------------------------------------
     def test_load_by_insertions_duplicate_id_invalidation(self):
-        """Section 12: A duplicate identifier in the insertion sequence invalidates the file."""
+        """A duplicate identifier in the insertion sequence invalidates the file."""
         events_payload = [
             {"id": 1, "priority": 1, "magnitude": 2.0, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-09-30T10:00:00"},
             {"id": 1, "priority": 1, "magnitude": 2.5, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-09-30T10:05:00"},
@@ -422,6 +421,50 @@ class TestScenarioPersistence(unittest.TestCase):
         success, errors = self.obs.load_scenario_by_topology(self.json_path)
         self.assertFalse(success)
         self.assertTrue(any("failed to parse" in err.lower() for err in errors))
+
+    # -------------------------------------------------------------------------
+    # Test 11: Load by Insertions with Optional AVL Adoption
+    # -------------------------------------------------------------------------
+    def test_load_by_insertions_with_adopt_avl(self):
+        """Verifies that adopt_avl=True populates observatory.tree and events_dict."""
+        events_payload = [
+            {"id": 10, "priority": 1, "magnitude": 2.0, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-09-30T10:00:00"},
+            {"id": 20, "priority": 2, "magnitude": 4.8, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-09-30T10:05:00"},
+            {"id": 30, "priority": 3, "magnitude": 6.2, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-09-30T10:10:00"},
+        ]
+        with open(self.json_path, "w", encoding="utf-8") as f:
+            json.dump(events_payload, f)
+
+        target = Observatory()
+        res = target.load_scenario_by_insertions(self.json_path, adopt_avl=True)
+
+        self.assertIsNotNone(target.tree)
+        self.assertIsNotNone(target.tree.root)
+        self.assertEqual(len(target.events_dict), 3)
+        self.assertIn(20, target.events_dict)
+        self.assertEqual(target.tree.root.id, 20)
+
+    # -------------------------------------------------------------------------
+    # Test 12: Deep Multi-Level Tree Topology Reconstruction
+    # -------------------------------------------------------------------------
+    def test_deep_tree_height_reconstruction(self):
+        """Verifies that bottom-up post-order height calculation correctly reconstructs deep trees."""
+        deep_obs = Observatory()
+        # Insert 7 nodes to create a 3-level tree (height 2)
+        for i in range(1, 8):
+            mag = 1.0 + (i * 0.4)
+            p = deep_obs.calculate_priority(mag, 10.0, (0.0, 0.0))
+            ev = Event(id=i, priority=p, magnitude=mag, depth=10.0, epicenter=(0.0, 0.0), date_time=datetime(2026, 9, 30, 10, i, 0), review=1)
+            deep_obs.tree.insert(Node(id=i, event=ev))
+            deep_obs.events_dict[i] = ev
+
+        deep_obs.save_scenario(self.json_path)
+
+        target = Observatory()
+        success, errors = target.load_scenario_by_topology(self.json_path)
+        self.assertTrue(success, f"Errors: {errors}")
+        self.assertEqual(target.tree.height(), deep_obs.tree.height())
+        self.assertEqual(len(target.events_dict), 7)
 
 
 if __name__ == "__main__":
