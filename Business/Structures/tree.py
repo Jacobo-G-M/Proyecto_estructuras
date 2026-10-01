@@ -262,3 +262,33 @@ class Tree(ABC):
     if current_node.right_son is not None:
       nodes.extend(self.get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
     return nodes
+  def get_node_metrics(self, search_key: tuple[int, float, int]) -> dict:
+        """
+        Returns a dictionary containing the depth, height, and balance factor of the node with the given search_key.
+        """
+        current = self.root
+        depth = 0
+        
+        while current is not None:
+            current_key = current.get_key()
+            
+            # 1. Node found
+            if search_key == current_key:
+                # Regla: Altura de árbol vacío es -1
+                left_h = current.left_son.height if current.left_son else -1
+                right_h = current.right_son.height if current.right_son else -1
+                
+                balance_factor = left_h - right_h
+                
+                return {
+                    "depth": depth,
+                    "height": current.height,
+                    "balance_factor": balance_factor
+                }
+            elif search_key < current_key:
+                current = current.left_son
+            else:
+                current = current.right_son
+                
+            depth += 1 # Increse depth as we go down the tree
+        return 
