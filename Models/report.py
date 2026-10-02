@@ -121,3 +121,6 @@ class Report:
             raise TypeError("station must be an instance of Station.")
         if station not in self._origin_station:
             self._origin_station.append(station)
+
+    def is_empty():
+        pass
