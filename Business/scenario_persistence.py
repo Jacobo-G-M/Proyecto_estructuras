@@ -170,22 +170,36 @@ class ScenarioPersistence:
         if not isinstance(data, dict):
             return ["Invalid scenario format: Root must be a JSON object."]
 
+        # 0. Validate simulation_clock if present
+        if "simulation_clock" in data:
+            clock_str = data["simulation_clock"]
+            try:
+                datetime.fromisoformat(clock_str)
+            except Exception:
+                errors.append(f"Invalid ISO-8601 simulation_clock format: '{clock_str}'.")
+
         # 1. Parse zones for priority evaluation
         map_to_use = geographical_map
-        if "zones" in data and isinstance(data["zones"], list):
-            try:
-                parsed_zones = []
-                for z in data["zones"]:
-                    parsed_zones.append(Zone(
-                        id=z["id"],
-                        name=z.get("name", ""),
-                        is_populated=bool(z.get("is_populated", False)),
-                        ubication_x=tuple(z["ubication_x"]),
-                        ubication_y=tuple(z["ubication_y"]),
-                    ))
-                map_to_use = Geographical_map(zones=parsed_zones)
-            except Exception as e:
-                errors.append(f"Failed to parse zones for priority evaluation: {e}")
+        if "zones" in data:
+            if not isinstance(data["zones"], list):
+                errors.append("'zones' must be a list of zone objects.")
+            else:
+                try:
+                    parsed_zones = []
+                    for idx, z in enumerate(data["zones"]):
+                        if not isinstance(z, dict):
+                            errors.append(f"Zone at index {idx} is not a valid JSON object.")
+                            continue
+                        parsed_zones.append(Zone(
+                            id=z["id"],
+                            name=z.get("name", ""),
+                            is_populated=bool(z.get("is_populated", False)),
+                            ubication_x=tuple(z["ubication_x"]),
+                            ubication_y=tuple(z["ubication_y"]),
+                        ))
+                    map_to_use = Geographical_map(zones=parsed_zones)
+                except Exception as e:
+                    errors.append(f"Failed to parse zones for priority evaluation: {e}")
 
         # 2. Verify tree section presence
         tree_section = data.get("tree")
@@ -199,30 +213,83 @@ class ScenarioPersistence:
             errors.append("'nodes' in tree section must be a list.")
             return errors
 
-        # 3. ID Uniqueness across catalogs
+        # 3. ID Uniqueness and Node Integrity across catalogs
         active_ids = set()
-        for nd in nodes_list:
+        for idx, nd in enumerate(nodes_list):
+            if not isinstance(nd, dict):
+                errors.append(f"Node at index {idx} is not a valid JSON object.")
+                continue
             nid = nd.get("id")
+            if nid is None or not isinstance(nid, int) or isinstance(nid, bool):
+                errors.append(f"Node at index {idx} is missing a valid integer 'id'.")
+                continue
             if nid in active_ids:
                 errors.append(f"Duplicate active node ID {nid} found in tree nodes.")
             active_ids.add(nid)
 
+            ev = nd.get("event")
+            if not isinstance(ev, dict):
+                errors.append(f"Node {nid} is missing a valid 'event' dictionary object.")
+                continue
+            if ev.get("id") != nid:
+                errors.append(f"Node {nid} id mismatch with internal event id {ev.get('id')}.")
+
+            # Validate event date_time format
+            dt_str = ev.get("date_time")
+            if dt_str:
+                try:
+                    datetime.fromisoformat(dt_str)
+                except Exception:
+                    errors.append(f"Event {nid} has invalid ISO-8601 date_time format '{dt_str}'.")
+            else:
+                errors.append(f"Event {nid} is missing required 'date_time'.")
+
+            # Validate epicenter format
+            epi = ev.get("epicenter")
+            if not isinstance(epi, (list, tuple)) or len(epi) < 2 or not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in epi[:2]):
+                errors.append(f"Event {nid} has invalid epicenter coordinates.")
+
         archived_ids = set()
         historic_section = data.get("historic", {})
         if isinstance(historic_section, dict):
-            for ev in historic_section.get("archived", []):
+            for idx, ev in enumerate(historic_section.get("archived", [])):
+                if not isinstance(ev, dict):
+                    errors.append(f"Archived event at index {idx} is not a valid JSON object.")
+                    continue
                 eid = ev.get("id")
+                if eid is None or not isinstance(eid, int) or isinstance(eid, bool):
+                    errors.append(f"Archived event at index {idx} is missing a valid integer 'id'.")
+                    continue
                 if eid in archived_ids:
                     errors.append(f"Duplicate archived event ID {eid} found in historic.")
                 archived_ids.add(eid)
 
-        deleted_ids = set()
-        if isinstance(historic_section, dict):
-            for ev in historic_section.get("deleted", []):
+                dt_str = ev.get("date_time")
+                if dt_str:
+                    try:
+                        datetime.fromisoformat(dt_str)
+                    except Exception:
+                        errors.append(f"Archived event {eid} has invalid date_time format '{dt_str}'.")
+
+            deleted_ids = set()
+            for idx, ev in enumerate(historic_section.get("deleted", [])):
+                if not isinstance(ev, dict):
+                    errors.append(f"Deleted event at index {idx} is not a valid JSON object.")
+                    continue
                 eid = ev.get("id")
+                if eid is None or not isinstance(eid, int) or isinstance(eid, bool):
+                    errors.append(f"Deleted event at index {idx} is missing a valid integer 'id'.")
+                    continue
                 if eid in deleted_ids:
                     errors.append(f"Duplicate deleted event ID {eid} found in historic.")
                 deleted_ids.add(eid)
+
+                dt_str = ev.get("date_time")
+                if dt_str:
+                    try:
+                        datetime.fromisoformat(dt_str)
+                    except Exception:
+                        errors.append(f"Deleted event {eid} has invalid date_time format '{dt_str}'.")
 
         # Check disjointness among active, archived, and deleted
         active_archived_overlap = active_ids & archived_ids
@@ -238,7 +305,10 @@ class ScenarioPersistence:
             errors.append(f"ID overlap between archived and deleted catalogs: {sorted(archived_deleted_overlap)}.")
 
         # 4. Topology and Graph Integrity
-        nodes_dict = {nd["id"]: nd for nd in nodes_list if "id" in nd}
+        nodes_dict = {
+            nd["id"]: nd for nd in nodes_list
+            if isinstance(nd, dict) and isinstance(nd.get("id"), int) and not isinstance(nd.get("id"), bool)
+        }
 
         if root_id is None:
             if len(nodes_list) > 0:
@@ -319,9 +389,10 @@ class ScenarioPersistence:
             r_id = cur_nd.get("right_id")
             if l_id is not None and l_id in nodes_dict:
                 _inorder(l_id)
-            ev = cur_nd.get("event", {})
-            k = (ev.get("priority", 0), float(ev.get("magnitude", 0.0)), int(ev.get("id", 0)))
-            inorder_keys.append((k, cur_id))
+            ev = cur_nd.get("event")
+            if isinstance(ev, dict):
+                k = (ev.get("priority", 0), float(ev.get("magnitude", 0.0)), int(ev.get("id", 0)))
+                inorder_keys.append((k, cur_id))
             if r_id is not None and r_id in nodes_dict:
                 _inorder(r_id)
 
@@ -361,17 +432,21 @@ class ScenarioPersistence:
                 errors.append(f"Node {cur_id}: stored balance factor {stored_bf} does not match calculated {calc_bf}.")
 
             # Verify priority calculation
-            ev_data = cur_nd.get("event", {})
-            mag = float(ev_data.get("magnitude", 0.0))
-            depth = float(ev_data.get("depth", 0.0))
-            epicenter = tuple(ev_data.get("epicenter", (0.0, 0.0)))
-            stored_p = ev_data.get("priority")
+            ev_data = cur_nd.get("event")
+            if isinstance(ev_data, dict):
+                try:
+                    mag = float(ev_data.get("magnitude", 0.0))
+                    depth = float(ev_data.get("depth", 0.0))
+                    epicenter = tuple(ev_data.get("epicenter", (0.0, 0.0)))
+                    stored_p = ev_data.get("priority")
 
-            calc_p = ScenarioPersistence._compute_priority(mag, depth, epicenter, map_to_use)
-            if stored_p is not None and stored_p != calc_p:
-                errors.append(
-                    f"Event {cur_id}: stored priority {stored_p} does not match calculated priority {calc_p}."
-                )
+                    calc_p = ScenarioPersistence._compute_priority(mag, depth, epicenter, map_to_use)
+                    if stored_p is not None and stored_p != calc_p:
+                        errors.append(
+                            f"Event {cur_id}: stored priority {stored_p} does not match calculated priority {calc_p}."
+                        )
+                except Exception as e:
+                    errors.append(f"Failed to verify priority for Node {cur_id}: {e}")
 
             return calc_h
 
@@ -421,123 +496,59 @@ class ScenarioPersistence:
             return False, errors
 
         # ---------------------------------------------------------------------
-        # ATOMIC RECONSTRUCTION: Apply state to observatory
+        # TRANSACTIONAL RECONSTRUCTION: Assemble state locally before applying
         # ---------------------------------------------------------------------
-        # Parameters and execution flags
-        params = data.get("parameters", {})
-        if "limit_L" in params:
-            observatory.limit = int(params["limit_L"])
-        if "max_time_W" in params:
-            observatory.max_time = float(params["max_time_W"])
-        if "distance_epicenter_R" in params:
-            observatory.distance_epicenter = float(params["distance_epicenter_R"])
-        if "max_tree_age_T" in params:
-            observatory.max_tree_age = int(params["max_tree_age_T"])
+        try:
+            # Parameters and execution flags
+            params = data.get("parameters", {})
+            new_limit = int(params["limit_L"]) if "limit_L" in params else observatory.limit
+            new_max_time = float(params["max_time_W"]) if "max_time_W" in params else observatory.max_time
+            new_distance_epicenter = float(params["distance_epicenter_R"]) if "distance_epicenter_R" in params else observatory.distance_epicenter
+            new_max_tree_age = int(params["max_tree_age_T"]) if "max_tree_age_T" in params else observatory.max_tree_age
 
-        file_stress = bool(data.get("stress_mode", False))
-        observatory.stress_mode = file_stress if stress_mode_override is None else stress_mode_override
+            file_stress = bool(data.get("stress_mode", False))
+            new_stress_mode = file_stress if stress_mode_override is None else stress_mode_override
 
-        if "simulation_clock" in data:
-            observatory.clock_simulation = datetime.fromisoformat(data["simulation_clock"])
+            new_clock = datetime.fromisoformat(data["simulation_clock"]) if "simulation_clock" in data else observatory.clock_simulation
 
-        # Reconstruct Zones
-        if "zones" in data and isinstance(data["zones"], list):
-            reconstructed_zones = []
-            for z in data["zones"]:
-                reconstructed_zones.append(Zone(
-                    id=z["id"],
-                    name=z.get("name", ""),
-                    is_populated=bool(z.get("is_populated", False)),
-                    ubication_x=tuple(z["ubication_x"]),
-                    ubication_y=tuple(z["ubication_y"]),
-                ))
-            observatory.geographical_map = Geographical_map(zones=reconstructed_zones)
+            # Reconstruct Zones
+            new_geographical_map = observatory.geographical_map
+            if "zones" in data and isinstance(data["zones"], list):
+                reconstructed_zones = []
+                for z in data["zones"]:
+                    reconstructed_zones.append(Zone(
+                        id=z["id"],
+                        name=z.get("name", ""),
+                        is_populated=bool(z.get("is_populated", False)),
+                        ubication_x=tuple(z["ubication_x"]),
+                        ubication_y=tuple(z["ubication_y"]),
+                    ))
+                new_geographical_map = Geographical_map(zones=reconstructed_zones)
 
-        # Reconstruct Stations
-        stations_dict: dict[int, Station] = {}
-        if "stations" in data and isinstance(data["stations"], list):
-            for s in data["stations"]:
-                st = Station(id=s["id"], name=s["name"], coords=tuple(s["coords"]))
-                stations_dict[s["id"]] = st
-            observatory.stations = list(stations_dict.values())
+            # Reconstruct Stations
+            stations_dict: dict[int, Station] = {}
+            if "stations" in data and isinstance(data["stations"], list):
+                for s in data["stations"]:
+                    st = Station(id=s["id"], name=s["name"], coords=tuple(s["coords"]))
+                    stations_dict[s["id"]] = st
+            new_stations = list(stations_dict.values()) if stations_dict else observatory.stations
 
-        # Reconstruct Tree Topology without reinsertion
-        tree_section = data.get("tree", {})
-        nodes_list = tree_section.get("nodes", [])
-        root_id = tree_section.get("root_id")
+            # Reconstruct Tree Topology without reinsertion
+            tree_section = data.get("tree", {})
+            nodes_list = tree_section.get("nodes", [])
+            root_id = tree_section.get("root_id")
 
-        new_tree = AVL(
-            id=1,
-            stress_mode=observatory.stress_mode,
-            on_rotation=observatory._handle_tree_rotation,
-        )
-
-        nodes_map: dict[int, Node] = {}
-        events_dict: dict[int, Event] = {}
-
-        for nd in nodes_list:
-            ev_data = nd["event"]
-            ev = Event(
-                id=ev_data["id"],
-                priority=int(ev_data["priority"]),
-                magnitude=float(ev_data["magnitude"]),
-                depth=float(ev_data["depth"]),
-                epicenter=tuple(ev_data["epicenter"]),
-                date_time=datetime.fromisoformat(ev_data["date_time"]),
-                review=int(ev_data.get("review", 1)),
-                attention_state=ev_data.get("attention_state", "Pending"),
-                status=ev_data.get("status", "Active"),
+            new_tree = AVL(
+                id=1,
+                stress_mode=new_stress_mode,
+                on_rotation=observatory._handle_tree_rotation,
             )
-            # Link stations
-            for sid in ev_data.get("origin_stations", []):
-                if sid in stations_dict:
-                    ev.add_origin_station(stations_dict[sid])
 
-            node = Node(id=nd["id"], event=ev)
-            nodes_map[nd["id"]] = node
-            events_dict[ev.id] = ev
+            nodes_map: dict[int, Node] = {}
+            events_dict: dict[int, Event] = {}
 
-        # Connect explicit left/right and father pointers
-        for nd in nodes_list:
-            cur_node = nodes_map[nd["id"]]
-            left_id = nd.get("left_id")
-            right_id = nd.get("right_id")
-
-            if left_id is not None and left_id in nodes_map:
-                left_node = nodes_map[left_id]
-                cur_node.left_son = left_node
-                left_node.father = cur_node
-
-            if right_id is not None and right_id in nodes_map:
-                right_node = nodes_map[right_id]
-                cur_node.right_son = right_node
-                right_node.father = cur_node
-
-        if root_id is not None and root_id in nodes_map:
-            new_tree.root = nodes_map[root_id]
-            new_tree.root.father = None
-        else:
-            new_tree.root = None
-
-        # Update node heights bottom-up (post-order) so parents compute accurate heights
-        def _post_order_heights(node: Node | None) -> None:
-            if node is None:
-                return
-            _post_order_heights(node.left_son)
-            _post_order_heights(node.right_son)
-            node.update_height()
-
-        if new_tree.root is not None:
-            _post_order_heights(new_tree.root)
-
-        observatory.tree = new_tree
-        observatory.events_dict = events_dict
-
-        # Reconstruct Historic Catalogs
-        new_historic = Historic()
-        historic_section = data.get("historic", {})
-        if isinstance(historic_section, dict):
-            for ev_data in historic_section.get("archived", []):
+            for nd in nodes_list:
+                ev_data = nd["event"]
                 ev = Event(
                     id=ev_data["id"],
                     priority=int(ev_data["priority"]),
@@ -547,85 +558,160 @@ class ScenarioPersistence:
                     date_time=datetime.fromisoformat(ev_data["date_time"]),
                     review=int(ev_data.get("review", 1)),
                     attention_state=ev_data.get("attention_state", "Pending"),
-                    status="Archived",
+                    status=ev_data.get("status", "Active"),
                 )
-                new_historic.archive_event(ev)
+                # Link stations
+                for sid in ev_data.get("origin_stations", []):
+                    if sid in stations_dict:
+                        ev.add_origin_station(stations_dict[sid])
 
-            for ev_data in historic_section.get("deleted", []):
-                ev = Event(
-                    id=ev_data["id"],
-                    priority=int(ev_data["priority"]),
-                    magnitude=float(ev_data["magnitude"]),
-                    depth=float(ev_data["depth"]),
-                    epicenter=tuple(ev_data["epicenter"]),
-                    date_time=datetime.fromisoformat(ev_data["date_time"]),
-                    review=int(ev_data.get("review", 1)),
-                    attention_state=ev_data.get("attention_state", "Pending"),
-                    status="Deleted",
+                node = Node(id=nd["id"], event=ev)
+                nodes_map[nd["id"]] = node
+                events_dict[ev.id] = ev
+
+            # Connect explicit left/right and father pointers
+            for nd in nodes_list:
+                cur_node = nodes_map[nd["id"]]
+                left_id = nd.get("left_id")
+                right_id = nd.get("right_id")
+
+                if left_id is not None and left_id in nodes_map:
+                    left_node = nodes_map[left_id]
+                    cur_node.left_son = left_node
+                    left_node.father = cur_node
+
+                if right_id is not None and right_id in nodes_map:
+                    right_node = nodes_map[right_id]
+                    cur_node.right_son = right_node
+                    right_node.father = cur_node
+
+            if root_id is not None and root_id in nodes_map:
+                new_tree.root = nodes_map[root_id]
+                new_tree.root.father = None
+            else:
+                new_tree.root = None
+
+            # Update node heights bottom-up (post-order) so parents compute accurate heights
+            def _post_order_heights(node: Node | None) -> None:
+                if node is None:
+                    return
+                _post_order_heights(node.left_son)
+                _post_order_heights(node.right_son)
+                node.update_height()
+
+            if new_tree.root is not None:
+                _post_order_heights(new_tree.root)
+
+            # Reconstruct Historic Catalogs
+            new_historic = Historic()
+            historic_section = data.get("historic", {})
+            if isinstance(historic_section, dict):
+                for ev_data in historic_section.get("archived", []):
+                    ev = Event(
+                        id=ev_data["id"],
+                        priority=int(ev_data["priority"]),
+                        magnitude=float(ev_data["magnitude"]),
+                        depth=float(ev_data["depth"]),
+                        epicenter=tuple(ev_data["epicenter"]),
+                        date_time=datetime.fromisoformat(ev_data["date_time"]),
+                        review=int(ev_data.get("review", 1)),
+                        attention_state=ev_data.get("attention_state", "Pending"),
+                        status="Archived",
+                    )
+                    new_historic.archive_event(ev)
+
+                for ev_data in historic_section.get("deleted", []):
+                    ev = Event(
+                        id=ev_data["id"],
+                        priority=int(ev_data["priority"]),
+                        magnitude=float(ev_data["magnitude"]),
+                        depth=float(ev_data["depth"]),
+                        epicenter=tuple(ev_data["epicenter"]),
+                        date_time=datetime.fromisoformat(ev_data["date_time"]),
+                        review=int(ev_data.get("review", 1)),
+                        attention_state=ev_data.get("attention_state", "Pending"),
+                        status="Deleted",
+                    )
+                    new_historic.delete_event(ev)
+
+            # Reconstruct Report Queue
+            new_queue = Report_Queue()
+            for r_data in data.get("report_queue", []):
+                st_list = [
+                    stations_dict[sid]
+                    for sid in r_data.get("origin_stations", [])
+                    if sid in stations_dict
+                ]
+                report = Report(
+                    id=r_data["id"],
+                    magnitude=float(r_data["magnitude"]),
+                    depth=float(r_data["depth"]),
+                    epicenter=tuple(r_data["epicenter"]),
+                    date_time=datetime.fromisoformat(r_data["date_time"]),
+                    review=int(r_data.get("review", 1)),
+                    origin_station=st_list,
                 )
-                new_historic.delete_event(ev)
+                new_queue.enqueue(report)
 
-        observatory.historic = new_historic
+            # Reconstruct Associations
+            all_catalog = dict(events_dict)
+            all_catalog.update(new_historic.archived)
+            all_catalog.update(new_historic.deleted)
 
-        # Reconstruct Report Queue
-        new_queue = Report_Queue()
-        for r_data in data.get("report_queue", []):
-            st_list = [
-                stations_dict[sid]
-                for sid in r_data.get("origin_stations", [])
-                if sid in stations_dict
-            ]
-            report = Report(
-                id=r_data["id"],
-                magnitude=float(r_data["magnitude"]),
-                depth=float(r_data["depth"]),
-                epicenter=tuple(r_data["epicenter"]),
-                date_time=datetime.fromisoformat(r_data["date_time"]),
-                review=int(r_data.get("review", 1)),
-                origin_station=st_list,
-            )
-            new_queue.enqueue(report)
+            new_associations = []
+            for assoc_data in data.get("associations", []):
+                ref_id = assoc_data.get("chosen_reference_id")
+                if ref_id in all_catalog:
+                    assoc = Association(
+                        assoc_id=assoc_data["id"],
+                        chosen_reference=all_catalog[ref_id],
+                    )
+                    for child_id in assoc_data.get("referenced_by_ids", []):
+                        if child_id in all_catalog:
+                            assoc.add_replica(all_catalog[child_id])
+                    new_associations.append(assoc)
 
-        observatory.report_queue = new_queue
+            # Reconstruct Metrics
+            new_metrics = Metrics()
+            metrics_data = data.get("metrics", {})
+            if metrics_data:
+                new_metrics.corrections_accepted = metrics_data.get("corrections_accepted", 0)
+                new_metrics.discarded_reports = metrics_data.get("discarded_reports", 0)
+                new_metrics.conflicts = metrics_data.get("conflicts", 0)
+                new_metrics.active_events = metrics_data.get("active_events", len(events_dict))
+                new_metrics.removed_events = metrics_data.get("removed_events", len(new_historic.deleted))
+                new_metrics.archived_events = metrics_data.get("archived_events", len(new_historic.archived))
+                for k, v in metrics_data.get("cases", {}).items():
+                    new_metrics._cases[k] = v
+                for k, v in metrics_data.get("turns", {}).items():
+                    new_metrics._turns[k] = v
+            else:
+                new_metrics.active_events = len(events_dict)
+                new_metrics.removed_events = len(new_historic.deleted)
+                new_metrics.archived_events = len(new_historic.archived)
 
-        # Reconstruct Associations
-        all_catalog = dict(events_dict)
-        all_catalog.update(new_historic.archived)
-        all_catalog.update(new_historic.deleted)
+            # -----------------------------------------------------------------
+            # ATOMIC COMMIT: Apply all newly constructed objects to observatory
+            # -----------------------------------------------------------------
+            observatory.limit = new_limit
+            observatory.max_time = new_max_time
+            observatory.distance_epicenter = new_distance_epicenter
+            observatory.max_tree_age = new_max_tree_age
+            observatory.stress_mode = new_stress_mode
+            observatory.clock_simulation = new_clock
+            observatory.geographical_map = new_geographical_map
+            observatory.stations = new_stations
+            observatory.tree = new_tree
+            observatory.events_dict = events_dict
+            observatory.historic = new_historic
+            observatory.report_queue = new_queue
+            observatory.associations = new_associations
+            observatory.metrics = new_metrics
 
-        new_associations = []
-        for assoc_data in data.get("associations", []):
-            ref_id = assoc_data.get("chosen_reference_id")
-            if ref_id in all_catalog:
-                assoc = Association(
-                    assoc_id=assoc_data["id"],
-                    chosen_reference=all_catalog[ref_id],
-                )
-                for child_id in assoc_data.get("referenced_by_ids", []):
-                    if child_id in all_catalog:
-                        assoc.add_replica(all_catalog[child_id])
-                new_associations.append(assoc)
+            return True, []
 
-        observatory.associations = new_associations
-
-        # Reconstruct Metrics
-        new_metrics = Metrics()
-        metrics_data = data.get("metrics", {})
-        if metrics_data:
-            new_metrics.corrections_accepted = metrics_data.get("corrections_accepted", 0)
-            new_metrics.discarded_reports = metrics_data.get("discarded_reports", 0)
-            new_metrics.conflicts = metrics_data.get("conflicts", 0)
-            new_metrics.active_events = metrics_data.get("active_events", len(events_dict))
-            new_metrics.removed_events = metrics_data.get("removed_events", len(new_historic.deleted))
-            new_metrics.archived_events = metrics_data.get("archived_events", len(new_historic.archived))
-            for k, v in metrics_data.get("cases", {}).items():
-                new_metrics._cases[k] = v
-            for k, v in metrics_data.get("turns", {}).items():
-                new_metrics._turns[k] = v
-
-        observatory.metrics = new_metrics
-
-        return True, []
+        except Exception as e:
+            return False, [f"Atomic reconstruction error: {e}"]
 
     # -------------------------------------------------------------------------
     # 3. SEQUENTIAL INSERTION LOAD
@@ -657,7 +743,7 @@ class ScenarioPersistence:
 
         if isinstance(data, list):
             events_data = data
-        elif isinstance(data, dict) and "events" in data:
+        elif isinstance(data, dict) and "events" in data and isinstance(data["events"], list):
             events_data = data["events"]
         else:
             raise ValueError("Invalid format for insertions: Expected a JSON array of events or an object with 'events'.")
@@ -668,7 +754,12 @@ class ScenarioPersistence:
         avl = AVL(id=1, stress_mode=False)
         bst = BST(id=2)
 
-        for item in events_data:
+        for idx, item in enumerate(events_data):
+            if not isinstance(item, dict):
+                raise ValueError(f"Event item at index {idx} is not a valid JSON object.")
+            if "id" not in item:
+                raise ValueError(f"Event item at index {idx} is missing required 'id'.")
+
             eid = int(item["id"])
             if eid in seen_ids:
                 raise ValueError(f"Duplicate event ID {eid} found in insertion sequence; invalid file.")
@@ -752,8 +843,11 @@ class ScenarioPersistence:
         - 1 (Low): All other events.
         """
         is_populated = False
-        if geographical_map is not None:
-            is_populated = geographical_map.is_in_populated_zone(epicenter[0], epicenter[1])
+        if geographical_map is not None and isinstance(epicenter, (tuple, list)) and len(epicenter) >= 2:
+            try:
+                is_populated = geographical_map.is_in_populated_zone(epicenter[0], epicenter[1])
+            except Exception:
+                is_populated = False
 
         if magnitude >= 6.0 or (magnitude >= 4.5 and depth <= 30.0 and is_populated):
             return 3
