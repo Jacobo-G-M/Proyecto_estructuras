@@ -21,7 +21,7 @@ class Queries:
         examined_nodes = 0
         results: list[Event] = []
 
-        if tree is None or tree.root is None or k <= 0:
+        if tree is None or tree.root is None or k is None or not isinstance(k, int) or isinstance(k, bool) or k <= 0:
             return results, examined_nodes
 
         def _reverse_inorder(current: Node | None) -> None:
@@ -56,11 +56,11 @@ class Queries:
     @staticmethod
     def events_by_filters(
         tree: Tree,
-        min_magnitude: float,
-        max_magnitude: float,
-        max_depth: float,
-        start_date: datetime,
-        end_date: datetime
+        min_magnitude: float | None = None,
+        max_magnitude: float | None = None,
+        max_depth: float | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None
     ) -> tuple[list[Event], int]:
         """
         Query 2: Finds events with magnitude in [min_magnitude, max_magnitude],
@@ -74,6 +74,15 @@ class Queries:
         if tree is None or tree.root is None:
             return results, examined_nodes
 
+        min_mag = float(min_magnitude) if min_magnitude is not None else -float('inf')
+        max_mag = float(max_magnitude) if max_magnitude is not None else float('inf')
+        max_d = float(max_depth) if max_depth is not None else float('inf')
+        start_dt = start_date if start_date is not None else datetime.min
+        end_dt = end_date if end_date is not None else datetime.max
+
+        if min_mag > max_mag or start_dt > end_dt:
+            return results, examined_nodes
+
         def _filter_helper(current: Node | None) -> None:
             nonlocal examined_nodes
             if current is None:
@@ -83,9 +92,9 @@ class Queries:
             ev = current.event
 
             if ev is not None:
-                mag_ok = min_magnitude <= ev.magnitude <= max_magnitude
-                depth_ok = ev.depth <= max_depth
-                date_ok = start_date <= ev.date_time <= end_date
+                mag_ok = min_mag <= ev.magnitude <= max_mag
+                depth_ok = ev.depth <= max_d
+                date_ok = start_dt <= ev.date_time <= end_dt
 
                 if mag_ok and depth_ok and date_ok:
                     results.append(ev)
@@ -93,11 +102,11 @@ class Queries:
                 # Pruning based on key K = (P, M, I):
                 # When priority is 3 (max priority) and magnitude exceeds max_magnitude,
                 # all nodes in right subtree have priority 3 and magnitude >= ev.magnitude > max_magnitude.
-                prune_right = (ev.priority == 3 and ev.magnitude > max_magnitude)
+                prune_right = (ev.priority == 3 and max_magnitude is not None and ev.magnitude > max_mag)
 
                 # When priority is 1 (min priority) and magnitude is below min_magnitude,
                 # all nodes in left subtree have priority 1 and magnitude <= ev.magnitude < min_magnitude.
-                prune_left = (ev.priority == 1 and ev.magnitude < min_magnitude)
+                prune_left = (ev.priority == 1 and min_magnitude is not None and ev.magnitude < min_mag)
 
                 if not prune_left:
                     _filter_helper(current.left_son)
@@ -117,8 +126,8 @@ class Queries:
         historic: Historic | None,
         associations: list[Association],
         event_id: int,
-        max_time_hours: float = 48.0,
-        max_distance_km: float = 40.0
+        max_time_hours: float | None = None,
+        max_distance_km: float | None = None
     ) -> tuple[dict[str, Any], int]:
         """
         Query 3: Locates candidates and chosen reference for an event, as well as
@@ -128,6 +137,9 @@ class Queries:
         examined_nodes = 0
         target_event: Event | None = None
         target_is_active = False
+
+        max_t = float(max_time_hours) if max_time_hours is not None else 48.0
+        max_d = float(max_distance_km) if max_distance_km is not None else 40.0
 
         # Helper to compute Euclidean distance
         def _calc_dist(p1: tuple[float, float], p2: tuple[float, float]) -> float:
@@ -167,19 +179,30 @@ class Queries:
 
         if associations:
             for assoc in associations:
-                # If target is the subject of this association
-                if getattr(assoc, "id", None) == event_id or getattr(assoc, "_id", None) == event_id:
-                    if chosen_ref_event is None:
-                        chosen_ref_event = assoc.chosen_reference
+                # If target is the subject or reference of this association, collect its replicas
+                is_subject_or_ref = (
+                    getattr(assoc, "id", None) == event_id or
+                    getattr(assoc, "_id", None) == event_id or
+                    (assoc.chosen_reference is not None and getattr(assoc.chosen_reference, "id", None) == event_id)
+                )
+                if is_subject_or_ref:
+                    # If target is subject (has chosen_reference distinct from target), resolve its reference
+                    if assoc.chosen_reference is not None and getattr(assoc.chosen_reference, "id", None) != event_id:
+                        if chosen_ref_event is None:
+                            chosen_ref_event = assoc.chosen_reference
                     for rep in assoc.referenced_by:
-                        if rep not in replicas:
+                        if rep is not None and rep not in replicas and getattr(rep, "id", None) != event_id:
                             replicas.append(rep)
 
-                # If target is the chosen reference of an association, collect its replicas
-                if assoc.chosen_reference is not None and assoc.chosen_reference.id == event_id:
-                    for rep in assoc.referenced_by:
-                        if rep not in replicas:
-                            replicas.append(rep)
+                # If target is a replica inside this association, its chosen reference is the association's reference
+                is_replica = any(
+                    getattr(rep, "id", None) == event_id
+                    for rep in assoc.referenced_by
+                    if rep is not None
+                )
+                if is_replica:
+                    if chosen_ref_event is None:
+                        chosen_ref_event = assoc.chosen_reference
 
         # 3. Discover candidate references (higher magnitude, strictly earlier, time <= W, dist <= R)
         candidates_raw: list[tuple[Event, str]] = []
@@ -197,7 +220,7 @@ class Queries:
                     if cand.magnitude > target_event.magnitude and cand.date_time < target_event.date_time:
                         time_hours = (target_event.date_time - cand.date_time).total_seconds() / 3600.0
                         dist = _calc_dist(cand.epicenter, target_event.epicenter)
-                        if time_hours <= max_time_hours and dist <= max_distance_km:
+                        if time_hours <= max_t and dist <= max_d:
                             candidates_raw.append((cand, "Activo"))
 
                 _search_candidates(current.left_son)
@@ -212,11 +235,13 @@ class Queries:
                     if cand.magnitude > target_event.magnitude and cand.date_time < target_event.date_time:
                         time_hours = (target_event.date_time - cand.date_time).total_seconds() / 3600.0
                         dist = _calc_dist(cand.epicenter, target_event.epicenter)
-                        if time_hours <= max_time_hours and dist <= max_distance_km:
+                        if time_hours <= max_t and dist <= max_d:
                             candidates_raw.append((cand, "Archivado"))
 
         # Determine status of chosen reference and replicas
-        def _get_status(ev: Event) -> str:
+        def _get_status(ev: Event | None) -> str:
+            if ev is None:
+                return "Desconocido"
             if historic is not None and hasattr(historic, "archived") and ev.id in historic.archived:
                 return "Archivado"
             return "Activo"
@@ -235,7 +260,7 @@ class Queries:
         return report, examined_nodes
 
     @staticmethod
-    def costly_high_priority_events(tree: Tree, limit: int) -> tuple[list[dict[str, Any]], int]:
+    def costly_high_priority_events(tree: Tree, limit: int | None = None) -> tuple[list[dict[str, Any]], int]:
         """
         Query 4: Identifies high-priority events (priority = 3) whose depth in the active
         AVL tree strictly exceeds limit L. Reports node depth, limit L, and simulated
@@ -248,6 +273,8 @@ class Queries:
 
         if tree is None or tree.root is None:
             return results, examined_nodes
+
+        safe_limit = limit if (limit is not None and isinstance(limit, int) and not isinstance(limit, bool) and limit >= 0) else 3
 
         def _traverse_high_priority(current: Node | None, depth: int) -> None:
             nonlocal examined_nodes
@@ -266,11 +293,11 @@ class Queries:
                 return
 
             # When priority == 3, evaluate current node for costly access
-            if ev is not None and ev.priority == 3 and depth > limit:
+            if ev is not None and ev.priority == 3 and depth > safe_limit:
                 results.append({
                     "event": ev,
                     "depth": depth,
-                    "limit": limit,
+                    "limit": safe_limit,
                     "visited_nodes": depth + 1
                 })
 
