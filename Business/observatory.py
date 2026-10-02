@@ -18,6 +18,7 @@ from Business.Structures.avl import AVL
 from Models.event import Event
 from Models.report import Report
 from Models.node import Node
+from Models.action import Action
 from Business.version import Version
 
 
@@ -68,6 +69,8 @@ class Observatory:
 	@limit.setter
 	def limit(self, value: int) -> None:
 		if isinstance(value, int) and value >= 0:
+			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_limit', None) is not None and self._limit != value:
+				self._record_action("UPDATE_PARAMETER", f"Changed limit L from {self._limit} to {value}")
 			self._limit = value
 		else:
 			raise ValueError("Limit must be a non-negative integer.")
@@ -81,7 +84,10 @@ class Observatory:
 	@max_time.setter
 	def max_time(self, value: float) -> None:
 		if isinstance(value, (int, float)) and value >= 0:
-			self._max_time = float(value)
+			new_val = float(value)
+			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_max_time', None) is not None and self._max_time != new_val:
+				self._record_action("UPDATE_PARAMETER", f"Changed max_time W from {self._max_time} to {new_val}")
+			self._max_time = new_val
 			if hasattr(self, 'events_dict'):
 				self.update_associations()
 		else:
@@ -96,7 +102,10 @@ class Observatory:
 	@distance_epicenter.setter
 	def distance_epicenter(self, value: float) -> None:
 		if isinstance(value, (int, float)) and value >= 0:
-			self._distance_epicenter = float(value)
+			new_val = float(value)
+			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_distance_epicenter', None) is not None and self._distance_epicenter != new_val:
+				self._record_action("UPDATE_PARAMETER", f"Changed distance_epicenter R from {self._distance_epicenter} to {new_val}")
+			self._distance_epicenter = new_val
 			if hasattr(self, 'events_dict'):
 				self.update_associations()
 		else:
@@ -111,6 +120,8 @@ class Observatory:
 	@max_tree_age.setter
 	def max_tree_age(self, value: int) -> None:
 		if isinstance(value, int) and value >= 0:
+			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_max_tree_age', None) is not None and self._max_tree_age != value:
+				self._record_action("UPDATE_PARAMETER", f"Changed max_tree_age T from {self._max_tree_age} to {value}")
 			self._max_tree_age = value
 		else:
 			raise ValueError("Max tree age must be a non-negative integer.")
@@ -994,6 +1005,7 @@ class Observatory:
 			tmp_path = tmp.name
 			json.dump(data, tmp, ensure_ascii=False)
 
+		self._suppress_undo_recording = True
 		try:
 			ok, errors = ScenarioPersistence.load_by_topology(self, tmp_path)
 			if not ok:
@@ -1001,6 +1013,7 @@ class Observatory:
 					f"Validation errors in scenario data:\n" + "\n".join(errors)
 				)
 		finally:
+			self._suppress_undo_recording = False
 			# Eliminar el archivo temporal en cualquier caso
 			try:
 				os.remove(tmp_path)
@@ -1185,8 +1198,41 @@ class Observatory:
 		ScenarioPersistence.export_to_json(self, filepath)
 
 	def load_scenario_by_topology(self, filepath: str, stress_mode_override: bool | None = None) -> tuple[bool, list[str]]:
-		"""Delegates atomic topology load and validation to ScenarioPersistence."""
-		return ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+		"""
+		Delega la carga atómica y validación de topología a ScenarioPersistence.
+		Según la Sección 13, cargar un escenario nuevo sobreescribe el actual, por lo que
+		esta operación debe registrarse para poder deshacerse si el usuario se equivocó de archivo.
+		"""
+		import os, json
+		if not os.path.exists(filepath):
+			return False, [f"File not found: {filepath}"]
+		
+		try:
+			with open(filepath, "r", encoding="utf-8") as f:
+				data = json.load(f)
+		except Exception as e:
+			return False, [f"Failed to parse JSON file: {e}"]
+		
+		# Validar la topología ANTES de alterar el observatorio o ensuciar el stack
+		from Business.scenario_persistence import ScenarioPersistence
+		errors = ScenarioPersistence.validate_topology_data(
+			data, 
+			geographical_map=self.geographical_map, 
+			stress_mode_override=stress_mode_override
+		)
+		if errors:
+			return False, errors
+		
+		# Si la validación es exitosa, registramos el estado actual antes de perderlo
+		if hasattr(self, '_record_action'):
+			self._record_action("LOAD_SCENARIO", f"Loaded scenario from {os.path.basename(filepath)}")
+		
+		# Aplicamos la reconstrucción atómica delegando a ScenarioPersistence
+		self._suppress_undo_recording = True
+		try:
+			return ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+		finally:
+			self._suppress_undo_recording = False
 
 	def load_scenario_by_insertions(self, filepath: str, adopt_avl: bool = False) -> dict:
 		"""Delegates sequential insertion comparison to ScenarioPersistence."""
@@ -1322,6 +1368,22 @@ class Observatory:
 			reporte.append("Auditoría Exitosa: El árbol cumple todas las propiedades matemáticas de estructura y orden.")
 
 		return reporte
+
+	def global_recovery(self) -> None:
+		"""
+		Fuerza un rebalanceo global del árbol y desactiva el modo de estrés (Sección 13).
+		Registra la acción en la pila para poder deshacerse.
+		"""
+		if hasattr(self, '_record_action'):
+			self._record_action("GLOBAL_RECOVERY", "Restauración global post-estrés")
+			
+		# El árbol rebalancea su topología de abajo hacia arriba y apaga su flag interno
+		if self.tree is not None:
+			self.tree.restore_balance()
+			
+		# Sincronizamos el flag del Observatorio
+		self.stress_mode = False
+		print("Global recovery completed. Stress mode disabled and tree rebalanced.")
 	# ---------------------------------------------------------
 	# ASSOCIATION LOGIC (REPLICAS AND REFERENCES)
 	# ---------------------------------------------------------
