@@ -117,5 +117,5 @@ class Event:
       self.__origin_stations.append(station)
 
   def get_key(self) -> tuple[int, float, int]:
-    """Returns the sorting key K = (priority, magnitude, id)."""
+    """Returns the sorting key K = (Priority, Magnitude, ID) according to Section 5."""
     return (self.__priority, self.__magnitude, self.__id)
