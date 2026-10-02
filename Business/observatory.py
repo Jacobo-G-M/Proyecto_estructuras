@@ -811,7 +811,9 @@ class Observatory:
 				'historic': self.historic,
 				'report_queue': self.report_queue,
 				'metrics': self.metrics,
-				'associations': self.associations
+				'associations': self.associations,
+				'stations': self.stations,
+				'geographical_map': self.geographical_map
 			})
 		finally:
 			# Restaurar siempre el callback en el árbol activo en ejecución
@@ -831,7 +833,9 @@ class Observatory:
 			'max_tree_age': self.max_tree_age,
 			'stress_mode': self.stress_mode,
 			'metrics': copied_state['metrics'],
-			'associations': copied_state['associations']
+			'associations': copied_state['associations'],
+			'stations': copied_state['stations'],
+			'geographical_map': copied_state['geographical_map']
 		}
 		
 		# Crear la acción y apilarla en la estructura Undo_stack
@@ -856,8 +860,8 @@ class Observatory:
 		   - Diccionario de acceso rápido events_dict.
 		   - Catálogo histórico (archivados y eliminados).
 		   - Cola de reportes (restaura los reportes procesados a su posición en la cola).
-		   - Reloj de simulación y parámetros de configuración.
-		   - Métricas acumuladas y relaciones de asociación/réplicas.
+		   - Reloj de simulación y parámetros de configuración (bypasseando setters).
+		   - Métricas acumuladas, relaciones de asociación/réplicas, estaciones y mapa geográfico.
 		3. Reconecta el callback de rotaciones del árbol AVL restaurado hacia _handle_tree_rotation
 		   para que cualquier operación futura continúe registrando rotaciones en Metrics.
 		
@@ -881,14 +885,24 @@ class Observatory:
 		self.events_dict = s.get('events_dict', {})
 		self.historic = s.get('historic')
 		self.report_queue = s.get('report_queue')
+		self.stations = s.get('stations', [])
+		self.geographical_map = s.get('geographical_map')
 		
 		# Restaurar reloj de simulación y parámetros del observatorio
 		self.clock_simulation = s.get('clock_simulation', self.clock_simulation)
 		self.limit = s.get('limit', self.limit)
-		self.max_time = s.get('max_time', self.max_time)
-		self.distance_epicenter = s.get('distance_epicenter', self.distance_epicenter)
+		
+		# Usamos los campos privados _max_time y _distance_epicenter para evitar 
+		# disparar los setters que sobreescribirían la asociación que apenas restauramos
+		self._max_time = s.get('max_time', self.max_time)
+		self._distance_epicenter = s.get('distance_epicenter', self.distance_epicenter)
+		
 		self.max_tree_age = s.get('max_tree_age', self.max_tree_age)
 		self.stress_mode = s.get('stress_mode', self.stress_mode)
+		
+		# Sincronizar explícitamente el modo de estrés en el árbol restaurado
+		if self.tree is not None:
+			self.tree.stress_mode = self.stress_mode
 		
 		# Restaurar métricas acumuladas y asociaciones
 		self.metrics = s.get('metrics')
