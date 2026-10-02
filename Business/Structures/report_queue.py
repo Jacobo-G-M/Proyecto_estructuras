@@ -1,4 +1,4 @@
-from ...Models.report import Report
+from Models.report import Report
 
 class Report_Queue:
   # ------------------------

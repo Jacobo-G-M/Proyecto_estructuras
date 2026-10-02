@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
+<<<<<<< HEAD
 from ...Models.node import Node
+=======
+from Models.node import Node
+>>>>>>> 461eea416c05d73e246dc488441bce57ef5f67c0
 
 class Tree(ABC):
   # ------------------------
@@ -231,4 +235,57 @@ class Tree(ABC):
 
     #height of the Tree
   def height(self):
+<<<<<<< HEAD
     return self.root.height if self.root is not None else -1
+=======
+    return self.root.height if self.root is not None else -1
+
+  # Traverses the tree and returns a list of tuples: (Node, Depth)
+  def get_all_nodes_with_depth(self, current_node: Node | None = None, current_depth: int = 0) -> list[tuple[Node, int]]:
+    """
+    Traverses the tree and returns a list of tuples: (Node, Depth).
+    The root node has depth 0, its children depth 1, and so on.
+    If current_node is omitted, traversal starts from self.root.
+    """
+    if current_node is None:
+      current_node = self.root
+    if current_node is None:
+      return []
+
+    nodes: list[tuple[Node, int]] = [(current_node, current_depth)]
+    if current_node.left_son is not None:
+      nodes.extend(self.get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
+    if current_node.right_son is not None:
+      nodes.extend(self.get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
+    return nodes
+  def get_node_metrics(self, search_key: tuple[int, float, int]) -> dict:
+        """
+        Returns a dictionary containing the depth, height, and balance factor of the node with the given search_key.
+        """
+        current = self.root
+        depth = 0
+        
+        while current is not None:
+            current_key = current.get_key()
+            
+            # 1. Node found
+            if search_key == current_key:
+                # Regla: Altura de árbol vacío es -1
+                left_h = current.left_son.height if current.left_son else -1
+                right_h = current.right_son.height if current.right_son else -1
+                
+                balance_factor = left_h - right_h
+                
+                return {
+                    "depth": depth,
+                    "height": current.height,
+                    "balance_factor": balance_factor
+                }
+            elif search_key < current_key:
+                current = current.left_son
+            else:
+                current = current.right_son
+                
+            depth += 1 # Increse depth as we go down the tree
+        return 
+>>>>>>> 461eea416c05d73e246dc488441bce57ef5f67c0

@@ -82,5 +82,3 @@ class Association:
             print("Replica added successfully to the reference event.")
         else:
             raise TypeError("The child event must be of class Event.")
-
-    

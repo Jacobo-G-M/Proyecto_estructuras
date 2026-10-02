@@ -1,7 +1,4 @@
-try:
-    import Models.zone as zone_module
-except ImportError:
-    import zone as zone_module
+import Models.zone as zone_module
 
 
 class Geographical_map:
