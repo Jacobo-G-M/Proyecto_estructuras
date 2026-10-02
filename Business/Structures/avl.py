@@ -33,6 +33,9 @@ class AVL(Tree):
 
   # Main method to restore balance after stress mode
   def restore_balance(self) -> None:
+    # Turn off stress mode immediately
+    self.stress_mode = False
+
     # Verifies that the tree exists
     if self.root is None:
       return
@@ -43,9 +46,6 @@ class AVL(Tree):
     # Cuts off father relation for root
     if self.root is not None:
       self.root.father = None
-
-    # Turn off stress mode
-    self.stress_mode = False
 
   # Recursive method to restore the tree's balance bottom-up
   def _restore_node(self, current_node: Node | None) -> Node | None:
