@@ -1,11 +1,5 @@
 from abc import ABC, abstractmethod
-try:
-  from ...Models.node import Node
-except (ImportError, ValueError):
-  try:
-    from Models.node import Node
-  except ImportError:
-    from node import Node
+from ...Models.node import Node
 
 class Tree(ABC):
   # ------------------------
@@ -64,22 +58,18 @@ class Tree(ABC):
       return None
     
     # Check if the key exists
-    target_node = self.search_node(key)
-    if target_node is None:
+    deleted_node = self.search_node(key)
+    if deleted_node is None:
       return None
-
-    # Preserve a clean copy of the original node/event before any in-place replacement
-    deleted_copy = Node(id=target_node.id, event=target_node.event)
-
-    # Uses the private method to apply deletion and updates root
-    self.root = self._delete_helper(self.root, key)
-    
-    # If the root exists, ensure its father is None
-    if self.root is not None:
-      self.root.father = None
-
-    # Returns the preserved deleted node to use it in the undo stack
-    return deleted_copy
+    else:
+      # Uses the private method to apply the rest of the logic
+      self._delete_helper(self.__root, key)
+      
+      # If the root has changed, it has to updates its father to None
+      if self.__root is not None:
+        self.__root.father = None
+      # Returns the deleted node to use it in the undo stack
+      return deleted_node
   
   # Protected method to delete a node.
   def _delete_helper(self, current: Node | None, key: tuple[int, float, int]) -> Node | None:
@@ -93,13 +83,9 @@ class Tree(ABC):
     # If the key is smaller, search in the left side
     if key < current_key:
       current.left_son = self._delete_helper(current.left_son, key)
-      if current.left_son is not None:
-        current.left_son.father = current
     # If the key is greater, search in the right side
     elif key > current_key:
       current.right_son = self._delete_helper(current.right_son, key)
-      if current.right_son is not None:
-        current.right_son.father = current
     # The node to delete has been found
     else:
       # Case 1: is a leaf
@@ -118,18 +104,17 @@ class Tree(ABC):
         return current.left_son
       # Case 3: It has two children
       else:
-        # Predecessor: maximum node in left subtree
-        predecessor = self._max_node(current.left_son)
-        # Replace the values of the deleted node with those of its predecessor
-        current.id = predecessor.id
-        current.event = predecessor.event
-        # Delete the predecessor copy from left subtree
-        current.left_son = self._delete_helper(current.left_son, predecessor.get_key())
+        # Finds its succesor by taking the maximum key from its left tree
+        succesor = self._max_node(current.left_son)
+        # Replace the values of the deleted node with those of its succesor
+        current.id = succesor.id
+        current.event = succesor.event
+        # Delete the copied succesor
+        current.left_son = self._delete_helper(current.left_son, succesor.get_key())
         if current.left_son is not None:
           current.left_son.father = current
     
-    # Updates height before returning
-    current.update_height()
+    # Returns the current node
     return current
         
   # Auxiliary method for finding the largest node in a subtree
@@ -166,11 +151,9 @@ class Tree(ABC):
     else:
       return self._search_node_helper(current.right_son, key)
   
-  def preorder(self, current: Node | None = None) -> list[Node]:
+  def preorder(self) -> list[Node]:
     result_list: list[Node] = []
-    target = self.root if current is None else current
-    if target is not None:
-      self._preorder_recursive(target, result_list)
+    self._preorder_recursive(self.root, result_list)
     return result_list
   
   def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
@@ -249,22 +232,3 @@ class Tree(ABC):
     #height of the Tree
   def height(self):
     return self.root.height if self.root is not None else -1
-
-  # Traverses the tree and returns a list of tuples: (Node, Depth)
-  def get_all_nodes_with_depth(self, current_node: Node | None = None, current_depth: int = 0) -> list[tuple[Node, int]]:
-    """
-    Traverses the tree and returns a list of tuples: (Node, Depth).
-    The root node has depth 0, its children depth 1, and so on.
-    If current_node is omitted, traversal starts from self.root.
-    """
-    if current_node is None:
-      current_node = self.root
-    if current_node is None:
-      return []
-
-    nodes: list[tuple[Node, int]] = [(current_node, current_depth)]
-    if current_node.left_son is not None:
-      nodes.extend(self.get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
-    if current_node.right_son is not None:
-      nodes.extend(self.get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
-    return nodes
