@@ -949,359 +949,49 @@ class Observatory:
 	def _serialize_scenario(self) -> dict:
 		"""
 		Serializa el escenario operativo completo a un diccionario compatible con JSON
-		siguiendo las directrices de la Sección 12 (Guardado Estructural).
-		
-		Componentes serializados:
-		1. Nodos y topología del árbol AVL activo (recorrido inorden conservando IDs de hijos y padre).
-		2. Catálogo histórico: eventos archivados y eventos eliminados lógicamente con todos sus datos.
-		3. Cola de reportes pendientes (FIFO).
-		4. Catálogo de estaciones sismológicas registradas.
-		5. Asociaciones sísmicas (eventos principales y sus réplicas asociadas).
-		6. Contadores de métricas acumuladas (conflictos, correcciones, descartes y rotaciones LL, RR, LR, RL).
-		7. Parámetros de configuración y reloj de simulación actual.
+		usando el esquema canónico de ScenarioPersistence (Sección 12).
+
+		Delega completamente a ScenarioPersistence.export_to_dict(self) para garantizar
+		que el formato de las versiones persistentes sea idéntico al de save_scenario()
+		y cargable por load_scenario_by_topology(), eliminando la duplicación de esquemas.
 		"""
-		# 1. Serializar nodos del árbol AVL activo y su topología física
-		nodes_data = []
-		if self.tree is not None and self.tree.root is not None:
-			# El recorrido inorden garantiza una secuencia ordenada por clave de prioridad/magnitud/ID
-			for node in self.tree.inorder():
-				ev = node.event
-				nodes_data.append({
-					'id': node.id,
-					'priority': ev.priority,
-					'magnitude': ev.magnitude,
-					'depth': ev.depth,
-					'epicenter': list(ev.epicenter),
-					'date_time': ev.date_time.isoformat(),
-					'review': ev.review,
-					'attention_state': ev.attention_state,
-					'status': ev.status,
-					'origin_stations': [st.id if hasattr(st, 'id') else str(st) for st in ev.origin_stations] if ev.origin_stations else [],
-					'height': node.height,
-					'balance_factor': node.balance_factor(),
-					'left_son_id': node.left_son.id if node.left_son else None,
-					'right_son_id': node.right_son.id if node.right_son else None,
-					'father_id': node.father.id if node.father else None
-				})
-
-		# 2. Serializar Catálogo Histórico (archivados y eliminados lógicamente)
-		archived_list = []
-		deleted_list = []
-		if self.historic is not None:
-			# Eventos archivados por antigüedad y prioridad baja
-			for ev in self.historic.archived.values():
-				archived_list.append({
-					'id': ev.id,
-					'priority': ev.priority,
-					'magnitude': ev.magnitude,
-					'depth': ev.depth,
-					'epicenter': list(ev.epicenter),
-					'date_time': ev.date_time.isoformat(),
-					'review': ev.review,
-					'attention_state': ev.attention_state,
-					'status': ev.status,
-					'origin_stations': [st.id if hasattr(st, 'id') else str(st) for st in ev.origin_stations] if ev.origin_stations else []
-				})
-			# Eventos eliminados lógicamente (se guardan completos para poder reactivarlos si se requiere)
-			for ev in self.historic.deleted.values():
-				if ev is not None and hasattr(ev, 'priority'):
-					deleted_list.append({
-						'id': ev.id,
-						'priority': ev.priority,
-						'magnitude': ev.magnitude,
-						'depth': ev.depth,
-						'epicenter': list(ev.epicenter),
-						'date_time': ev.date_time.isoformat(),
-						'review': ev.review,
-						'attention_state': ev.attention_state,
-						'status': ev.status,
-						'origin_stations': [st.id if hasattr(st, 'id') else str(st) for st in ev.origin_stations] if ev.origin_stations else []
-					})
-				elif ev is not None:
-					deleted_list.append({'id': getattr(ev, 'id', ev)})
-
-		# 3. Serializar la Cola de Reportes pendientes (FIFO)
-		queue_list = []
-		if self.report_queue is not None:
-			for rep in self.report_queue.view_all():
-				queue_list.append({
-					'id': rep.id,
-					'magnitude': rep.magnitude,
-					'depth': rep.depth,
-					'epicenter': list(rep.epicenter),
-					'date_time': rep.date_time.isoformat(),
-					'review': rep.review,
-					'origin_station': [st.id if hasattr(st, 'id') else str(st) for st in rep.origin_station] if rep.origin_station else []
-				})
-
-		# 4. Serializar el Catálogo de Estaciones sismológicas
-		stations_data = []
-		if hasattr(self, 'stations') and self.stations:
-			for st in self.stations:
-				stations_data.append({
-					'id': st.id,
-					'name': st.name,
-					'coords': list(st.coords)
-				})
-
-		# 5. Serializar las Asociaciones de réplicas sísmicas
-		associations_data = []
-		if hasattr(self, 'associations') and self.associations:
-			for assoc in self.associations:
-				associations_data.append({
-					'id': assoc.id,
-					'chosen_reference_id': assoc.chosen_reference.id if assoc.chosen_reference else None,
-					'referenced_by_ids': [r.id for r in assoc.referenced_by if r]
-				})
-
-		# 6. Serializar Contadores de Métricas acumuladas y rotaciones
-		metrics_data = {}
-		if self.metrics is not None:
-			metrics_data = {
-				'conflicts': self.metrics.conflicts,
-				'corrections_accepted': self.metrics.corrections_accepted,
-				'discarded_reports': self.metrics.discarded_reports,
-				'active_events': self.metrics.active_events,
-				'removed_events': self.metrics.removed_events,
-				'archived_events': self.metrics.archived_events,
-				'cases': self.metrics.cases,
-				'turns': self.metrics.turns
-			}
-
-		# Retornar estructura consolidada del escenario
-		return {
-			'clock_simulation': self.clock_simulation.isoformat(),
-			'parameters': {
-				'limit': self.limit,
-				'max_time': self.max_time,
-				'distance_epicenter': self.distance_epicenter,
-				'max_tree_age': self.max_tree_age,
-				'stress_mode': self.stress_mode
-			},
-			'metrics': metrics_data,
-			'tree_root_id': self.tree.root.id if (self.tree and self.tree.root) else None,
-			'active_nodes': nodes_data,
-			'historic': {
-				'archived': archived_list,
-				'deleted': deleted_list
-			},
-			'report_queue': queue_list,
-			'stations': stations_data,
-			'associations': associations_data
-		}
+		return ScenarioPersistence.export_to_dict(self)
 
 	def _deserialize_scenario(self, data: dict) -> None:
 		"""
 		Restaura el estado operativo del observatorio a partir de un diccionario serializado.
-		
-		Pasos de reconstrucción:
-		1. Restablece el reloj de simulación y los parámetros globales de umbrales.
-		2. Asegura que los componentes operativos esenciales no sean None.
-		3. Restaura las métricas de negocio y los contadores acumulados de rotaciones AVL.
-		4. Reconstruye el catálogo de estaciones para asegurar resolución de objetos Station reales.
-		5. Restaura el catálogo histórico (archivados y eliminados lógicamente).
-		6. Vacía y recarga la cola de reportes con instancias Report válidas.
-		7. Reconstruye directamente la topología del árbol AVL (nodos, punteros hijo/padre)
-		   sin ejecutar inserciones repetidas, conservando la forma exacta guardada.
-		8. Recalcula las alturas de los nodos en post-orden (bottom-up) para garantizar
-		   integridad matemática absoluta de alturas y factores de equilibrio en el árbol AVL.
-		9. Reconecta el callback de rotaciones del árbol hacia _handle_tree_rotation.
-		10. Restaura las asociaciones vinculando las réplicas a los eventos correspondientes.
+
+		Delega a ScenarioPersistence.load_by_topology() escribiendo los datos en un archivo
+		temporal, lo que garantiza:
+		  1. Misma validación que load_scenario_by_topology() (BST order, ciclos, alturas, etc.).
+		  2. Reconstrucción atómica: si alguna validación falla se lanza ValueError con los errores,
+		     y el estado del observatorio NO se modifica (todo-o-nada).
+		  3. Esquema unificado: compatible con el producido por _serialize_scenario().
 		"""
-		# 1. Restaurar reloj de simulación y parámetros operativos
-		self.clock_simulation = datetime.fromisoformat(data['clock_simulation'])
-		params = data.get('parameters', {})
-		self.limit = params.get('limit', 3)
-		self.max_time = params.get('max_time', 48.0)
-		self.distance_epicenter = params.get('distance_epicenter', 40.0)
-		self.max_tree_age = params.get('max_tree_age', 72)
-		self.stress_mode = params.get('stress_mode', False)
+		import tempfile
 
-		# 2. Asegurar que los componentes centrales existan (evitar errores si eran None)
-		if self.metrics is None:
-			self.metrics = Metrics()
-		if self.historic is None:
-			self.historic = Historic()
-		if self.report_queue is None:
-			self.report_queue = Report_Queue()
-		if self.tree is None:
-			self.tree = AVL(id=1, on_rotation=self._handle_tree_rotation)
+		# Escribir el dict a un archivo temporal para poder llamar load_by_topology
+		with tempfile.NamedTemporaryFile(
+			mode="w",
+			suffix=".json",
+			delete=False,
+			encoding="utf-8"
+		) as tmp:
+			tmp_path = tmp.name
+			json.dump(data, tmp, ensure_ascii=False)
 
-		# Sincronizar el modo de estrés con el árbol AVL restaurado
-		self.tree.stress_mode = self.stress_mode
-
-		# 3. Restaurar métricas acumuladas y contadores de rotaciones (casos LL, RR, LR, RL y giros)
-		if 'metrics' in data and self.metrics is not None:
-			m = data['metrics']
-			self.metrics.conflicts = m.get('conflicts', 0)
-			self.metrics.corrections_accepted = m.get('corrections_accepted', 0)
-			self.metrics.discarded_reports = m.get('discarded_reports', 0)
-			self.metrics.active_events = m.get('active_events', 0)
-			self.metrics.removed_events = m.get('removed_events', 0)
-			self.metrics.archived_events = m.get('archived_events', 0)
-			if 'cases' in m and isinstance(m['cases'], dict):
-				self.metrics._cases.update(m['cases'])
-			if 'turns' in m and isinstance(m['turns'], dict):
-				self.metrics._turns.update(m['turns'])
-
-		# 4. Reconstruir catálogo de estaciones sismológicas
-		if not hasattr(self, 'stations') or self.stations is None:
-			self.stations = []
-		stations_by_id = {st.id: st for st in self.stations}
-		for st_data in data.get('stations', []):
-			if st_data['id'] not in stations_by_id:
-				st_obj = Station(id=st_data['id'], name=st_data['name'], coords=tuple(st_data['coords']))
-				self.stations.append(st_obj)
-				stations_by_id[st_obj.id] = st_obj
-
-		# Función auxiliar para resolver referencias a objetos reales de tipo Station
-		# (necesario porque el setter de Report.origin_station valida estrictamente isinstance(item, Station))
-		def _resolve_stations(station_refs: list) -> list:
-			resolved = []
-			for ref in station_refs:
-				st_id = ref if isinstance(ref, int) else (ref.get('id') if isinstance(ref, dict) else None)
-				if st_id is not None and st_id in stations_by_id:
-					resolved.append(stations_by_id[st_id])
-				elif st_id is not None:
-					new_st = Station(id=st_id, name=f"Estacion_{st_id}", coords=(0.0, 0.0))
-					self.stations.append(new_st)
-					stations_by_id[st_id] = new_st
-					resolved.append(new_st)
-				elif isinstance(ref, Station):
-					resolved.append(ref)
-			return resolved
-
-		# 5. Restaurar catálogo histórico
-		self.historic.archived.clear()
-		self.historic.deleted.clear()
-		if 'historic' in data:
-			# Eventos archivados
-			for item in data['historic'].get('archived', []):
-				ev = Event(
-					id=item['id'],
-					priority=item['priority'],
-					magnitude=item['magnitude'],
-					depth=item['depth'],
-					epicenter=tuple(item['epicenter']),
-					date_time=datetime.fromisoformat(item['date_time']),
-					review=item['review'],
-					attention_state=item['attention_state'],
-					status=item['status']
+		try:
+			ok, errors = ScenarioPersistence.load_by_topology(self, tmp_path)
+			if not ok:
+				raise ValueError(
+					f"Validation errors in scenario data:\n" + "\n".join(errors)
 				)
-				ev.origin_stations = _resolve_stations(item.get('origin_stations', []))
-				self.historic.archived[ev.id] = ev
-
-			# Eventos eliminados lógicamente (se instancian como Event válidos para evitar errores de tipo)
-			for item in data['historic'].get('deleted', []):
-				if isinstance(item, dict) and 'priority' in item:
-					ev = Event(
-						id=item['id'],
-						priority=item['priority'],
-						magnitude=item['magnitude'],
-						depth=item['depth'],
-						epicenter=tuple(item['epicenter']),
-						date_time=datetime.fromisoformat(item['date_time']),
-						review=item['review'],
-						attention_state=item['attention_state'],
-						status=item['status']
-					)
-					ev.origin_stations = _resolve_stations(item.get('origin_stations', []))
-					self.historic.deleted[ev.id] = ev
-				elif isinstance(item, dict) and 'id' in item:
-					del_id = item['id']
-					self.historic.deleted[del_id] = Event(
-						id=del_id, priority=1, magnitude=0.0, depth=0.0,
-						epicenter=(0.0, 0.0), date_time=datetime.now(), review=1, status="Deleted"
-					)
-				elif isinstance(item, int):
-					self.historic.deleted[item] = Event(
-						id=item, priority=1, magnitude=0.0, depth=0.0,
-						epicenter=(0.0, 0.0), date_time=datetime.now(), review=1, status="Deleted"
-					)
-
-		# 6. Restaurar cola de reportes pendientes
-		while not self.report_queue.is_empty():
-			self.report_queue.dequeue()
-
-		for rep_data in data.get('report_queue', []):
-			rep_stations = _resolve_stations(rep_data.get('origin_station', []))
-			rep = Report(
-				id=rep_data['id'],
-				magnitude=rep_data['magnitude'],
-				depth=rep_data['depth'],
-				epicenter=tuple(rep_data['epicenter']),
-				date_time=datetime.fromisoformat(rep_data['date_time']),
-				review=rep_data['review'],
-				origin_station=rep_stations
-			)
-			self.report_queue.enqueue(rep)
-
-		# 7. Reconstruir topología del árbol AVL activo sin reinserciones
-		self.events_dict.clear()
-		nodes_by_id = {}
-		raw_nodes = data.get('active_nodes', [])
-
-		for raw in raw_nodes:
-			ev = Event(
-				id=raw['id'],
-				priority=raw['priority'],
-				magnitude=raw['magnitude'],
-				depth=raw['depth'],
-				epicenter=tuple(raw['epicenter']),
-				date_time=datetime.fromisoformat(raw['date_time']),
-				review=raw['review'],
-				attention_state=raw['attention_state'],
-				status=raw['status']
-			)
-			ev.origin_stations = _resolve_stations(raw.get('origin_stations', []))
-			self.events_dict[ev.id] = ev
-			node = Node(id=ev.id, event=ev)
-			# Guardar tupla con referencias a los IDs de hijos y padre para enlazarlos a continuación
-			nodes_by_id[ev.id] = (node, raw.get('left_son_id'), raw.get('right_son_id'), raw.get('father_id'))
-
-		# Enlazar los punteros directos (left_son, right_son, father) entre los nodos
-		for node_id, (node, left_id, right_id, father_id) in nodes_by_id.items():
-			if left_id is not None and left_id in nodes_by_id:
-				node.left_son = nodes_by_id[left_id][0]
-			if right_id is not None and right_id in nodes_by_id:
-				node.right_son = nodes_by_id[right_id][0]
-			if father_id is not None and father_id in nodes_by_id:
-				node.father = nodes_by_id[father_id][0]
-
-		# Asignar el nodo raíz del árbol AVL
-		root_id = data.get('tree_root_id')
-		if root_id is not None and root_id in nodes_by_id:
-			self.tree.root = nodes_by_id[root_id][0]
-		else:
-			self.tree.root = None
-
-		# 8. Recalcular alturas de nodos en recorrido post-orden (bottom-up: hojas hacia la raíz)
-		# Esto garantiza que las alturas de los hijos siempre se calculen antes que las del padre
-		def _recalculate_heights(current: Node | None) -> None:
-			if current is None:
-				return
-			_recalculate_heights(current.left_son)
-			_recalculate_heights(current.right_son)
-			current.update_height()
-
-		_recalculate_heights(self.tree.root)
-
-		# 9. Reconectar callback de rotaciones para que el observatorio continúe registrando eventos
-		if hasattr(self.tree, '_AVL__on_rotation'):
-			self.tree._AVL__on_rotation = self._handle_tree_rotation
-
-		# 10. Restaurar relaciones de asociaciones (sismos principales y sus réplicas)
-		self.associations = []
-		for a_data in data.get('associations', []):
-			ref_id = a_data.get('chosen_reference_id')
-			ref_ev = self.events_dict.get(ref_id) or (self.historic.archived.get(ref_id) if self.historic else None)
-			if ref_ev:
-				assoc_obj = Association(assoc_id=a_data['id'], chosen_reference=ref_ev)
-				for r_id in a_data.get('referenced_by_ids', []):
-					r_ev = self.events_dict.get(r_id) or (self.historic.archived.get(r_id) if self.historic else None)
-					if r_ev:
-						assoc_obj.referenced_by.append(r_ev)
-				self.associations.append(assoc_obj)
+		finally:
+			# Eliminar el archivo temporal en cualquier caso
+			try:
+				os.remove(tmp_path)
+			except OSError:
+				pass
 
 	def save_version(self, name: str) -> bool:
 		"""
@@ -1318,8 +1008,14 @@ class Observatory:
 			print("Error: Version name cannot be empty.")
 			return False
 
-		# Limpiar el nombre para crear un archivo válido
+		# Limpiar el nombre: espacios → '_', luego eliminar caracteres prohibidos por el OS
+		import re
 		clean_name = name.strip().replace(" ", "_")
+		clean_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', clean_name)
+		if not clean_name:
+			print("Error: Version name is empty after removing invalid characters.")
+			return False
+
 		os.makedirs(self.VERSIONS_DIR, exist_ok=True)
 		file_path = os.path.join(self.VERSIONS_DIR, f"{clean_name}.json")
 
@@ -1357,10 +1053,15 @@ class Observatory:
 	def list_versions(self) -> list[str]:
 		"""
 		Retorna una lista ordenada con los nombres de todas las versiones persistentes disponibles en disco.
-		Sincroniza automáticamente la lista en memoria self.versions si se detectan archivos nuevos.
+		Sincroniza automáticamente la lista en memoria self.versions:
+		  - Elimina entradas cuyo archivo ya no existe en disco (versiones fantasma).
+		  - Agrega entradas por archivos nuevos detectados en disco.
 		"""
 		if not os.path.exists(self.VERSIONS_DIR):
 			return []
+
+		# Purgar de memoria las entradas cuyos archivos físicos ya no existen
+		self.versions = [v for v in self.versions if os.path.exists(v.file_path)]
 
 		version_names = []
 		for file in os.listdir(self.VERSIONS_DIR):
@@ -1391,7 +1092,9 @@ class Observatory:
 		undo_stack ('RESTORE_VERSION') antes de sobreescribir el catálogo, permitiendo
 		al usuario deshacer la restauración y regresar al estado inmediatamente anterior.
 		"""
+		import re
 		clean_name = name.strip().replace(" ", "_")
+		clean_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', clean_name)
 		file_path = os.path.join(self.VERSIONS_DIR, f"{clean_name}.json")
 
 		# Validar que el archivo exista físicamente en el disco
@@ -1402,12 +1105,27 @@ class Observatory:
 		try:
 			with open(file_path, 'r', encoding='utf-8') as f:
 				data = json.load(f)
+		except Exception as e:
+			print(f"Error reading version '{clean_name}': {e}")
+			return False
 
-			# Registrar el estado actual en undo_stack antes de restaurar (permite deshacer la restauración)
-			if hasattr(self, '_record_action'):
-				self._record_action("RESTORE_VERSION", f"Restore version '{clean_name}'")
+		# Validar PRIMERO el contenido antes de tocar el undo stack o el estado (Sección 12 / atomicidad)
+		validation_errors = ScenarioPersistence.validate_topology_data(
+			data,
+			geographical_map=self.geographical_map,
+		)
+		if validation_errors:
+			print(f"Error: Version '{clean_name}' failed validation and will NOT be restored:")
+			for err in validation_errors:
+				print(f"  - {err}")
+			return False
 
-			# Aplicar la reconstrucción completa del estado
+		try:
+			# Solo si la validación pasó: registrar snapshot del estado actual en undo_stack
+			# (permite al usuario deshacer la restauración con undo_action())
+			self._record_action("RESTORE_VERSION", f"Restore version '{clean_name}'")
+
+			# Aplicar la reconstrucción completa del estado (atómica, ya validada)
 			self._deserialize_scenario(data)
 			print(f"Version '{clean_name}' successfully restored into the observatory.")
 			return True
@@ -1672,4 +1390,3 @@ class Observatory:
 					best_parent = parent
 
 		return best_parent
-
