@@ -73,4 +73,6 @@ class Action:
         self._timestamp = value
 
     def __repr__(self) -> str:
+        if not self._action_type and not self._description:
+            return f"Action(id={self._id})"
         return f"Action(id={self._id}, type='{self._action_type}', desc='{self._description}')"

@@ -1,4 +1,7 @@
+import copy
+import json
 import math
+import os
 from datetime import datetime, timedelta
 from Business.historic import Historic
 from Business.Structures.report_queue import Report_Queue
@@ -15,7 +18,7 @@ from Business.Structures.avl import AVL
 from Models.event import Event
 from Models.report import Report
 from Models.node import Node
-import Business.version as Version
+from Business.version import Version
 
 
 class Observatory:
@@ -78,11 +81,11 @@ class Observatory:
 	@max_time.setter
 	def max_time(self, value: float) -> None:
 		if isinstance(value, (int, float)) and value >= 0:
-    		self._max_time = float(value)
-    		if hasattr(self, 'events_dict'):
-        		self.update_associations()
-	else:
-    	raise ValueError("Max time must be a non-negative number.")
+			self._max_time = float(value)
+			if hasattr(self, 'events_dict'):
+				self.update_associations()
+		else:
+			raise ValueError("Max time must be a non-negative number.")
 
 	# Getter of distance_epicenter attribute
 	@property
@@ -95,7 +98,7 @@ class Observatory:
 		if isinstance(value, (int, float)) and value >= 0:
 			self._distance_epicenter = float(value)
 			if hasattr(self, 'events_dict'):
-        		self.update_associations()
+				self.update_associations()
 		else:
 			raise ValueError("Distance must be a non-negative number.")
 
@@ -354,8 +357,8 @@ class Observatory:
 
 		return False
 
-	#method to process all report_queue reports -------------------------------------------------
-	def process_report(self) -> None:
+	# Method to process a single report from report_queue step by step --------------------------
+	def process_report_step(self) -> dict | None:
 		"""
 		Procesa un único reporte de la cola report_queue (disparador paso a paso para UI/CLI).
 		Retorna un diccionario con el resultado del paso, o None si la cola está vacía.
@@ -1460,142 +1463,133 @@ class Observatory:
 			self.tree = result["avl"]
 			self.events_dict = {ev.id: ev for ev in result.get("events", [])}
 		return result
-        print(f"Error: El identificador {event_id} no existe en ningún catálogo.")
-        return None
-	
+
 	def query_event(self, event_id: int) -> dict | None:
-        # 1. Search in the Active Catalog
-        if hasattr(self, 'events_dict') and event_id in self.events_dict:
-            event = self.events_dict[event_id]
-            
-            # Obtain node metrics (depth, height, balance factor) from the AVL tree
-            node_metrics = self._get_node_metrics(event_id)
-            
-            # Check if the epicenter is in a populated zone
-            is_populated = False
-            if getattr(self, 'geographical_map', None) is not None:
-                is_populated = self.geographical_map.is_in_populated_zone(event.epicenter[0], event.epicenter[1])
+		# 1. Search in the Active Catalog
+		if hasattr(self, 'events_dict') and event_id in self.events_dict:
+			event = self.events_dict[event_id]
+			
+			# Obtain node metrics (depth, height, balance factor) from the AVL tree
+			node_metrics = self._get_node_metrics(event_id)
+			
+			# Check if the epicenter is in a populated zone
+			is_populated = False
+			if getattr(self, 'geographical_map', None) is not None:
+				is_populated = self.geographical_map.is_in_populated_zone(event.epicenter[0], event.epicenter[1])
 
-            return {
-                "id": event.id,
-                "status": "Active",
-                "current_data": {
-                    "magnitude": event.magnitude,
-                    "depth": event.depth,
-                    "epicenter": event.epicenter,
-                    "date_time": event.date_time
-                },
+			return {
+				"id": event.id,
+				"status": "Active",
+				"current_data": {
+					"magnitude": event.magnitude,
+					"depth": event.depth,
+					"epicenter": event.epicenter,
+					"date_time": event.date_time
+				},
 				"priority": event.priority,
-                "review": event.review,
-                "stations": getattr(event, "stations", []),
-                "is_in_populated_zone": is_populated,
-                "key_K": (event.priority, event.magnitude, event.id),
-                "attention_state": event.attention_state,
-                "node_depth": node_metrics.get("depth", 0),
-                "height": node_metrics.get("height", 0),
-                "balance_factor": node_metrics.get("balance_factor", 0),
-                #"associations": self._get_event_associations(event_id) PENDING: Implement association retrieval if needed
-            }
+				"review": event.review,
+				"stations": getattr(event, "stations", []),
+				"is_in_populated_zone": is_populated,
+				"key_K": (event.priority, event.magnitude, event.id),
+				"attention_state": event.attention_state,
+				"node_depth": node_metrics.get("depth", 0),
+				"height": node_metrics.get("height", 0),
+				"balance_factor": node_metrics.get("balance_factor", 0),
+			}
 
-        # 2. Search in the Historical Catalog (Archived or Deleted)
-        if getattr(self, 'historic', None) is not None:
-            if hasattr(self.historic, 'archived') and event_id in self.historic.archived:
-                event = self.historic.archived[event_id]
-                return {"id": event_id, "status": "Archived", "event_data": event}
-            
-            if hasattr(self.historic, 'deleted') and event_id in self.historic.deleted:
-                event = self.historic.deleted[event_id]
-                return {"id": event_id, "status": "Deleted", "event_data": event}
+		# 2. Search in the Historical Catalog (Archived or Deleted)
+		if getattr(self, 'historic', None) is not None:
+			if hasattr(self.historic, 'archived') and event_id in self.historic.archived:
+				event = self.historic.archived[event_id]
+				return {"id": event_id, "status": "Archived", "event_data": event}
+			
+			if hasattr(self.historic, 'deleted') and event_id in self.historic.deleted:
+				event = self.historic.deleted[event_id]
+				return {"id": event_id, "status": "Deleted", "event_data": event}
 
-        print(f"Error: El identificador {event_id} no existe en ningún catálogo.")
+		print(f"Error: El identificador {event_id} no existe en ningún catálogo.")
+		return None
 
 	def _get_node_metrics(self, event_id: int) -> dict:
-        """
+		"""
 		Retrieves the depth, height, and balance factor of the node corresponding to the given event_id in the AVL tree.
-        """
-    	if event_id not in self.events_dict or self.tree is None:
-            return {"depth": 0, "height": 0, "balance_factor": 0}
-            
-        event = self.events_dict[event_id]
+		"""
+		if event_id not in self.events_dict or self.tree is None:
+			return {"depth": 0, "height": 0, "balance_factor": 0}
+			
+		event = self.events_dict[event_id]
+		search_key = event.get_key()
+		return self.tree.get_node_metrics(search_key)
 
-        search_key = event.get_key()
-        
-        return self.tree.get_node_metrics(search_key)
 	def verify_structure(self) -> list[str]:
-        """
-        Audits the structure of the active catalog.
-        Returns a list of errors or inconsistencies found.
-        """
-        reporte = []
-        
-        if self.tree is None or getattr(self.tree, 'root', None) is None:
-            return ["Auditoría: El árbol activo está vacío."]
+		"""
+		Audits the structure of the active catalog.
+		Returns a list of errors or inconsistencies found.
+		"""
+		reporte = []
+		
+		if self.tree is None or getattr(self.tree, 'root', None) is None:
+			return ["Auditoría: El árbol activo está vacío."]
 
-        ids_visitados = set()
-        # Use a mutable dictionary or list to maintain the state of the previous node during recursion
-        estado_auditoria = {"clave_previa": None}
+		ids_visitados = set()
+		estado_auditoria = {"clave_previa": None}
 
-    	def auditar_nodo(nodo) -> int:
-            """
-            Recursive function that traverses the tree in in-order.
-            Returns the recalculated height of the node.
-            """
-            # Rule: Height of an empty tree is -1
-            if nodo is None:
-                return -1
+		def auditar_nodo(nodo) -> int:
+			"""
+			Recursive function that traverses the tree in in-order.
+			Returns the recalculated height of the node.
+			"""
+			if nodo is None:
+				return -1
 
-            # 1. Audit left subtree
-            altura_izq = auditar_nodo(nodo.left_son)
+			# 1. Audit left subtree
+			altura_izq = auditar_nodo(nodo.left_son)
 
-            # 2. Verify uniqueness and references (cycles)
-            if nodo.id in ids_visitados:
-                reporte.append(f"Error Crítico: Identificador duplicado o ciclo de punteros detectado en ID {nodo.id}.")
-            else:
-                ids_visitados.add(nodo.id)
+			# 2. Verify uniqueness and references (cycles)
+			if nodo.id in ids_visitados:
+				reporte.append(f"Error Crítico: Identificador duplicado o ciclo de punteros detectado en ID {nodo.id}.")
+			else:
+				ids_visitados.add(nodo.id)
 
-            # 3. Verify global lexicographical order K=(P, M, I) via in-order traversal
-            clave_actual = nodo.get_key()
-            if estado_auditoria["clave_previa"] is not None:
-                if clave_actual <= estado_auditoria["clave_previa"]:
-                    reporte.append(f"Error de Orden: El nodo {clave_actual} es menor o igual a su predecesor {estado_auditoria['clave_previa']}.")
-            estado_auditoria["clave_previa"] = clave_actual
+			# 3. Verify global lexicographical order K=(P, M, I) via in-order traversal
+			clave_actual = nodo.get_key()
+			if estado_auditoria["clave_previa"] is not None:
+				if clave_actual <= estado_auditoria["clave_previa"]:
+					reporte.append(f"Error de Orden: El nodo {clave_actual} es menor o igual a su predecesor {estado_auditoria['clave_previa']}.")
+			estado_auditoria["clave_previa"] = clave_actual
 
-            # 4. Audit right subtree
-            altura_der = auditar_nodo(nodo.right_son)
+			# 4. Audit right subtree
+			altura_der = auditar_nodo(nodo.right_son)
 
-            # 5. Recalculate and verify heights
-            # Rule: Actual height = 1 + max(left_height, right_height)
-            altura_real = 1 + max(altura_izq, altura_der)
-            if nodo.height != altura_real:
-                reporte.append(f"Error de Metadatos (ID {nodo.id}): Altura guardada={nodo.height}, Altura real={altura_real}.")
+			# 5. Recalculate and verify heights
+			altura_real = 1 + max(altura_izq, altura_der)
+			if nodo.height != altura_real:
+				reporte.append(f"Error de Metadatos (ID {nodo.id}): Altura guardada={nodo.height}, Altura real={altura_real}.")
 
-            # 6. Calculate and verify balance factor
-            # Rule: Balance factor = left_height - right_height
-            factor_calculado = altura_izq - altura_der
-            
-            if not self.stress_mode:
-                # In normal mode, the balance factor must strictly be in {-1, 0, 1}
-                if factor_calculado not in (-1, 0, 1):
-                    reporte.append(f"Error de Balance (Modo Normal): ID {nodo.id} tiene un factor de {factor_calculado}.")
-            else:
-                # In stress mode, imbalance is allowed but should be reported
-                if factor_calculado not in (-1, 0, 1):
-                    reporte.append(f"Aviso (Modo Estrés): Desbalance esperado en ID {nodo.id} con factor {factor_calculado}.")
+			# 6. Calculate and verify balance factor
+			factor_calculado = altura_izq - altura_der
+			
+			if not self.stress_mode:
+				if factor_calculado not in (-1, 0, 1):
+					reporte.append(f"Error de Balance (Modo Normal): ID {nodo.id} tiene un factor de {factor_calculado}.")
+			else:
+				if factor_calculado not in (-1, 0, 1):
+					reporte.append(f"Aviso (Modo Estrés): Desbalance esperado en ID {nodo.id} con factor {factor_calculado}.")
 
-            return altura_real
+			return altura_real
 
-        # Start traversal from the root
-        auditar_nodo(self.tree.root)
+		# Start traversal from the root
+		auditar_nodo(self.tree.root)
 
-        # 7. Cross-check with auxiliary O(1) structure
-        if hasattr(self, 'events_dict'):
-            if len(ids_visitados) != len(self.events_dict):
-                reporte.append(f"Error de Integridad: El árbol tiene {len(ids_visitados)} nodos, pero el diccionario activo tiene {len(self.events_dict)}.")
+		# 7. Cross-check with auxiliary O(1) structure
+		if hasattr(self, 'events_dict'):
+			if len(ids_visitados) != len(self.events_dict):
+				reporte.append(f"Error de Integridad: El árbol tiene {len(ids_visitados)} nodos, pero el diccionario activo tiene {len(self.events_dict)}.")
 
-        if not reporte:
-            reporte.append("Auditoría Exitosa: El árbol cumple todas las propiedades matemáticas de estructura y orden.")
+		if not reporte:
+			reporte.append("Auditoría Exitosa: El árbol cumple todas las propiedades matemáticas de estructura y orden.")
 
-        return reporte
+		return reporte
 	# ---------------------------------------------------------
 	# ASSOCIATION LOGIC (REPLICAS AND REFERENCES)
 	# ---------------------------------------------------------

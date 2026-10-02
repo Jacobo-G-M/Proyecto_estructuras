@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-<<<<<<< HEAD
-from ...Models.node import Node
-=======
-from Models.node import Node
->>>>>>> 461eea416c05d73e246dc488441bce57ef5f67c0
+try:
+  from Models.node import Node
+except (ImportError, ValueError):
+  try:
+    from ...Models.node import Node
+  except (ImportError, ValueError):
+    from node import Node
+
 
 class Tree(ABC):
   # ------------------------
@@ -155,9 +158,10 @@ class Tree(ABC):
     else:
       return self._search_node_helper(current.right_son, key)
   
-  def preorder(self) -> list[Node]:
+  def preorder(self, start_node: Node | None = None) -> list[Node]:
     result_list: list[Node] = []
-    self._preorder_recursive(self.root, result_list)
+    root_to_use = start_node if start_node is not None else self.root
+    self._preorder_recursive(root_to_use, result_list)
     return result_list
   
   def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
@@ -235,9 +239,6 @@ class Tree(ABC):
 
     #height of the Tree
   def height(self):
-<<<<<<< HEAD
-    return self.root.height if self.root is not None else -1
-=======
     return self.root.height if self.root is not None else -1
 
   # Traverses the tree and returns a list of tuples: (Node, Depth)
@@ -288,4 +289,3 @@ class Tree(ABC):
                 
             depth += 1 # Increse depth as we go down the tree
         return 
->>>>>>> 461eea416c05d73e246dc488441bce57ef5f67c0
