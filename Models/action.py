@@ -1,8 +1,29 @@
-class Action:
-    def __init__(self, id: int):
-        self.id = id
+from datetime import datetime
 
-    # --- id ---
+class Action:
+    """
+    Modelo que representa una acción registrada en la Pila de Deshacer (Sección 13).
+    
+    Implementa el Patrón Memento almacenando una instantánea completa (snapshot)
+    del catálogo operativo del observatorio antes de que se ejecute una mutación,
+    permitiendo restaurar el estado en caso de deshacer (undo).
+    """
+    def __init__(
+        self,
+        id: int,
+        action_type: str = "",
+        description: str = "",
+        snapshot: dict | None = None,
+        timestamp: datetime | None = None
+    ):
+        # Inicialización de atributos mediante setters para validación de tipos
+        self.id = id
+        self.action_type = action_type
+        self.description = description
+        self.snapshot = snapshot if snapshot is not None else {}
+        self.timestamp = timestamp if timestamp is not None else datetime.now()
+
+    # --- id: Identificador numérico secuencial de la acción en la pila ---
     @property
     def id(self) -> int:
         return self._id
@@ -13,5 +34,43 @@ class Action:
             raise TypeError("id must be an integer.")
         self._id = value
 
+    # --- action_type: Tipo de operación (CREATE_EVENT, EDIT_EVENT, REMOVE_EVENT, etc.) ---
+    @property
+    def action_type(self) -> str:
+        return self._action_type
+
+    @action_type.setter
+    def action_type(self, value: str):
+        self._action_type = str(value)
+
+    # --- description: Explicación textual legible para el usuario o la interfaz ---
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @description.setter
+    def description(self, value: str):
+        self._description = str(value)
+
+    # --- snapshot: Diccionario que contiene el estado profundo previo de los componentes ---
+    @property
+    def snapshot(self) -> dict:
+        return self._snapshot
+
+    @snapshot.setter
+    def snapshot(self, value: dict):
+        if not isinstance(value, dict):
+            raise TypeError("snapshot must be a dictionary.")
+        self._snapshot = value
+
+    # --- timestamp: Marca de tiempo en la que se capturó la acción ---
+    @property
+    def timestamp(self) -> datetime:
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, value: datetime):
+        self._timestamp = value
+
     def __repr__(self) -> str:
-        return f"Action(id={self._id})"
+        return f"Action(id={self._id}, type='{self._action_type}', desc='{self._description}')"
