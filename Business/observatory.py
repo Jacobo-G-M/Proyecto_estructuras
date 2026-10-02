@@ -743,6 +743,11 @@ class Observatory:
 		"""Delegates sequential insertion comparison to ScenarioPersistence."""
 		result = ScenarioPersistence.load_by_insertions(filepath, self.geographical_map)
 		if adopt_avl and result.get("avl") is not None:
-			self.tree = result["avl"]
+			adopted_avl = result["avl"]
+			# Restore rotation callback so subsequent operations properly update metrics
+			adopted_avl._AVL__on_rotation = self._handle_tree_rotation
+			self.tree = adopted_avl
 			self.events_dict = {ev.id: ev for ev in result.get("events", [])}
+			if self.metrics is not None:
+				self.metrics.active_events = len(self.events_dict)
 		return result
