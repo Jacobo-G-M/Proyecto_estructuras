@@ -466,6 +466,101 @@ class TestScenarioPersistence(unittest.TestCase):
         self.assertEqual(target.tree.height(), deep_obs.tree.height())
         self.assertEqual(len(target.events_dict), 7)
 
+    # -------------------------------------------------------------------------
+    # Test 13: Defensive Validation on Malformed JSON Entities
+    # -------------------------------------------------------------------------
+    def test_topology_defensive_validation_corrupt_nodes(self):
+        """Validates that non-dict nodes, missing event dicts, or ID mismatches are caught cleanly."""
+        data_bad_node = {"tree": {"root_id": 1, "nodes": [123]}}
+        errors = ScenarioPersistence.validate_topology_data(data_bad_node)
+        self.assertTrue(len(errors) > 0)
+        self.assertTrue(any("JSON object" in e or "invalid" in e.lower() for e in errors))
+
+        data_none_event = {"tree": {"root_id": 1, "nodes": [{"id": 1, "event": None}]}}
+        errors2 = ScenarioPersistence.validate_topology_data(data_none_event)
+        self.assertTrue(len(errors2) > 0)
+
+        data_mismatch = {
+            "tree": {
+                "root_id": 1,
+                "nodes": [{
+                    "id": 1,
+                    "event": {
+                        "id": 2, "priority": 1, "magnitude": 3.0, "depth": 10.0,
+                        "epicenter": [0.0, 0.0], "date_time": "2026-10-01T12:00:00"
+                    }
+                }]
+            }
+        }
+        errors3 = ScenarioPersistence.validate_topology_data(data_mismatch)
+        self.assertTrue(len(errors3) > 0)
+
+    # -------------------------------------------------------------------------
+    # Test 14: Atomic Rollback on Corrupted Data
+    # -------------------------------------------------------------------------
+    def test_topology_atomic_rollback_on_bad_data(self):
+        """Verifies that if scenario has corrupt date_time, observatory remains 100% untouched."""
+        obs = Observatory()
+        obs.limit = 5
+        obs.max_time = 24.0
+
+        corrupt_data = {
+            "parameters": {"limit_L": 99, "max_time_W": 99.0},
+            "tree": {
+                "root_id": 1,
+                "nodes": [{
+                    "id": 1,
+                    "left_id": None,
+                    "right_id": None,
+                    "height": 0,
+                    "balance_factor": 0,
+                    "event": {
+                        "id": 1, "priority": 1, "magnitude": 2.0, "depth": 10.0,
+                        "epicenter": [0.0, 0.0],
+                        "date_time": "corrupt-iso-date"
+                    }
+                }]
+            }
+        }
+        with open(self.json_path, "w", encoding="utf-8") as f:
+            json.dump(corrupt_data, f)
+
+        success, errors = obs.load_scenario_by_topology(self.json_path)
+
+        self.assertFalse(success)
+        self.assertTrue(len(errors) > 0)
+        self.assertEqual(obs.limit, 5, "Observatory limit was partially mutated!")
+        self.assertEqual(obs.max_time, 24.0, "Observatory max_time was partially mutated!")
+
+    # -------------------------------------------------------------------------
+    # Test 15: Insertions Format Validation and Observatory Adoption
+    # -------------------------------------------------------------------------
+    def test_load_by_insertions_format_validation(self):
+        """Verifies that non-list events and duplicates raise ValueError in load_by_insertions."""
+        bad_format_file = os.path.join(self.temp_dir.name, "bad_format.json")
+        with open(bad_format_file, "w", encoding="utf-8") as f:
+            json.dump({"events": "invalid_string"}, f)
+
+        with self.assertRaises(ValueError):
+            ScenarioPersistence.load_by_insertions(bad_format_file)
+
+    def test_observatory_adopt_avl_preserves_rotation_callback_and_metrics(self):
+        """Adopting AVL via load_scenario_by_insertions re-links rotation callback & metrics."""
+        obs = Observatory()
+        events_seq = [
+            {"id": 1, "magnitude": 2.0, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-10-01T12:00:00"},
+            {"id": 2, "magnitude": 3.0, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-10-01T12:01:00"},
+            {"id": 3, "magnitude": 4.0, "depth": 10.0, "epicenter": [0.0, 0.0], "date_time": "2026-10-01T12:02:00"},
+        ]
+        with open(self.json_path, "w", encoding="utf-8") as f:
+            json.dump(events_seq, f)
+
+        obs.load_scenario_by_insertions(self.json_path, adopt_avl=True)
+
+        self.assertIsNotNone(obs.tree._AVL__on_rotation, "on_rotation callback was lost on adopt_avl!")
+        self.assertEqual(obs.metrics.active_events, 3, "metrics.active_events was not updated!")
+        self.assertEqual(len(obs.events_dict), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
