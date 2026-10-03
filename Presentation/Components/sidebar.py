@@ -7,7 +7,7 @@ class Sidebar(ctk.CTkFrame):
         super().__init__(master, fg_color="#0b131c", corner_radius=0, **kwargs)
         self.app = app
         self.observatory = observatory
-        self.active_key = "arboles"
+        self.active_key = "dashboard"
         self.menu_items = {}
 
         self.grid_rowconfigure(2, weight=1)
@@ -64,7 +64,7 @@ class Sidebar(ctk.CTkFrame):
         self.lbl_balance_sub = ctk.CTkLabel(self.balance_frame, text="n=0 · h=0 · BF∈[-1,1]", font=ctk.CTkFont(family=FONT_MAIN, size=9), text_color="#8a9bb0")
         self.lbl_balance_sub.pack(anchor="w", padx=15, pady=(0, 15))
 
-        self.set_active("arboles")
+        self.set_active("dashboard")
         self.refresh()
 
     def _create_nav_item(self, key: str, title: str, subtitle: str, row: int):

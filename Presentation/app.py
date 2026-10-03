@@ -52,8 +52,8 @@ class SismoLabApp(ctk.CTk):
         self.current_view_key = None
         self.current_view = None
 
-        # Mostrar por defecto la vista de Árboles
-        self.switch_view("arboles")
+        # Mostrar por defecto la vista de Dashboard
+        self.switch_view("dashboard")
 
     def switch_view(self, view_key: str):
         """
