@@ -48,8 +48,12 @@ class Tree(ABC):
     #Comparison: decide whether to go left or right in the tree based on the new node's value
     if new_node < current:
       current.left_son = self._insert_recursive(current.left_son, new_node)
+      if current.left_son is not None:
+        current.left_son.father = current
     elif new_node > current:
       current.right_son = self._insert_recursive(current.right_son, new_node)
+      if current.right_son is not None:
+        current.right_son.father = current
     else:
       return current
     return self._post_process(current)
@@ -70,7 +74,7 @@ class Tree(ABC):
       return None
     else:
       # Uses the private method to apply the rest of the logic
-      self._delete_helper(self.__root, key)
+      self.__root = self._delete_helper(self.__root, key)
       
       # If the root has changed, it has to updates its father to None
       if self.__root is not None:
@@ -90,9 +94,13 @@ class Tree(ABC):
     # If the key is smaller, search in the left side
     if key < current_key:
       current.left_son = self._delete_helper(current.left_son, key)
+      if current.left_son is not None:
+        current.left_son.father = current
     # If the key is greater, search in the right side
     elif key > current_key:
       current.right_son = self._delete_helper(current.right_son, key)
+      if current.right_son is not None:
+        current.right_son.father = current
     # The node to delete has been found
     else:
       # Case 1: is a leaf
