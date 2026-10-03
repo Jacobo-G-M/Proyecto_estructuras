@@ -35,24 +35,24 @@ class Sidebar(ctk.CTkFrame):
         self.menu_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
         self.menu_frame.grid_columnconfigure(0, weight=1)
         
-        self._create_nav_item("dashboard", "Dashboard", "Consola Maestra", row=0)
-        self._create_nav_item("arboles", "Árboles", "AVL vs BST", row=1)
-        self._create_nav_item("mapa", "Mapa", "1000x1000 km", row=2)
-        self._create_nav_item("eventos", "Eventos", "CRUD + Cola", row=3)
-        self._create_nav_item("consultas", "Consultas", "Top-k · Métricas", row=4)
+        self._create_nav_item("dashboard", "Dashboard", row=0)
+        self._create_nav_item("arboles", "Árboles", row=1)
+        self._create_nav_item("mapa", "Mapa", row=2)
+        self._create_nav_item("eventos", "Eventos", row=3)
+        self._create_nav_item("consultas", "Consultas", row=4)
 
         # 3. Balance Global
         self.balance_frame = ctk.CTkFrame(self, fg_color="#0e1620", border_color="#1e2d3d", border_width=1, corner_radius=12)
         self.balance_frame.grid(row=3, column=0, padx=15, pady=25, sticky="ew")
         
-        self.lbl_balance_title = ctk.CTkLabel(self.balance_frame, text="BALANCE GLOBAL", font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#8a9bb0")
+        self.lbl_balance_title = ctk.CTkLabel(self.balance_frame, text="BALANCE GLOBAL", font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#8a9bb0")
         self.lbl_balance_title.pack(anchor="w", padx=15, pady=(15, 0))
         
         val_frame = ctk.CTkFrame(self.balance_frame, fg_color="transparent")
         val_frame.pack(anchor="w", padx=15, fill="x")
         self.lbl_balance_val = ctk.CTkLabel(val_frame, text="1.00", font=ctk.CTkFont(family=FONT_MAIN, size=24, weight="bold"), text_color="#2ecc71")
         self.lbl_balance_val.pack(side="left")
-        self.lbl_balance_status = ctk.CTkLabel(val_frame, text="AVL OK", font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#2ecc71")
+        self.lbl_balance_status = ctk.CTkLabel(val_frame, text="AVL OK", font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#2ecc71")
         self.lbl_balance_status.pack(side="left", padx=5, pady=(8, 0))
         
         self.prog_bg = ctk.CTkFrame(self.balance_frame, height=4, fg_color="#1e2d3d", corner_radius=2)
@@ -61,30 +61,52 @@ class Sidebar(ctk.CTkFrame):
         self.prog_fg.pack(side="left", fill="y")
         self.prog_bg.pack_propagate(False)
         
-        self.lbl_balance_sub = ctk.CTkLabel(self.balance_frame, text="n=0 · h=0 · BF∈[-1,1]", font=ctk.CTkFont(family=FONT_MAIN, size=9), text_color="#8a9bb0")
+        self.lbl_balance_sub = ctk.CTkLabel(self.balance_frame, text="n=0 · h=0 · BF∈[-1,1]", font=ctk.CTkFont(family=FONT_MAIN, size=11), text_color="#8a9bb0")
         self.lbl_balance_sub.pack(anchor="w", padx=15, pady=(0, 15))
+
+        # 4. Selector de Tema Claro / Oscuro
+        self.theme_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.theme_frame.grid(row=4, column=0, padx=15, pady=(5, 20), sticky="ew")
+
+        self.theme_switch = ctk.CTkSwitch(
+            self.theme_frame,
+            text="Tema: Oscuro",
+            font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"),
+            text_color="#8a9bb0",
+            progress_color="#22d3ee",
+            button_color="#ffffff",
+            button_hover_color="#f0f0f0",
+            fg_color="#1a2736",
+            switch_width=38,
+            switch_height=20,
+            command=self._on_theme_toggle
+        )
+        self.theme_switch.select()
+        self.theme_switch.pack(side="left", padx=5)
 
         self.set_active("dashboard")
         self.refresh()
 
-    def _create_nav_item(self, key: str, title: str, subtitle: str, row: int):
+    def _on_theme_toggle(self):
+        if self.theme_switch.get() == 1:
+            ctk.set_appearance_mode("Dark")
+            self.theme_switch.configure(text="Tema: Oscuro")
+        else:
+            ctk.set_appearance_mode("Light")
+            self.theme_switch.configure(text="Tema: Claro")
+
+    def _create_nav_item(self, key: str, title: str, row: int):
         container = ctk.CTkFrame(self.menu_frame, fg_color="transparent", corner_radius=8, border_width=0, border_color="#0b131c")
-        container.grid(row=row, column=0, sticky="ew", pady=2, padx=5)
+        container.grid(row=row, column=0, sticky="ew", pady=3, padx=5)
         container.grid_columnconfigure(1, weight=1)
         
         # Punto indicador
         dot = ctk.CTkFrame(container, width=6, height=6, corner_radius=3, fg_color="#8a9bb0")
-        dot.grid(row=0, column=0, padx=(15, 10), pady=18)
+        dot.grid(row=0, column=0, padx=(15, 10), pady=10)
         
-        # Textos
-        text_frame = ctk.CTkFrame(container, fg_color="transparent")
-        text_frame.grid(row=0, column=1, sticky="w", pady=8)
-        
-        lbl_title = ctk.CTkLabel(text_frame, text=title, font=ctk.CTkFont(family=FONT_MAIN, size=13), text_color="#8a9bb0", height=15)
-        lbl_title.pack(anchor="w")
-        
-        lbl_sub = ctk.CTkLabel(text_frame, text=subtitle, font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0", height=15)
-        lbl_sub.pack(anchor="w")
+        # Título principal
+        lbl_title = ctk.CTkLabel(container, text=title, font=ctk.CTkFont(family=FONT_MAIN, size=14), text_color="#8a9bb0")
+        lbl_title.grid(row=0, column=1, sticky="w", pady=8)
         
         # Punto derecho
         dot_right = ctk.CTkFrame(container, width=4, height=4, corner_radius=2, fg_color="#22d3ee")
@@ -96,12 +118,11 @@ class Sidebar(ctk.CTkFrame):
             "container": container,
             "dot": dot,
             "title": lbl_title,
-            "sub": lbl_sub,
             "dot_right": dot_right
         }
 
         # Enlazar clicks en todos los subelementos
-        for widget in (container, dot, text_frame, lbl_title, lbl_sub):
+        for widget in (container, dot, lbl_title):
             widget.bind("<Button-1>", lambda e, k=key: self._on_item_click(k))
             widget.bind("<Enter>", lambda e, k=key: self._on_item_hover(k, True))
             widget.bind("<Leave>", lambda e, k=key: self._on_item_hover(k, False))
@@ -125,14 +146,12 @@ class Sidebar(ctk.CTkFrame):
             if is_active:
                 item["container"].configure(fg_color="#111c28", border_width=1, border_color="#22d3ee")
                 item["dot"].configure(fg_color="#22d3ee")
-                item["title"].configure(text_color="#e8eef3", font=ctk.CTkFont(family=FONT_MAIN, size=13, weight="bold"))
-                item["sub"].configure(text_color="#8a9bb0")
+                item["title"].configure(text_color="#e8eef3", font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"))
                 item["dot_right"].grid()
             else:
                 item["container"].configure(fg_color="transparent", border_width=0, border_color="#0b131c")
                 item["dot"].configure(fg_color="#8a9bb0")
-                item["title"].configure(text_color="#8a9bb0", font=ctk.CTkFont(family=FONT_MAIN, size=13, weight="normal"))
-                item["sub"].configure(text_color="#536477")
+                item["title"].configure(text_color="#8a9bb0", font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="normal"))
                 item["dot_right"].grid_remove()
 
     def refresh(self):

@@ -10,6 +10,10 @@ from Presentation.Utils.demo_data import load_demo_data
 
 class SismoLabApp(ctk.CTk):
     def __init__(self, observatory):
+        # Escala visual global para mejorar la legibilidad y soporte de alta resolución
+        ctk.set_widget_scaling(1.15)
+        ctk.set_window_scaling(1.0)
+
         super().__init__()
         self.observatory = observatory
 

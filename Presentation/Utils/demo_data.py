@@ -36,6 +36,7 @@ def load_demo_data(observatory):
     # 3. Insertar eventos de prueba representativos
     # Formato: (id, mag, depth, epicenter, time_offset_h)
     demo_events = [
+        # Eventos base representativos
         (42, 6.1, 18.0, (410.0, 390.0), 3.0),   # P3 (mag >= 6.0)
         (10, 5.2, 22.4, (412.0, 388.0), 2.5),   # P3 (mag >= 4.5, depth <= 30 en zona poblada)
         (31, 4.8, 45.0, (200.0, 150.0), 4.0),   # P2 (mag >= 4.5, depth > 30)
@@ -43,6 +44,20 @@ def load_demo_data(observatory):
         (88, 4.4, 25.0, (420.0, 410.0), 1.0),   # P1 (mag < 4.5)
         (15, 3.9, 10.0, (220.0, 180.0), 6.0),   # P1
         (53, 2.7, 8.0,  (100.0, 120.0), 8.0),   # P1
+
+        # Eventos adicionales para probar topología y Acceso Costoso (P3 depth > L=3)
+        (65, 6.3, 15.0, (405.0, 395.0), 7.0),   # P3
+        (72, 6.8, 12.0, (415.0, 400.0), 9.0),   # P3
+        (81, 7.1, 20.0, (425.0, 405.0), 10.0),  # P3
+        (94, 6.5, 25.0, (408.0, 392.0), 11.0),  # P3
+        (24, 5.8, 19.0, (411.0, 389.0), 12.0),  # P3 (zona poblada)
+        (19, 5.0, 21.0, (414.0, 387.0), 13.0),  # P3 (zona poblada)
+        (5,  2.2, 5.0,  (80.0, 90.0),   14.0),  # P1 (profundidad 4 en árbol, NO costoso por ser P1)
+        (61, 4.9, 50.0, (190.0, 160.0), 15.0),  # P2
+        (38, 4.6, 60.0, (210.0, 140.0), 16.0),  # P2 (profundidad 4 en árbol, NO costoso por ser P2)
+        (95, 6.6, 14.0, (407.0, 393.0), 18.0),  # P3 (profundidad 4 > L=3 -> ACCESO COSTOSO)
+        (99, 7.5, 10.0, (430.0, 410.0), 17.0),  # P3 (profundidad 4 > L=3 -> ACCESO COSTOSO)
+        (25, 5.9, 17.0, (409.0, 391.0), 19.0),  # P3 (zona poblada)
     ]
 
     for eid, mag, dep, epi, off in demo_events:

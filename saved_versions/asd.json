@@ -1,0 +1,591 @@
+{
+  "version": "1.0",
+  "simulation_clock": "2026-10-03T18:31:16",
+  "stress_mode": true,
+  "parameters": {
+    "limit_L": 3,
+    "max_time_W": 48.0,
+    "distance_epicenter_R": 40.0,
+    "max_tree_age_T": 72
+  },
+  "zones": [
+    {
+      "id": 1,
+      "name": "Zona Central Metropolitana",
+      "is_populated": true,
+      "ubication_x": [
+        300.0,
+        500.0
+      ],
+      "ubication_y": [
+        300.0,
+        500.0
+      ]
+    }
+  ],
+  "stations": [
+    {
+      "id": 1,
+      "name": "S-N1",
+      "coords": [
+        250.0,
+        350.0
+      ]
+    },
+    {
+      "id": 2,
+      "name": "S-N2",
+      "coords": [
+        400.0,
+        420.0
+      ]
+    },
+    {
+      "id": 3,
+      "name": "S-C1",
+      "coords": [
+        600.0,
+        500.0
+      ]
+    }
+  ],
+  "tree": {
+    "root_id": 10,
+    "nodes": [
+      {
+        "id": 10,
+        "left_id": 88,
+        "right_id": 65,
+        "height": 4,
+        "balance_factor": 0,
+        "event": {
+          "id": 10,
+          "priority": 3,
+          "magnitude": 5.2,
+          "depth": 22.4,
+          "epicenter": [
+            412.0,
+            388.0
+          ],
+          "date_time": "2026-10-03T14:01:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 88,
+        "left_id": 7,
+        "right_id": 61,
+        "height": 3,
+        "balance_factor": 0,
+        "event": {
+          "id": 88,
+          "priority": 1,
+          "magnitude": 4.4,
+          "depth": 25.0,
+          "epicenter": [
+            420.0,
+            410.0
+          ],
+          "date_time": "2026-10-03T15:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "left_id": 53,
+        "right_id": 15,
+        "height": 2,
+        "balance_factor": 1,
+        "event": {
+          "id": 7,
+          "priority": 1,
+          "magnitude": 3.1,
+          "depth": 15.0,
+          "epicenter": [
+            150.0,
+            200.0
+          ],
+          "date_time": "2026-10-03T11:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 53,
+        "left_id": 5,
+        "right_id": null,
+        "height": 1,
+        "balance_factor": 1,
+        "event": {
+          "id": 53,
+          "priority": 1,
+          "magnitude": 2.7,
+          "depth": 8.0,
+          "epicenter": [
+            100.0,
+            120.0
+          ],
+          "date_time": "2026-10-03T08:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 5,
+          "priority": 1,
+          "magnitude": 2.2,
+          "depth": 5.0,
+          "epicenter": [
+            80.0,
+            90.0
+          ],
+          "date_time": "2026-10-03T02:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 15,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 15,
+          "priority": 1,
+          "magnitude": 3.9,
+          "depth": 10.0,
+          "epicenter": [
+            220.0,
+            180.0
+          ],
+          "date_time": "2026-10-03T10:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 61,
+        "left_id": 31,
+        "right_id": 19,
+        "height": 2,
+        "balance_factor": 1,
+        "event": {
+          "id": 61,
+          "priority": 2,
+          "magnitude": 4.9,
+          "depth": 50.0,
+          "epicenter": [
+            190.0,
+            160.0
+          ],
+          "date_time": "2026-10-03T01:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 31,
+        "left_id": 38,
+        "right_id": null,
+        "height": 1,
+        "balance_factor": 1,
+        "event": {
+          "id": 31,
+          "priority": 2,
+          "magnitude": 4.8,
+          "depth": 45.0,
+          "epicenter": [
+            200.0,
+            150.0
+          ],
+          "date_time": "2026-10-03T12:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 38,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 38,
+          "priority": 2,
+          "magnitude": 4.6,
+          "depth": 60.0,
+          "epicenter": [
+            210.0,
+            140.0
+          ],
+          "date_time": "2026-10-03T00:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 19,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 19,
+          "priority": 3,
+          "magnitude": 5.0,
+          "depth": 21.0,
+          "epicenter": [
+            414.0,
+            387.0
+          ],
+          "date_time": "2026-10-03T03:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 65,
+        "left_id": 25,
+        "right_id": 72,
+        "height": 3,
+        "balance_factor": -1,
+        "event": {
+          "id": 65,
+          "priority": 3,
+          "magnitude": 6.3,
+          "depth": 15.0,
+          "epicenter": [
+            405.0,
+            395.0
+          ],
+          "date_time": "2026-10-03T09:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 25,
+        "left_id": 24,
+        "right_id": 42,
+        "height": 1,
+        "balance_factor": 0,
+        "event": {
+          "id": 25,
+          "priority": 3,
+          "magnitude": 5.9,
+          "depth": 17.0,
+          "epicenter": [
+            409.0,
+            391.0
+          ],
+          "date_time": "2026-10-02T21:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 24,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 24,
+          "priority": 3,
+          "magnitude": 5.8,
+          "depth": 19.0,
+          "epicenter": [
+            411.0,
+            389.0
+          ],
+          "date_time": "2026-10-03T04:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 42,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 42,
+          "priority": 3,
+          "magnitude": 6.1,
+          "depth": 18.0,
+          "epicenter": [
+            410.0,
+            390.0
+          ],
+          "date_time": "2026-10-03T13:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 72,
+        "left_id": 94,
+        "right_id": 81,
+        "height": 2,
+        "balance_factor": 0,
+        "event": {
+          "id": 72,
+          "priority": 3,
+          "magnitude": 6.8,
+          "depth": 12.0,
+          "epicenter": [
+            415.0,
+            400.0
+          ],
+          "date_time": "2026-10-03T07:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 94,
+        "left_id": null,
+        "right_id": 95,
+        "height": 1,
+        "balance_factor": -1,
+        "event": {
+          "id": 94,
+          "priority": 3,
+          "magnitude": 6.5,
+          "depth": 25.0,
+          "epicenter": [
+            408.0,
+            392.0
+          ],
+          "date_time": "2026-10-03T05:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 95,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 95,
+          "priority": 3,
+          "magnitude": 6.6,
+          "depth": 14.0,
+          "epicenter": [
+            407.0,
+            393.0
+          ],
+          "date_time": "2026-10-02T22:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 81,
+        "left_id": null,
+        "right_id": 99,
+        "height": 1,
+        "balance_factor": -1,
+        "event": {
+          "id": 81,
+          "priority": 3,
+          "magnitude": 7.1,
+          "depth": 20.0,
+          "epicenter": [
+            425.0,
+            405.0
+          ],
+          "date_time": "2026-10-03T06:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 99,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 99,
+          "priority": 3,
+          "magnitude": 7.5,
+          "depth": 10.0,
+          "epicenter": [
+            430.0,
+            410.0
+          ],
+          "date_time": "2026-10-02T23:31:16",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "historic": {
+    "archived": [],
+    "deleted": []
+  },
+  "report_queue": [],
+  "associations": [
+    {
+      "id": 94,
+      "chosen_reference_id": 94,
+      "referenced_by_ids": [
+        42
+      ]
+    },
+    {
+      "id": 24,
+      "chosen_reference_id": 24,
+      "referenced_by_ids": [
+        10
+      ]
+    },
+    {
+      "id": 61,
+      "chosen_reference_id": 61,
+      "referenced_by_ids": [
+        31,
+        15
+      ]
+    },
+    {
+      "id": 81,
+      "chosen_reference_id": 81,
+      "referenced_by_ids": [
+        88,
+        72
+      ]
+    },
+    {
+      "id": 95,
+      "chosen_reference_id": 95,
+      "referenced_by_ids": [
+        65,
+        94
+      ]
+    },
+    {
+      "id": 99,
+      "chosen_reference_id": 99,
+      "referenced_by_ids": [
+        81
+      ]
+    },
+    {
+      "id": 25,
+      "chosen_reference_id": 25,
+      "referenced_by_ids": [
+        24,
+        19
+      ]
+    }
+  ],
+  "metrics": {
+    "corrections_accepted": 0,
+    "discarded_reports": 0,
+    "conflicts": 0,
+    "active_events": 19,
+    "removed_events": 0,
+    "archived_events": 0,
+    "cases": {
+      "LL": 2,
+      "RR": 2,
+      "LR": 2,
+      "RL": 2
+    },
+    "turns": {
+      "left": 6,
+      "right": 6
+    }
+  }
+}
