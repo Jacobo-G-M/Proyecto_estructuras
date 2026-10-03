@@ -24,16 +24,16 @@ from Business.version import Version
 
 class Observatory:
 	def __init__(self) -> None:
-		self.clock_simulation = datetime.now()
+		self.clock_simulation = datetime.now().replace(microsecond=0)
 		self.limit = 3
-		self.max_time = 0.0
-		self.distance_epicenter = 0.0
-		self.max_tree_age = 0
+		self.max_time = 48.0
+		self.distance_epicenter = 40.0
+		self.max_tree_age = 72
 		self.stress_mode = False
 		
 		# 1:1 Relationships
-		self.historic = None
-		self.report_queue = None
+		self.historic = Historic()
+		self.report_queue = Report_Queue()
 		self.undo_stack = Undo_stack()
 		self.metrics = Metrics()
 		self.geographical_map = None
@@ -68,12 +68,12 @@ class Observatory:
 	# Setter for limit attribute
 	@limit.setter
 	def limit(self, value: int) -> None:
-		if isinstance(value, int) and value >= 0:
+		if isinstance(value, int) and value > 0:
 			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_limit', None) is not None and self._limit != value:
 				self._record_action("UPDATE_PARAMETER", f"Changed limit L from {self._limit} to {value}")
 			self._limit = value
 		else:
-			raise ValueError("Limit must be a non-negative integer.")
+			raise ValueError("Limit must be a positive integer.")
 
 	# Getter of max_time attribute
 	@property
@@ -83,7 +83,7 @@ class Observatory:
 	# Setter for max_time attribute
 	@max_time.setter
 	def max_time(self, value: float) -> None:
-		if isinstance(value, (int, float)) and value >= 0:
+		if isinstance(value, (int, float)) and value > 0:
 			new_val = float(value)
 			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_max_time', None) is not None and self._max_time != new_val:
 				self._record_action("UPDATE_PARAMETER", f"Changed max_time W from {self._max_time} to {new_val}")
@@ -91,7 +91,7 @@ class Observatory:
 			if hasattr(self, 'events_dict'):
 				self.update_associations()
 		else:
-			raise ValueError("Max time must be a non-negative number.")
+			raise ValueError("Max time must be a positive number.")
 
 	# Getter of distance_epicenter attribute
 	@property
@@ -101,7 +101,7 @@ class Observatory:
 	# Setter for distance_epicenter attribute
 	@distance_epicenter.setter
 	def distance_epicenter(self, value: float) -> None:
-		if isinstance(value, (int, float)) and value >= 0:
+		if isinstance(value, (int, float)) and value > 0:
 			new_val = float(value)
 			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_distance_epicenter', None) is not None and self._distance_epicenter != new_val:
 				self._record_action("UPDATE_PARAMETER", f"Changed distance_epicenter R from {self._distance_epicenter} to {new_val}")
@@ -109,7 +109,7 @@ class Observatory:
 			if hasattr(self, 'events_dict'):
 				self.update_associations()
 		else:
-			raise ValueError("Distance must be a non-negative number.")
+			raise ValueError("Distance must be a positive number.")
 
 	# Getter of max_tree_age attribute
 	@property
@@ -119,12 +119,12 @@ class Observatory:
 	# Setter for max_tree_age attribute
 	@max_tree_age.setter
 	def max_tree_age(self, value: int) -> None:
-		if isinstance(value, int) and value >= 0:
+		if isinstance(value, int) and value > 0:
 			if getattr(self, 'undo_stack', None) is not None and getattr(self, '_max_tree_age', None) is not None and self._max_tree_age != value:
 				self._record_action("UPDATE_PARAMETER", f"Changed max_tree_age T from {self._max_tree_age} to {value}")
 			self._max_tree_age = value
 		else:
-			raise ValueError("Max tree age must be a non-negative integer.")
+			raise ValueError("Max tree age must be a positive integer.")
 
 	# Getter of stress_mode attribute
 	@property
@@ -136,6 +136,8 @@ class Observatory:
 	def stress_mode(self, value: bool) -> None:
 		if isinstance(value, bool):
 			self._stress_mode = value
+			if getattr(self, 'tree', None) is not None:
+				self.tree.stress_mode = value
 		else:
 			raise TypeError("Stress mode must be a boolean.")
 
@@ -263,55 +265,54 @@ class Observatory:
 		# -----------------------------------------------------------------
 		# 1. RANGE AND DATA VALIDATIONS
 		# -----------------------------------------------------------------
+		magnitude = round(magnitude, 1)
+		depth = round(depth, 1)
+		x, y = epicenter
+		x, y = round(x, 1), round(y, 1)
+		epicenter = (x, y)
+
 		if not isinstance(event_id, int) or not (1 <= event_id <= 999999):
-			print("Error: Event ID must be an integer between 1 and 999999.")
-			return None
+			raise ValueError("Event ID must be an integer between 1 and 999999.")
 
 		if not (-2.0 <= magnitude <= 10.0):
-			print("Error: Magnitude must be between -2.0 and 10.0.")
-			return None
+			raise ValueError("Magnitude must be between -2.0 and 10.0.")
 
 		if not (0.0 <= depth <= 700.0):
-			print("Error: Depth must be between 0.0 and 700.0 km.")
-			return None
+			raise ValueError("Depth must be between 0.0 and 700.0 km.")
 
 		if not (isinstance(epicenter, tuple) and len(epicenter) == 2):
-			print("Error: Epicenter must be a tuple of two coordinates (x, y).")
-			return None
+			raise ValueError("Epicenter must be a tuple of two coordinates (x, y).")
 
-		x, y = epicenter
 		if not (0.0 <= x <= 1000.0 and 0.0 <= y <= 1000.0):
-			print("Error: Coordinates x and y must be between 0.0 and 1000.0 km.")
-			return None
+			raise ValueError("Coordinates x and y must be between 0.0 and 1000.0 km.")
 
 		if date_time > self.clock_simulation:
-			print("Error: Occurrence time cannot be after the simulation clock.")
-			return None
+			raise ValueError("Occurrence time cannot be after the simulation clock.")
 
 		# -----------------------------------------------------------------
 		# 2. CHECK ID UNIQUENESS (Active, Archived, or Deleted)
 		# -----------------------------------------------------------------
 		if self._is_id_registered(event_id):
-			print(f"Error: Event ID {event_id} already exists in active, archived, or deleted catalog.")
-			return None
+			raise ValueError(f"Event ID {event_id} already exists in active, archived, or deleted catalog.")
 
 		# -----------------------------------------------------------------
 		# 3. DERIVE PRIORITY & CREATE EVENT OBJECT
 		# -----------------------------------------------------------------
 		priority = self.calculate_priority(magnitude, depth, epicenter)
 
-		# TODO: put stations in event
 		new_event = Event(
 			id=event_id,
 			priority=priority,
-			magnitude=round(magnitude, 1),
-			depth=round(depth, 1),
-			epicenter=(round(x, 1), round(y, 1)),
+			magnitude=magnitude,
+			depth=depth,
+			epicenter=epicenter,
 			date_time=date_time,
 			review=1,
 			attention_state="Pending",
 			status="Active"
 		)
+		if station is not None:
+			new_event.add_origin_station(station)
 
 		# -----------------------------------------------------------------
 		# 4. REGISTRAR ACCIÓN DE DESHACER (SECCIÓN 13) E INSERTAR EN AVL
@@ -330,10 +331,8 @@ class Observatory:
 
 		if self.metrics is not None:
 			self.metrics.active_events += 1
-		# TODO: Record action in self.undo_stack to allow undoing this creation
 		self.update_associations()
 
-		print(f"Event {event_id} successfully created with priority {priority}.")
 		return new_event
 
 	# Callback handler to register AVL rotations into Metrics
@@ -350,11 +349,11 @@ class Observatory:
 		# Check in historic (archived and deleted)
 		if self.historic is not None:
 			# Check the archived events
-			for ev in self.historic.archived:
+			for ev in self.historic.archived.values():
 				if ev.id == event_id:
 					return True
 			# Check the deleted events
-			for ev in self.historic.deleted:
+			for ev in self.historic.deleted.values():
 				if ev.id == event_id:
 					return True
 
@@ -363,7 +362,7 @@ class Observatory:
 			for node in self.tree.inorder():
 				# Extract the event ID from get_key(): (priority, magnitude, event_id)
 				_, _, current_event_id = node.get_key()
-				if current_event_id == event_id:
+				if abs(current_event_id) == event_id:
 					return True
 
 		return False
@@ -530,15 +529,19 @@ class Observatory:
 						new_node = Node(id=reactivated.id, event=reactivated)
 						self.tree.insert(new_node)
 					event = reactivated
+					if self.metrics is not None:
+						self.metrics.active_events += 1
 
 			#edits the event with the new information
-			self.edit_event(
+			edited_event = self.edit_event(
 				event_id=event.id,
 				new_magnitude=report.magnitude,
 				new_depth=report.depth,
 				new_epicenter=report.epicenter,
 				new_date_time=report.date_time
 			)
+			if edited_event is None:
+				return "Correction Failed"
 			# Update to the report's revision
 			event.review = report.review
 			if self.metrics is not None:
@@ -606,20 +609,23 @@ class Observatory:
 		new_date_time: datetime
 	) -> Event | None:
 		if event_id not in self.events_dict:
-			print(f"Error: Event ID {event_id} no se encuentra en el catálogo activo.")
-			return None
+			raise ValueError(f"Event ID {event_id} no se encuentra en el catálogo activo.")
 
 		event_to_edit = self.events_dict[event_id]
 
+		new_magnitude = round(new_magnitude, 1)
+		new_depth = round(new_depth, 1)
+		new_x, new_y = round(new_epicenter[0], 1), round(new_epicenter[1], 1)
+		new_epicenter = (new_x, new_y)
+
 		if not (-2.0 <= new_magnitude <= 10.0):
-			print("Error: La magnitud debe estar entre -2.0 y 10.0.")
-			return None
+			raise ValueError("La magnitud debe estar entre -2.0 y 10.0.")
 		if not (0.0 <= new_depth <= 700.0):
-			print("Error: La profundidad debe estar entre 0.0 y 700.0 km.")
-			return None
+			raise ValueError("La profundidad debe estar entre 0.0 y 700.0 km.")
+		if not (0.0 <= new_x <= 1000.0 and 0.0 <= new_y <= 1000.0):
+			raise ValueError("Las coordenadas x e y deben estar entre 0.0 y 1000.0 km.")
 		if new_date_time > self.clock_simulation:
-			print("Error: El tiempo de ocurrencia no puede ser futuro.")
-			return None
+			raise ValueError("El tiempo de ocurrencia no puede ser futuro.")
 
 		# Registrar snapshot en la pila de deshacer antes de modificar los datos físicos o la clave del árbol AVL
 		self._record_action("EDIT_EVENT", f"Edit event ID {event_id}")
@@ -649,21 +655,17 @@ class Observatory:
 			updated_node = Node(id=event_id, event=event_to_edit)
 			self.tree.insert(updated_node)
 		self.update_associations()
-		print(f"Event {event_id} corregido. Clave actualizada: {key_changed}.")
 		return event_to_edit
 
 	def remove_event(self, event_id: int) -> None:
 		# Validation: Check if the event exists in the active catalog
 		if not hasattr(self, 'events_dict') or event_id not in self.events_dict:
-			print(f"Error: El evento {event_id} no se encuentra en el catálogo activo.")
-			return None
+			raise ValueError(f"El evento {event_id} no se encuentra en el catálogo activo.")
 
 		event_to_remove = self.events_dict[event_id]
 
 		# Registrar snapshot antes de eliminar el nodo del árbol AVL y removerlo de los catálogos
 		self._record_action("REMOVE_EVENT", f"Remove event ID {event_id}")
-
-		print(f"Preparando para eliminar el evento activo: ID={event_id}, K=(P:{event_to_remove.priority}, M:{event_to_remove.magnitude})")
 
 		# Remove from the tree if it exists
 		if hasattr(self, 'tree') and self.tree is not None:
@@ -678,23 +680,30 @@ class Observatory:
 		# Update metrics if applicable
 		if self.metrics is not None:
 			self.metrics.active_events -= 1
+			self.metrics.removed_events += 1
 
-		print(f"Eliminación completada: El identificador {event_id} ha sido retirado del catálogo.")
 		return event_to_remove
 
-	def archive_subtree(self) -> None:
+	def archive_subtree(self, execute: bool = False) -> dict | None:
 		if self.tree is None or self.tree.root is None:
-			print("El catálogo activo está vacío. No hay nada que archivar.")
-			return
+			raise ValueError("El catálogo activo está vacío. No hay nada que archivar.")
 
 		# Search for the best branch to archive based on the defined rules
 		best_root_node, nodes_to_archive = self._find_best_branch()
 
 		if not nodes_to_archive:
-			print("No existe ninguna rama que cumpla los criterios para ser archivada.")
-			return
+			raise ValueError("No existe ninguna rama que cumpla los criterios para ser archivada.")
 
 		ids_afectados = [n.id for n in nodes_to_archive]
+		
+		# Return preview if not executing
+		if not execute:
+			return {
+				"best_root_id": best_root_node.id,
+				"count": len(ids_afectados),
+				"affected_ids": ids_afectados
+			}
+
 		print(f"Archivando subárbol con raíz ID={best_root_node.id}.")
 		print(f"Eventos afectados ({len(ids_afectados)}): {ids_afectados}")
 		# Registrar la acción de archivo masivo como una única unidad atómica en la pila de deshacer
@@ -720,10 +729,17 @@ class Observatory:
 
 			if self.metrics is not None:
 				self.metrics.active_events -= len(nodes_to_archive)
+				self.metrics.archived_events += len(nodes_to_archive)
+				self.metrics.mass_archives += 1
 		finally:
 			self._suppress_undo_recording = False
 
 		print("Archivo masivo ejecutado con éxito.")
+		return {
+			"best_root_id": best_root_node.id,
+			"count": len(ids_afectados),
+			"affected_ids": ids_afectados
+		}
 
 	# --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
 
@@ -754,27 +770,72 @@ class Observatory:
 		"""
 		if new_time is None:
 			if hours <= 0:
-				print("Error: You must provide a valid future datetime or a positive number of hours.")
-				return None
+				raise ValueError("You must provide a valid future datetime or a positive number of hours.")
 			target_time = self.clock_simulation + timedelta(hours=hours)
 		else:
 			target_time = new_time
 
 		if not isinstance(target_time, datetime):
-			print("Error: Target time must be an instance of datetime.")
-			return None
+			raise TypeError("Target time must be an instance of datetime.")
 
 		if target_time <= self.clock_simulation:
-			print(f"Error: The clock can only advance to a future time. Current: {self.clock_simulation.isoformat()}, Target: {target_time.isoformat()}")
-			return None
+			raise ValueError(f"The clock can only advance to a future time. Current: {self.clock_simulation.isoformat()}, Target: {target_time.isoformat()}")
 
 		# Guardar el estado previo en la pila de deshacer antes de adelantar el reloj de simulación
 		previous_time = self.clock_simulation
 		self._record_action("ADVANCE_CLOCK", f"Advance clock from {previous_time.isoformat()} to {target_time.isoformat()}")
 		self.clock_simulation = target_time
 
-		print(f"Clock advanced successfully: {previous_time.isoformat()} -> {self.clock_simulation.isoformat()}")
 		return self.clock_simulation
+
+	def archive_expired_events(self) -> list[int]:
+		"""
+		Scans the active catalog and archives all events that have been unmanaged
+		for longer than self.max_time (W) hours relative to the current simulation clock.
+		
+		This method satisfies SismoLab Rule 6: "Eventos no gestionados que excedan 
+		W horas pasan a estado 'Archivado'".
+		
+		Returns:
+			A list of event IDs that were successfully archived.
+		"""
+		if not hasattr(self, 'events_dict') or not hasattr(self, 'clock_simulation'):
+			return []
+
+		expired_ids = []
+		
+		# Identify expired events before deleting to avoid modifying dict during iteration
+		for event in self.events_dict.values():
+			age_hours = (self.clock_simulation - event.date_time).total_seconds() / 3600.0
+			if age_hours > self.max_time:
+				expired_ids.append(event.id)
+				
+		if not expired_ids:
+			return [] # Nothing to archive
+
+		# Record snapshot once for the bulk archival
+		self._record_action("ARCHIVE_EXPIRED", f"Archived {len(expired_ids)} expired events.")
+
+		for eid in expired_ids:
+			event_to_archive = self.events_dict[eid]
+			
+			# Remove from Tree
+			if hasattr(self, 'tree') and self.tree is not None:
+				self.tree.delete(event_to_archive.get_key())
+			
+			# Remove from dict
+			del self.events_dict[eid]
+			
+			# Add to historic
+			if hasattr(self, 'historic') and self.historic is not None:
+				self.historic.archive_event(event_to_archive)
+				
+		if hasattr(self, 'metrics') and self.metrics is not None:
+			self.metrics.active_events -= len(expired_ids)
+			self.metrics.archived_events += len(expired_ids)
+			
+		self.update_associations()
+		return expired_ids
 
 	# =========================================================================
 	#              SISTEMA DE PILA DE DESHACER (SECCIÓN 13 - SNAPSHOTS)
@@ -880,8 +941,7 @@ class Observatory:
 		"""
 		# Verificar si hay acciones previas disponibles para revertir
 		if self.undo_stack is None or self.undo_stack.is_empty():
-			print("No previous actions available to undo.")
-			return False
+			raise ValueError("No previous actions available to undo.")
 
 		# Desapilar la acción más reciente
 		last_action = self.undo_stack.unstack()
@@ -901,14 +961,14 @@ class Observatory:
 		
 		# Restaurar reloj de simulación y parámetros del observatorio
 		self.clock_simulation = s.get('clock_simulation', self.clock_simulation)
-		self.limit = s.get('limit', self.limit)
+		self._limit = s.get('limit', self.limit)
 		
 		# Usamos los campos privados _max_time y _distance_epicenter para evitar 
 		# disparar los setters que sobreescribirían la asociación que apenas restauramos
 		self._max_time = s.get('max_time', self.max_time)
 		self._distance_epicenter = s.get('distance_epicenter', self.distance_epicenter)
 		
-		self.max_tree_age = s.get('max_tree_age', self.max_tree_age)
+		self._max_tree_age = s.get('max_tree_age', self.max_tree_age)
 		self.stress_mode = s.get('stress_mode', self.stress_mode)
 		
 		# Sincronizar explícitamente el modo de estrés en el árbol restaurado
@@ -919,7 +979,6 @@ class Observatory:
 		self.metrics = s.get('metrics')
 		self.associations = s.get('associations', [])
 
-		print(f"Undo completed successfully: Reverted '{last_action.description}' (Type: {last_action.action_type}).")
 		return True
 	
 	# Method to identify high-priority events whose node depth exceeds limit L
@@ -957,10 +1016,7 @@ class Observatory:
 
 		# 3. Change the attention state
 		event.attention_state = "Reviewed"
-
-		# 4. Update metrics if applicable
-		if self.metrics is not None:
-			pass # TODO: self.metrics.mark_reviewed_count += 1
+		
 		print(f"El evento {event_id} ha sido marcado exitosamente como 'Reviewed'.")
 		return True
 
@@ -1176,29 +1232,43 @@ class Observatory:
 		"""
 		return Queries.top_k_pending(self.tree, k)
 
-	def query_events_by_filters(
+	def query_by_magnitude_range(
 		self,
-		min_mag: float | None = None,
-		max_mag: float | None = None,
-		max_depth: float | None = None,
-		start_date: datetime | None = None,
-		end_date: datetime | None = None
+		min_mag: float,
+		max_mag: float
 	) -> tuple[list[Event], int]:
 		"""
-		Query 2 Facade: Filters active events across magnitude, depth, and occurrence date.
-		Delegates execution to Queries.events_by_filters with branch pruning on key bounds.
+		Query 2a Facade: Filters active events across a specific magnitude range.
+		Delegates execution to Queries.events_by_magnitude_range with branch pruning on key bounds.
 
 		Args:
-			min_mag: Lower bound for magnitude (inclusive). None means no lower bound.
-			max_mag: Upper bound for magnitude (inclusive). None means no upper bound.
-			max_depth: Maximum focal depth in km (inclusive). None means no depth bound.
-			start_date: Earliest occurrence timestamp (inclusive). None means datetime.min.
-			end_date: Latest occurrence timestamp (inclusive). None means datetime.max.
+			min_mag: Lower bound for magnitude (inclusive).
+			max_mag: Upper bound for magnitude (inclusive).
 
 		Returns:
 			A tuple of (matching_events_list, examined_nodes_count).
 		"""
-		return Queries.events_by_filters(self.tree, min_mag, max_mag, max_depth, start_date, end_date)
+		return Queries.events_by_magnitude_range(self.tree, min_mag, max_mag)
+
+	def query_by_depth_and_date(
+		self,
+		max_depth: float,
+		start_date: datetime,
+		end_date: datetime
+	) -> tuple[list[Event], int]:
+		"""
+		Query 2b Facade: Filters active events by depth and date boundaries.
+		Delegates execution to Queries.events_by_depth_and_date.
+
+		Args:
+			max_depth: Maximum focal depth in km (inclusive).
+			start_date: Earliest occurrence timestamp (inclusive).
+			end_date: Latest occurrence timestamp (inclusive).
+
+		Returns:
+			A tuple of (matching_events_list, examined_nodes_count).
+		"""
+		return Queries.events_by_depth_and_date(self.tree, max_depth, start_date, end_date)
 
 	def query_event_associations(
 		self,
@@ -1301,12 +1371,25 @@ class Observatory:
 		
 		# If user requested adoption of the balanced tree
 		if adopt_avl and result.get("avl") is not None:
+			if hasattr(self, '_record_action'):
+				self._record_action("ADOPT_AVL", "Adopted AVL tree from insertions sequence file")
+
 			adopted_avl = result["avl"]
 			# Restore decoupled rotation callback so subsequent operations properly update metrics
 			adopted_avl._AVL__on_rotation = self._handle_tree_rotation
 			self.tree = adopted_avl
+			
 			# Re-index active events dictionary for O(1) lookup
 			self.events_dict = {ev.id: ev for ev in result.get("events", [])}
+			
+			# Prevent duplicate IDs in history
+			if self.historic is not None:
+				for eid in self.events_dict:
+					if hasattr(self.historic, 'archived') and eid in self.historic.archived:
+						del self.historic.archived[eid]
+					if hasattr(self.historic, 'deleted') and eid in self.historic.deleted:
+						del self.historic.deleted[eid]
+
 			# Synchronize active event metric count
 			if self.metrics is not None:
 				self.metrics.active_events = len(self.events_dict)
@@ -1314,21 +1397,46 @@ class Observatory:
 		return result
 
 	def query_event(self, event_id: int) -> dict | None:
+		event = None
+		status = None
+		
 		# 1. Search in the Active Catalog
 		if hasattr(self, 'events_dict') and event_id in self.events_dict:
 			event = self.events_dict[event_id]
-			
-			# Obtain node metrics (depth, height, balance factor) from the AVL tree
+			status = "Active"
+		# 2. Search in the Historical Catalog (Archived or Deleted)
+		elif getattr(self, 'historic', None) is not None:
+			if hasattr(self.historic, 'archived') and event_id in self.historic.archived:
+				event = self.historic.archived[event_id]
+				status = "Archived"
+			elif hasattr(self.historic, 'deleted') and event_id in self.historic.deleted:
+				event = self.historic.deleted[event_id]
+				status = "Deleted"
+
+		if event is None:
+			print(f"Error: El identificador {event_id} no existe en ningún catálogo.")
+			return None
+
+		# Find associations
+		assoc_data = None
+		if hasattr(self, 'associations') and self.associations:
+			for assoc in self.associations:
+				if assoc.assoc_id == event_id:
+					assoc_data = {"role": "Reference", "replicas": [r.id for r in assoc.replicas]}
+					break
+				elif any(r.id == event_id for r in assoc.replicas):
+					assoc_data = {"role": "Replica", "reference": assoc.assoc_id}
+					break
+
+		if status == "Active":
 			node_metrics = self._get_node_metrics(event_id)
-			
-			# Check if the epicenter is in a populated zone
 			is_populated = False
 			if getattr(self, 'geographical_map', None) is not None:
 				is_populated = self.geographical_map.is_in_populated_zone(event.epicenter[0], event.epicenter[1])
 
 			return {
 				"id": event.id,
-				"status": "Active",
+				"status": status,
 				"current_data": {
 					"magnitude": event.magnitude,
 					"depth": event.depth,
@@ -1337,27 +1445,17 @@ class Observatory:
 				},
 				"priority": event.priority,
 				"review": event.review,
-				"stations": getattr(event, "stations", []),
+				"stations": getattr(event, "origin_stations", []),
 				"is_in_populated_zone": is_populated,
 				"key_K": (event.priority, event.magnitude, event.id),
 				"attention_state": event.attention_state,
 				"node_depth": node_metrics.get("depth", 0),
 				"height": node_metrics.get("height", 0),
 				"balance_factor": node_metrics.get("balance_factor", 0),
+				"associations": assoc_data
 			}
 
-		# 2. Search in the Historical Catalog (Archived or Deleted)
-		if getattr(self, 'historic', None) is not None:
-			if hasattr(self.historic, 'archived') and event_id in self.historic.archived:
-				event = self.historic.archived[event_id]
-				return {"id": event_id, "status": "Archived", "event_data": event}
-			
-			if hasattr(self.historic, 'deleted') and event_id in self.historic.deleted:
-				event = self.historic.deleted[event_id]
-				return {"id": event_id, "status": "Deleted", "event_data": event}
-
-		print(f"Error: El identificador {event_id} no existe en ningún catálogo.")
-		return None
+		return {"id": event_id, "status": status, "event_data": event, "associations": assoc_data}
 
 	def _get_node_metrics(self, event_id: int) -> dict:
 		"""
@@ -1400,6 +1498,18 @@ class Observatory:
 			else:
 				ids_visitados.add(nodo.id)
 
+			# Check father pointer
+			if nodo.left_son is not None and nodo.left_son.father != nodo:
+				reporte.append(f"Error Estructural: El hijo izquierdo del nodo {nodo.id} no apunta de vuelta a él.")
+			if nodo.right_son is not None and nodo.right_son.father != nodo:
+				reporte.append(f"Error Estructural: El hijo derecho del nodo {nodo.id} no apunta de vuelta a él.")
+				
+			# Check priority math
+			if nodo.event is not None:
+				calculated_priority = self.calculate_priority(nodo.event.magnitude, nodo.event.depth, nodo.event.epicenter)
+				if nodo.event.priority != calculated_priority:
+					reporte.append(f"Error de Integridad: El evento {nodo.id} tiene prioridad guardada {nodo.event.priority} pero la calculada es {calculated_priority}.")
+
 			# 3. Verify global lexicographical order K=(P, M, I) via in-order traversal
 			clave_actual = nodo.get_key()
 			if estado_auditoria["clave_previa"] is not None:
@@ -1434,13 +1544,21 @@ class Observatory:
 		if hasattr(self, 'events_dict'):
 			if len(ids_visitados) != len(self.events_dict):
 				reporte.append(f"Error de Integridad: El árbol tiene {len(ids_visitados)} nodos, pero el diccionario activo tiene {len(self.events_dict)}.")
+			
+			missing_in_dict = ids_visitados - set(self.events_dict.keys())
+			if missing_in_dict:
+				reporte.append(f"Error de Integridad: Los IDs {missing_in_dict} están en el árbol pero no en el diccionario.")
+			
+			missing_in_tree = set(self.events_dict.keys()) - ids_visitados
+			if missing_in_tree:
+				reporte.append(f"Error de Integridad: Los IDs {missing_in_tree} están en el diccionario pero no en el árbol.")
 
 		if not reporte:
 			reporte.append("Auditoría Exitosa: El árbol cumple todas las propiedades matemáticas de estructura y orden.")
 
 		return reporte
 
-	def global_recovery(self) -> None:
+	def global_recovery(self) -> dict:
 		"""
 		Fuerza un rebalanceo global del árbol y desactiva el modo de estrés (Sección 13).
 		Registra la acción en la pila para poder deshacerse.
@@ -1448,13 +1566,32 @@ class Observatory:
 		if hasattr(self, '_record_action'):
 			self._record_action("GLOBAL_RECOVERY", "Restauración global post-estrés")
 			
+		cases_before = self.metrics.cases.copy() if self.metrics is not None else {}
+		turns_before = self.metrics.turns.copy() if self.metrics is not None else {}
+
 		# El árbol rebalancea su topología de abajo hacia arriba y apaga su flag interno
 		if self.tree is not None:
 			self.tree.restore_balance()
 			
+		# Ejecutar auditoría para garantizar el equilibrio antes de retornar al modo normal
+		audit_report = self.verify_structure()
+		if any(e.startswith("Error") for e in audit_report):
+			print("Error: Global recovery failed audit. Stress mode remains ON.")
+			if self.tree is not None:
+				self.tree.stress_mode = True # Revert inner flag
+			return {"success": False, "audit": audit_report}
+
 		# Sincronizamos el flag del Observatorio
 		self.stress_mode = False
+
+		rotations_produced = {}
+		if self.metrics is not None:
+			cases_diff = {k: self.metrics.cases[k] - cases_before.get(k, 0) for k in self.metrics.cases if self.metrics.cases[k] > cases_before.get(k, 0)}
+			turns_diff = {k: self.metrics.turns[k] - turns_before.get(k, 0) for k in self.metrics.turns if self.metrics.turns[k] > turns_before.get(k, 0)}
+			rotations_produced = {'cases': cases_diff, 'turns': turns_diff}
+
 		print("Global recovery completed. Stress mode disabled and tree rebalanced.")
+		return {"success": True, "rotations": rotations_produced, "audit": audit_report}
 	# ---------------------------------------------------------
 	# ASSOCIATION LOGIC (REPLICAS AND REFERENCES)
 	# ---------------------------------------------------------

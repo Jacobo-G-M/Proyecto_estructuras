@@ -556,10 +556,10 @@ class ScenarioPersistence:
             # In-order: Step 1 - Explore Left subtree
             if l_id is not None and l_id in nodes_dict:
                 _inorder(l_id)
-            # In-order: Step 2 - Visit current node and extract its composite key K = (P, M, I)
+            # In-order: Step 2 - Visit current node and extract its composite key K = (P, M, -I)
             ev = cur_nd.get("event")
             if isinstance(ev, dict):
-                k = (ev.get("priority", 0), float(ev.get("magnitude", 0.0)), int(ev.get("id", 0)))
+                k = (ev.get("priority", 0), float(ev.get("magnitude", 0.0)), -int(ev.get("id", 0)))
                 inorder_keys.append((k, cur_id))
             # In-order: Step 3 - Explore Right subtree
             if r_id is not None and r_id in nodes_dict:
@@ -1043,21 +1043,24 @@ class ScenarioPersistence:
             seen_ids.add(eid)
 
             # Extract physical event parameters
-            mag = float(item["magnitude"])
-            depth = float(item["depth"])
-            epicenter = tuple(item["epicenter"])
+            mag = round(float(item["magnitude"]), 1)
+            depth = round(float(item["depth"]), 1)
+            epi_raw = tuple(item["epicenter"])
+            epicenter = (round(epi_raw[0], 1), round(epi_raw[1], 1))
             dt = datetime.fromisoformat(item["date_time"])
             review = int(item.get("review", 1))
             attention = item.get("attention_state", "Pending")
             status = item.get("status", "Active")
 
-            # Conditional Branch: Determine Event Priority
-            # If the priority is explicitly stated in the JSON, honor the stored value;
-            # otherwise, dynamically compute it based on magnitude, depth, and populated zone status.
-            if "priority" in item:
-                priority = int(item["priority"])
-            else:
-                priority = ScenarioPersistence._compute_priority(mag, depth, epicenter, geographical_map)
+            if not (-2.0 <= mag <= 10.0):
+                raise ValueError(f"Invalid magnitude {mag} for event {eid}.")
+            if not (0.0 <= depth <= 700.0):
+                raise ValueError(f"Invalid depth {depth} for event {eid}.")
+            if not (0.0 <= epicenter[0] <= 1000.0 and 0.0 <= epicenter[1] <= 1000.0):
+                raise ValueError(f"Invalid epicenter {epicenter} for event {eid}.")
+
+            # Always compute SismoLab priority, ignore the JSON one to prevent forged priority.
+            priority = ScenarioPersistence._compute_priority(mag, depth, epicenter, geographical_map)
 
             # Instantiate Event domain model
             ev = Event(
@@ -1099,6 +1102,35 @@ class ScenarioPersistence:
         bst_leaves = sum(1 for n, _ in bst_depths if n.is_leaf())
 
         # Compile comparison metrics between self-balancing AVL and standard BST
+        # Simulate search for all keys to track comparisons
+        avl_comparisons = 0
+        bst_comparisons = 0
+
+        for ev in events_list:
+            key = ev.get_key()
+            
+            # Count in AVL
+            cur = avl.root
+            while cur is not None:
+                avl_comparisons += 1
+                if key == cur.get_key():
+                    break
+                elif key < cur.get_key():
+                    cur = cur.left_son
+                else:
+                    cur = cur.right_son
+            
+            # Count in BST
+            cur = bst.root
+            while cur is not None:
+                bst_comparisons += 1
+                if key == cur.get_key():
+                    break
+                elif key < cur.get_key():
+                    cur = cur.left_son
+                else:
+                    cur = cur.right_son
+
         metrics = {
             "avl_root_id": avl.root.id if avl.root else None,
             "bst_root_id": bst.root.id if bst.root else None,
@@ -1108,6 +1140,8 @@ class ScenarioPersistence:
             "bst_max_depth": bst_max_depth,
             "avl_leaves": avl_leaves,
             "bst_leaves": bst_leaves,
+            "avl_search_comparisons": avl_comparisons,
+            "bst_search_comparisons": bst_comparisons,
             "total_events": len(events_list),
         }
 
