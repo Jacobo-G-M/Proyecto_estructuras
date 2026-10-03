@@ -26,6 +26,10 @@ from Presentation.Components.Atoms.typography import (
     Divider
 )
 
+from Presentation.Components.Atoms.toggles import (
+    CapsuleToggle
+)
+
 __all__ = [
     "PrimaryButton",
     "SecondaryButton",
@@ -37,5 +41,6 @@ __all__ = [
     "BadgeVariant",
     "StyledEntry",
     "StyledLabel",
-    "Divider"
+    "Divider",
+    "CapsuleToggle"
 ]

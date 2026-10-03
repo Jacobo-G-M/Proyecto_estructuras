@@ -7,7 +7,7 @@ import customtkinter as ctk
 
 from Presentation.Components.theme import (
     FONT_MAIN,
-    BG_ROOT,
+    BG_INPUT,
     BORDER_SUBTLE,
     TEXT_PRIMARY, TEXT_MUTED,
     RADIUS_SM
@@ -33,7 +33,7 @@ class StyledEntry(ctk.CTkEntry):
             width=width,
             height=height,
             corner_radius=corner_radius,
-            fg_color=BG_ROOT,
+            fg_color=BG_INPUT,
             border_color=BORDER_SUBTLE,
             border_width=1,
             text_color=TEXT_PRIMARY,
