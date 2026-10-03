@@ -957,10 +957,7 @@ class Observatory:
 
 		# 3. Change the attention state
 		event.attention_state = "Reviewed"
-
-		# 4. Update metrics if applicable
-		if self.metrics is not None:
-			pass # TODO: self.metrics.mark_reviewed_count += 1
+		
 		print(f"El evento {event_id} ha sido marcado exitosamente como 'Reviewed'.")
 		return True
 

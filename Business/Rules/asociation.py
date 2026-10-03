@@ -8,6 +8,7 @@ class Association:
         self._id: int = assoc_id
         self._chosen_reference = chosen_reference
         self._referenced_by: list[Event] = []
+        
 
     # GETTER for _id
     @property
