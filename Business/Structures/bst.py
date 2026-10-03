@@ -1,5 +1,5 @@
 from Models.node import Node
-from tree import Tree
+from Business.Structures.tree import Tree
 
 class BST(Tree):
 # ------------------------
@@ -9,4 +9,5 @@ class BST(Tree):
     super().__init__(id)
   # Logic applied in BST class
   def _post_process(self, node: Node) -> Node:
+    node.update_height()
     return node

@@ -1,5 +1,12 @@
 from abc import ABC, abstractmethod
-from ...Models.node import Node
+try:
+  from Models.node import Node
+except (ImportError, ValueError):
+  try:
+    from ...Models.node import Node
+  except (ImportError, ValueError):
+    from node import Node
+
 
 class Tree(ABC):
   # ------------------------
@@ -41,8 +48,12 @@ class Tree(ABC):
     #Comparison: decide whether to go left or right in the tree based on the new node's value
     if new_node < current:
       current.left_son = self._insert_recursive(current.left_son, new_node)
+      if current.left_son is not None:
+        current.left_son.father = current
     elif new_node > current:
       current.right_son = self._insert_recursive(current.right_son, new_node)
+      if current.right_son is not None:
+        current.right_son.father = current
     else:
       return current
     return self._post_process(current)
@@ -63,7 +74,7 @@ class Tree(ABC):
       return None
     else:
       # Uses the private method to apply the rest of the logic
-      self._delete_helper(self.__root, key)
+      self.__root = self._delete_helper(self.__root, key)
       
       # If the root has changed, it has to updates its father to None
       if self.__root is not None:
@@ -83,9 +94,13 @@ class Tree(ABC):
     # If the key is smaller, search in the left side
     if key < current_key:
       current.left_son = self._delete_helper(current.left_son, key)
+      if current.left_son is not None:
+        current.left_son.father = current
     # If the key is greater, search in the right side
     elif key > current_key:
       current.right_son = self._delete_helper(current.right_son, key)
+      if current.right_son is not None:
+        current.right_son.father = current
     # The node to delete has been found
     else:
       # Case 1: is a leaf
@@ -151,13 +166,10 @@ class Tree(ABC):
     else:
       return self._search_node_helper(current.right_son, key)
   
-  def preorder(self, current: Node | None = None) -> list[Node]:
-    if current is None:
-      current = self.root
-      
+  def preorder(self, start_node: Node | None = None) -> list[Node]:
     result_list: list[Node] = []
-    if current is not None:
-      self._preorder_recursive(current, result_list)
+    root_to_use = start_node if start_node is not None else self.root
+    self._preorder_recursive(root_to_use, result_list)
     return result_list
   
   def _preorder_recursive(self, current: Node, result: list[Node]) -> None:
@@ -236,3 +248,52 @@ class Tree(ABC):
     #height of the Tree
   def height(self):
     return self.root.height if self.root is not None else -1
+
+  # Traverses the tree and returns a list of tuples: (Node, Depth)
+  def get_all_nodes_with_depth(self, current_node: Node | None = None, current_depth: int = 0) -> list[tuple[Node, int]]:
+    """
+    Traverses the tree and returns a list of tuples: (Node, Depth).
+    The root node has depth 0, its children depth 1, and so on.
+    If current_node is omitted, traversal starts from self.root.
+    """
+    if current_node is None:
+      current_node = self.root
+    if current_node is None:
+      return []
+
+    nodes: list[tuple[Node, int]] = [(current_node, current_depth)]
+    if current_node.left_son is not None:
+      nodes.extend(self.get_all_nodes_with_depth(current_node.left_son, current_depth + 1))
+    if current_node.right_son is not None:
+      nodes.extend(self.get_all_nodes_with_depth(current_node.right_son, current_depth + 1))
+    return nodes
+  def get_node_metrics(self, search_key: tuple[int, float, int]) -> dict:
+        """
+        Returns a dictionary containing the depth, height, and balance factor of the node with the given search_key.
+        """
+        current = self.root
+        depth = 0
+        
+        while current is not None:
+            current_key = current.get_key()
+            
+            # 1. Node found
+            if search_key == current_key:
+                # Regla: Altura de árbol vacío es -1
+                left_h = current.left_son.height if current.left_son else -1
+                right_h = current.right_son.height if current.right_son else -1
+                
+                balance_factor = left_h - right_h
+                
+                return {
+                    "depth": depth,
+                    "height": current.height,
+                    "balance_factor": balance_factor
+                }
+            elif search_key < current_key:
+                current = current.left_son
+            else:
+                current = current.right_son
+                
+            depth += 1 # Increse depth as we go down the tree
+        return 

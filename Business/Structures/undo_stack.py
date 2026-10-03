@@ -1,23 +1,30 @@
-from Business.Action import Action
+try:
+    from ...Models.action import Action
+except (ImportError, ValueError):
+    try:
+        from Models.action import Action
+    except ImportError:
+        try:
+            from action import Action
+        except ImportError:
+            pass
+
 class Undo_stack:
     def __init__(self) -> None:
-        # Internal list to represent the stack of actions
         self._actions: list[Action] = []
 
-    # GETTER for _actions
+    # GETTER para _actions
     @property
     def actions(self) -> list[Action]:
         return self._actions
 
-    # SETTER for _actions
+    # SETTER para _actions
     @actions.setter
     def actions(self, new_actions: list[Action]) -> None:
         if isinstance(new_actions, list):
             self._actions = new_actions
         else:
             raise TypeError("The 'actions' attribute must be a list.")
-
-    # --- Auxiliary and Stack Operations ---
 
     def _is_valid_action(self, action: Action) -> bool:
         return type(action).__name__ == 'Action'
@@ -38,8 +45,8 @@ class Undo_stack:
     def is_empty(self) -> bool:
         return len(self._actions) == 0
 
-    # ----- methods -----
-
-    #method to get de cant of items on the undo_stack
     def size(self) -> int:
         return len(self._actions)
+
+    def clear(self) -> None:
+        self._actions.clear()

@@ -1,9 +1,6 @@
-try:
-  from .tree import Tree
-except ImportError:
-  from tree import Tree
-from ...Models.node import Node
 from typing import Callable
+from Business.Structures.tree import Tree
+from Models.node import Node
 
 class AVL(Tree):
   # ------------------------
@@ -30,10 +27,16 @@ class AVL(Tree):
   # ------------------------
   # Hook for template method in Tree: rebalances after recursive insertion
   def _post_process(self, node: Node) -> Node:
+    node.update_height()
+    if self.__stress_mode:
+      return node  # Skip balancing in stress mode
     return self.balance(node)
 
   # Main method to restore balance after stress mode
   def restore_balance(self) -> None:
+    # Turn off stress mode immediately
+    self.stress_mode = False
+
     # Verifies that the tree exists
     if self.root is None:
       return
@@ -44,9 +47,6 @@ class AVL(Tree):
     # Cuts off father relation for root
     if self.root is not None:
       self.root.father = None
-
-    # Turn off stress mode
-    self.stress_mode = False
 
   # Recursive method to restore the tree's balance bottom-up
   def _restore_node(self, current_node: Node | None) -> Node | None:

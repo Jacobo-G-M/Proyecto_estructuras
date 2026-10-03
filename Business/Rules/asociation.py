@@ -1,14 +1,14 @@
 import math
-from Business.Event import Event
+from Models.event import Event
 from datetime import timedelta
 class Association:
 
     def __init__(self, assoc_id: int, chosen_reference: Event) -> None:
    
         self._id: int = assoc_id
-        self._chosen_reference: Event = None
-
+        self._chosen_reference = chosen_reference
         self._referenced_by: list[Event] = []
+        
 
     # GETTER for _id
     @property
@@ -83,5 +83,3 @@ class Association:
             print("Replica added successfully to the reference event.")
         else:
             raise TypeError("The child event must be of class Event.")
-
-    

@@ -1,9 +1,6 @@
 from datetime import datetime
 
-try:
-    import Models.station as station_module
-except ImportError:
-    import station as station_module
+import Models.station as station_module
 
 class Report:
     def __init__(
@@ -124,3 +121,6 @@ class Report:
             raise TypeError("station must be an instance of Station.")
         if station not in self._origin_station:
             self._origin_station.append(station)
+
+    def is_empty():
+        pass

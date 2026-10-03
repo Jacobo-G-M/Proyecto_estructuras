@@ -115,3 +115,7 @@ class Event:
     """Adds an origin station to the event if not already present."""
     if station not in self.__origin_stations:
       self.__origin_stations.append(station)
+
+  def get_key(self) -> tuple[int, float, int]:
+    """Returns the sorting key K = (Priority, Magnitude, -ID) to ensure ID sorts ascending when fetching the max node."""
+    return (self.__priority, self.__magnitude, -self.__id)

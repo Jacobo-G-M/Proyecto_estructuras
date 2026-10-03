@@ -1,5 +1,5 @@
 from __future__ import annotations
-from event import Event
+from Models.event import Event
 
 class Node:
   # ------------------------
@@ -73,12 +73,12 @@ class Node:
   def is_leaf(self) -> bool:
     return self.__left_son is None and self.__right_son is None
   
-  def get_key(self):
-    return (self.__event.priority, self.__event.magnitude, self.__event.id)
+  def get_key(self) -> tuple[int, float, int]:
+    return self.__event.get_key()
   
   def balance_factor(self) -> int:
-    left_h = self.__left_son.__height if self.__left_son else -1
-    right_h = self.__right_son.__height if self.__right_son else -1
+    left_h = self.__left_son.height if self.__left_son else -1
+    right_h = self.__right_son.height if self.__right_son else -1
     return left_h - right_h
 
   # --------------------------------------------------------
