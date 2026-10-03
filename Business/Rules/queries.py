@@ -238,18 +238,9 @@ class Queries:
 
         if associations:
             for assoc in associations:
-                # Case 2A: Target is the primary subject or chosen reference of the association
-                is_subject_or_ref = (
-                    getattr(assoc, "id", None) == event_id or
-                    getattr(assoc, "_id", None) == event_id or
-                    (assoc.chosen_reference is not None and getattr(assoc.chosen_reference, "id", None) == event_id)
-                )
-                if is_subject_or_ref:
-                    # If target is subject and has a chosen reference distinct from itself
-                    if assoc.chosen_reference is not None and getattr(assoc.chosen_reference, "id", None) != event_id:
-                        if chosen_ref_event is None:
-                            chosen_ref_event = assoc.chosen_reference
-                    # Collect all replica events attached to this association
+                # Case 2A: Target is the chosen reference (parent) of this association cluster
+                if assoc.chosen_reference is not None and getattr(assoc.chosen_reference, "id", None) == event_id:
+                    # Collect all replica events attached to this reference event
                     for rep in assoc.referenced_by:
                         if rep is not None and rep not in replicas and getattr(rep, "id", None) != event_id:
                             replicas.append(rep)
@@ -262,7 +253,7 @@ class Queries:
                 )
                 if is_replica:
                     # Its chosen parent reference is the association's chosen_reference
-                    if chosen_ref_event is None:
+                    if chosen_ref_event is None and assoc.chosen_reference is not None:
                         chosen_ref_event = assoc.chosen_reference
 
         # Step 3: Discover candidate reference events meeting spatiotemporal constraints
