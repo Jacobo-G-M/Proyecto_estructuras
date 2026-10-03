@@ -7,6 +7,9 @@ class Sidebar(ctk.CTkFrame):
         super().__init__(master, fg_color="#0b131c", corner_radius=0, **kwargs)
         self.app = app
         self.observatory = observatory
+        self.active_key = "arboles"
+        self.menu_items = {}
+
         self.grid_rowconfigure(2, weight=1)
 
         # 1. Título y Logo
@@ -27,16 +30,16 @@ class Sidebar(ctk.CTkFrame):
         self.subtitle_lbl = ctk.CTkLabel(self.title_frame, text="OBS-UNI · v2.4.1", font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0")
         self.subtitle_lbl.pack(anchor="w", pady=0)
 
-        # 2. Menú de Navegación
+        # 2. Menú de Navegación Interactivo
         self.menu_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.menu_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
         self.menu_frame.grid_columnconfigure(0, weight=1)
         
-        self.create_menu_item("Dashboard", "Consola Maestra", active=False, row=0)
-        self.create_menu_item("Árboles", "AVL vs BST", active=True, row=1)
-        self.create_menu_item("Mapa", "1000x1000 km", active=False, row=2)
-        self.create_menu_item("Eventos", "CRUD + Cola", active=False, row=3)
-        self.create_menu_item("Consultas", "Top-k · Métricas", active=False, row=4)
+        self._create_nav_item("dashboard", "Dashboard", "Consola Maestra", row=0)
+        self._create_nav_item("arboles", "Árboles", "AVL vs BST", row=1)
+        self._create_nav_item("mapa", "Mapa", "1000x1000 km", row=2)
+        self._create_nav_item("eventos", "Eventos", "CRUD + Cola", row=3)
+        self._create_nav_item("consultas", "Consultas", "Top-k · Métricas", row=4)
 
         # 3. Balance Global
         self.balance_frame = ctk.CTkFrame(self, fg_color="#0e1620", border_color="#1e2d3d", border_width=1, corner_radius=12)
@@ -61,7 +64,76 @@ class Sidebar(ctk.CTkFrame):
         self.lbl_balance_sub = ctk.CTkLabel(self.balance_frame, text="n=0 · h=0 · BF∈[-1,1]", font=ctk.CTkFont(family=FONT_MAIN, size=9), text_color="#8a9bb0")
         self.lbl_balance_sub.pack(anchor="w", padx=15, pady=(0, 15))
 
+        self.set_active("arboles")
         self.refresh()
+
+    def _create_nav_item(self, key: str, title: str, subtitle: str, row: int):
+        container = ctk.CTkFrame(self.menu_frame, fg_color="transparent", corner_radius=8, border_width=0, border_color="#0b131c")
+        container.grid(row=row, column=0, sticky="ew", pady=2, padx=5)
+        container.grid_columnconfigure(1, weight=1)
+        
+        # Punto indicador
+        dot = ctk.CTkFrame(container, width=6, height=6, corner_radius=3, fg_color="#8a9bb0")
+        dot.grid(row=0, column=0, padx=(15, 10), pady=18)
+        
+        # Textos
+        text_frame = ctk.CTkFrame(container, fg_color="transparent")
+        text_frame.grid(row=0, column=1, sticky="w", pady=8)
+        
+        lbl_title = ctk.CTkLabel(text_frame, text=title, font=ctk.CTkFont(family=FONT_MAIN, size=13), text_color="#8a9bb0", height=15)
+        lbl_title.pack(anchor="w")
+        
+        lbl_sub = ctk.CTkLabel(text_frame, text=subtitle, font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0", height=15)
+        lbl_sub.pack(anchor="w")
+        
+        # Punto derecho
+        dot_right = ctk.CTkFrame(container, width=4, height=4, corner_radius=2, fg_color="#22d3ee")
+        dot_right.grid(row=0, column=2, padx=15)
+        dot_right.grid_remove()
+
+        # Guardar referencias
+        self.menu_items[key] = {
+            "container": container,
+            "dot": dot,
+            "title": lbl_title,
+            "sub": lbl_sub,
+            "dot_right": dot_right
+        }
+
+        # Enlazar clicks en todos los subelementos
+        for widget in (container, dot, text_frame, lbl_title, lbl_sub):
+            widget.bind("<Button-1>", lambda e, k=key: self._on_item_click(k))
+            widget.bind("<Enter>", lambda e, k=key: self._on_item_hover(k, True))
+            widget.bind("<Leave>", lambda e, k=key: self._on_item_hover(k, False))
+
+    def _on_item_click(self, key: str):
+        if self.app:
+            self.app.switch_view(key)
+
+    def _on_item_hover(self, key: str, is_hover: bool):
+        if key == self.active_key:
+            return
+        item = self.menu_items.get(key)
+        if item:
+            item["container"].configure(fg_color="#101924" if is_hover else "transparent")
+
+    def set_active(self, key: str):
+        """Actualiza el estilo visual del elemento activo en el menú."""
+        self.active_key = key
+        for k, item in self.menu_items.items():
+            is_active = (k == key)
+            if is_active:
+                item["container"].configure(fg_color="#111c28", border_width=1, border_color="#22d3ee")
+                item["dot"].configure(fg_color="#22d3ee")
+                item["title"].configure(text_color="#e8eef3", font=ctk.CTkFont(family=FONT_MAIN, size=13, weight="bold"))
+                item["sub"].configure(text_color="#8a9bb0")
+                item["dot_right"].grid()
+            else:
+                item["container"].configure(fg_color="transparent", border_width=0, border_color="#0b131c")
+                item["dot"].configure(fg_color="#8a9bb0")
+                item["title"].configure(text_color="#8a9bb0", font=ctk.CTkFont(family=FONT_MAIN, size=13, weight="normal"))
+                item["sub"].configure(text_color="#536477")
+                item["dot_right"].grid_remove()
 
     def refresh(self):
         """Calcula el factor de balance global real del árbol AVL activo."""
@@ -85,26 +157,3 @@ class Sidebar(ctk.CTkFrame):
         self.lbl_balance_status.configure(text=status_text, text_color=color)
         self.prog_fg.configure(fg_color=color, width=int(200 * ratio))
         self.lbl_balance_sub.configure(text=f"n={total} · h={height_val} · BF∈[-1,1]")
-
-    def create_menu_item(self, title, subtitle, active, row):
-        bg_color = "#111c28" if active else "transparent"
-        b_width = 1 if active else 0
-        border_color = "#22d3ee" if active else "#0b131c"
-        
-        container = ctk.CTkFrame(self.menu_frame, fg_color=bg_color, corner_radius=8, border_width=b_width, border_color=border_color)
-        container.grid(row=row, column=0, sticky="ew", pady=2, padx=5)
-        container.grid_columnconfigure(1, weight=1)
-        
-        dot_color = "#22d3ee" if active else "#8a9bb0"
-        dot = ctk.CTkFrame(container, width=6, height=6, corner_radius=3, fg_color=dot_color)
-        dot.grid(row=0, column=0, padx=(15, 10), pady=18)
-        
-        text_frame = ctk.CTkFrame(container, fg_color="transparent")
-        text_frame.grid(row=0, column=1, sticky="w", pady=8)
-        
-        ctk.CTkLabel(text_frame, text=title, font=ctk.CTkFont(family=FONT_MAIN, size=13, weight="bold" if active else "normal"), text_color="#e8eef3", height=15).pack(anchor="w")
-        ctk.CTkLabel(text_frame, text=subtitle, font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0", height=15).pack(anchor="w")
-        
-        if active:
-            dot_right = ctk.CTkFrame(container, width=4, height=4, corner_radius=2, fg_color="#22d3ee")
-            dot_right.grid(row=0, column=2, padx=15)

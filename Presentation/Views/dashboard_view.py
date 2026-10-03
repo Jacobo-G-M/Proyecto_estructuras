@@ -2,10 +2,10 @@ import customtkinter as ctk
 
 FONT_MAIN = "Segoe UI"
 
-class QueriesView(ctk.CTkFrame):
+class DashboardView(ctk.CTkFrame):
     """
-    Vista de Consultas y Métricas · Top-k · Podas.
-    Scaffold listo para que el equipo integre las consultas avanzadas en el árbol AVL.
+    Vista de Dashboard · Consola Maestra.
+    Scaffold listo para que los compañeros de equipo agreguen los widgets del Dashboard.
     """
     def __init__(self, master, app=None, observatory=None, **kwargs):
         super().__init__(master, fg_color="#070c12", corner_radius=0, **kwargs)
@@ -22,17 +22,17 @@ class QueriesView(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 20))
         
         ctk.CTkLabel(
-            header, text="PRESENTATION / VIEWS / QUERIES_VIEW.PY",
+            header, text="PRESENTATION / VIEWS / DASHBOARD_VIEW.PY",
             font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#22d3ee"
         ).pack(anchor="w")
         
         ctk.CTkLabel(
-            header, text="Consultas y Métricas · Top-k",
+            header, text="Dashboard · Consola Maestra",
             font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"), text_color="#e8eef3"
         ).pack(anchor="w", pady=(2, 0))
         
         ctk.CTkLabel(
-            header, text="Consultas especializadas con poda de subárboles: Top-k pendientes, rango de magnitudes y réplicas.",
+            header, text="Resumen ejecutivo del estado del observatorio, colas y balance general.",
             font=ctk.CTkFont(family=FONT_MAIN, size=11), text_color="#8a9bb0"
         ).pack(anchor="w", pady=(2, 0))
 
@@ -43,18 +43,17 @@ class QueriesView(ctk.CTkFrame):
         center_box = ctk.CTkFrame(card, fg_color="transparent")
         center_box.place(relx=0.5, rely=0.5, anchor="center")
 
-        ctk.CTkLabel(center_box, text="🔍", font=ctk.CTkFont(size=44)).pack(pady=10)
+        ctk.CTkLabel(center_box, text="📊", font=ctk.CTkFont(size=44)).pack(pady=10)
         ctk.CTkLabel(
-            center_box, text="Módulo Consultas y Métricas · Listo para Integrar",
+            center_box, text="Módulo Dashboard · Listo para Integrar",
             font=ctk.CTkFont(family=FONT_MAIN, size=18, weight="bold"), text_color="#e8eef3"
         ).pack()
         
         ctk.CTkLabel(
             center_box,
             text="Tu equipo puede programar esta vista editando el archivo:\n"
-                 "Presentation/Views/queries_view.py\n\n"
-                 "Aquí se integrarán las búsquedas de Top-k eventos pendientes,\n"
-                 "los filtros por rango de magnitud con podas en el árbol y la auditoría de nodos.",
+                 "Presentation/Views/dashboard_view.py\n\n"
+                 "Aquí irán las tarjetas de resumen, gráficas de sismos y estado del sistema.",
             font=ctk.CTkFont(family=FONT_MAIN, size=12), text_color="#8a9bb0", justify="center"
         ).pack(pady=12)
 
