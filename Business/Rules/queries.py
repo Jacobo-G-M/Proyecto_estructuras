@@ -70,19 +70,16 @@ class Queries:
         return results, examined_nodes
 
     @staticmethod
-    def events_by_filters(
+    def events_by_magnitude_range(
         tree: Tree,
-        min_magnitude: float | None = None,
-        max_magnitude: float | None = None,
-        max_depth: float | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None
+        min_magnitude: float,
+        max_magnitude: float
     ) -> tuple[list[Event], int]:
         """
-        Query 2: Multi-criteria filtering by magnitude range, maximum depth, and date range.
+        Query 2a: Multi-criteria filtering by magnitude range.
         
         Algorithm:
-        - Recursively visits tree nodes while testing all criteria against the event.
+        - Recursively visits tree nodes while testing the magnitude criteria against the event.
         - Applies mathematical branch pruning based on the composite key K = (Priority, Magnitude, ID):
           * When current node has priority 3 (maximum possible priority in system) and its
             magnitude exceeds max_magnitude: any node in its right subtree must have priority 3
@@ -105,16 +102,73 @@ class Queries:
         if tree is None or tree.root is None:
             return results, examined_nodes
 
-        # Fallback to safe infinite/extreme bounds when parameters are omitted (None)
-        # This prevents TypeError comparisons while preserving unconstrained filtering
-        min_mag = float(min_magnitude) if min_magnitude is not None else -float('inf')
-        max_mag = float(max_magnitude) if max_magnitude is not None else float('inf')
-        max_d = float(max_depth) if max_depth is not None else float('inf')
-        start_dt = start_date if start_date is not None else datetime.min
-        end_dt = end_date if end_date is not None else datetime.max
+        def _filter_helper(current: Node | None) -> None:
+            nonlocal examined_nodes
+            # Base case: reached empty leaf slot
+            if current is None:
+                return
 
-        # Contradictory range pruning: if min > max, no event can possibly match
-        if min_mag > max_mag or start_dt > end_dt:
+            # Count current node visit
+            examined_nodes += 1
+            ev = current.event
+
+            if ev is not None:
+                # Evaluate whether the current event satisfies the magnitude bounds
+                if min_magnitude <= ev.magnitude <= max_magnitude:
+                    results.append(ev)
+
+                # Pruning Rule 1 (Right Subtree):
+                # If priority is 3 and magnitude exceeds max_magnitude, right subtree has keys > K(current),
+                # so all right descendants have priority 3 and magnitude >= ev.magnitude > max_magnitude.
+                prune_right = (ev.priority == 3 and ev.magnitude > max_magnitude)
+
+                # Pruning Rule 2 (Left Subtree):
+                # If priority is 1 and magnitude is below min_magnitude, left subtree has keys < K(current),
+                # so all left descendants have priority 1 and magnitude <= ev.magnitude < min_magnitude.
+                prune_left = (ev.priority == 1 and ev.magnitude < min_magnitude)
+
+                # Recursively explore left child if not pruned
+                if not prune_left:
+                    _filter_helper(current.left_son)
+
+                # Recursively explore right child if not pruned
+                if not prune_right:
+                    _filter_helper(current.right_son)
+            else:
+                # If node has no event payload, safely traverse both child branches
+                _filter_helper(current.left_son)
+                _filter_helper(current.right_son)
+
+        # Start traversal from root
+        _filter_helper(tree.root)
+        return results, examined_nodes
+
+    @staticmethod
+    def events_by_depth_and_date(
+        tree: Tree,
+        max_depth: float,
+        start_date: datetime,
+        end_date: datetime
+    ) -> tuple[list[Event], int]:
+        """
+        Query 2b: Multi-criteria filtering by maximum depth and date range.
+        
+        Algorithm:
+        - Recursively visits tree nodes while testing depth and date criteria.
+        - Because depth and date do not participate in the lexicographical tree key K=(P,M,I),
+          mathematical branch pruning is not possible for these dimensions. It performs a full O(N) 
+          in-order traversal of the tree.
+          
+        Returns:
+            A tuple of (matching_events_list, examined_nodes_count).
+        """
+        # Counter for total tree nodes evaluated
+        examined_nodes = 0
+        # Collector for events satisfying all active criteria
+        results: list[Event] = []
+
+        # Return immediately if tree has no root
+        if tree is None or tree.root is None:
             return results, examined_nodes
 
         def _filter_helper(current: Node | None) -> None:
@@ -128,36 +182,14 @@ class Queries:
             ev = current.event
 
             if ev is not None:
-                # Evaluate whether the current event satisfies all 3 filter dimensions
-                mag_ok = min_mag <= ev.magnitude <= max_mag
-                depth_ok = ev.depth <= max_d
-                date_ok = start_dt <= ev.date_time <= end_dt
-
-                # Collect if all criteria are satisfied
-                if mag_ok and depth_ok and date_ok:
+                # Evaluate whether the current event satisfies the physical and temporal bounds
+                if ev.depth <= max_depth and start_date <= ev.date_time <= end_date:
                     results.append(ev)
 
-                # Pruning Rule 1 (Right Subtree):
-                # If priority is 3 and magnitude exceeds max_mag, right subtree has keys > K(current),
-                # so all right descendants have priority 3 and magnitude >= ev.magnitude > max_mag.
-                prune_right = (ev.priority == 3 and max_magnitude is not None and ev.magnitude > max_mag)
-
-                # Pruning Rule 2 (Left Subtree):
-                # If priority is 1 and magnitude is below min_mag, left subtree has keys < K(current),
-                # so all left descendants have priority 1 and magnitude <= ev.magnitude < min_mag.
-                prune_left = (ev.priority == 1 and min_magnitude is not None and ev.magnitude < min_mag)
-
-                # Recursively explore left child if not pruned
-                if not prune_left:
-                    _filter_helper(current.left_son)
-
-                # Recursively explore right child if not pruned
-                if not prune_right:
-                    _filter_helper(current.right_son)
-            else:
-                # If node has no event payload, safely traverse both child branches
-                _filter_helper(current.left_son)
-                _filter_helper(current.right_son)
+            # Traverse left child
+            _filter_helper(current.left_son)
+            # Traverse right child
+            _filter_helper(current.right_son)
 
         # Start traversal from root
         _filter_helper(tree.root)
