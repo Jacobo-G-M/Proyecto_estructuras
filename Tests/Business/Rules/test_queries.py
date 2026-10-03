@@ -205,6 +205,63 @@ class TestQueries(unittest.TestCase):
         self.assertEqual(results, [])
         self.assertEqual(examined, 0)
 
+    def test_top_k_pending_none_or_negative_k(self):
+        """None or negative k returns empty list safely without TypeError."""
+        res_none, ex_none = Queries.top_k_pending(self.tree, k=None)
+        self.assertEqual(res_none, [])
+        self.assertEqual(ex_none, 0)
+
+        res_neg, ex_neg = Queries.top_k_pending(self.tree, k=-3)
+        self.assertEqual(res_neg, [])
+        self.assertEqual(ex_neg, 0)
+
+    def test_events_by_filters_omitted_or_none_arguments(self):
+        """Default or None filter arguments return valid matches without TypeError."""
+        results_min, _ = Queries.events_by_filters(self.tree, min_magnitude=6.0)
+        self.assertEqual({ev.id for ev in results_min}, {5, 6})
+
+        results_all, _ = Queries.events_by_filters(self.tree)
+        self.assertEqual(len(results_all), 6)
+
+        results_inv, ex_inv = Queries.events_by_filters(self.tree, min_magnitude=7.0, max_magnitude=3.0)
+        self.assertEqual(results_inv, [])
+        self.assertEqual(ex_inv, 0)
+
+    def test_event_associations_replica_lookup(self):
+        """Querying an event registered as replica inside referenced_by resolves its chosen reference."""
+        assoc = Association(assoc_id=10, chosen_reference=self.ev6)
+        assoc.add_replica(self.ev1)
+
+        report, examined = Queries.event_associations(
+            tree=self.tree,
+            historic=None,
+            associations=[assoc],
+            event_id=self.ev1.id,
+            max_time_hours=48.0,
+            max_distance_km=50.0
+        )
+        self.assertIsNotNone(report.get("chosen_reference"))
+        self.assertEqual(report["chosen_reference"]["event"].id, self.ev6.id)
+        self.assertEqual(report["chosen_reference"]["status"], "Activo")
+
+    def test_event_associations_none_thresholds(self):
+        """Passing None for max_time_hours and max_distance_km uses safe defaults."""
+        report, _ = Queries.event_associations(
+            tree=self.tree,
+            historic=None,
+            associations=[],
+            event_id=self.ev1.id,
+            max_time_hours=None,
+            max_distance_km=None
+        )
+        self.assertEqual(report["event"].id, self.ev1.id)
+
+    def test_costly_high_priority_events_limit_none(self):
+        """Passing limit=None defaults safely to limit 3 without crashing."""
+        results, examined = Queries.costly_high_priority_events(self.tree, limit=None)
+        self.assertIsInstance(results, list)
+        self.assertGreater(examined, 0)
+
 
 if __name__ == '__main__':
     unittest.main()

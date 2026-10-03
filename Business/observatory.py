@@ -957,10 +957,7 @@ class Observatory:
 
 		# 3. Change the attention state
 		event.attention_state = "Reviewed"
-
-		# 4. Update metrics if applicable
-		if self.metrics is not None:
-			pass # TODO: self.metrics.mark_reviewed_count += 1
+		
 		print(f"El evento {event_id} ha sido marcado exitosamente como 'Reviewed'.")
 		return True
 
@@ -1164,7 +1161,16 @@ class Observatory:
 	# Section 11 Queries Facade Delegation Methods
 	# ------------------------
 	def query_top_k_pending(self, k: int) -> tuple[list[Event], int]:
-		"""Delegates to Queries.top_k_pending."""
+		"""
+		Query 1 Facade: Retrieves the top k pending events in descending order of key K = (P, M, I).
+		Delegates execution to Queries.top_k_pending using the active AVL tree.
+
+		Args:
+			k: The maximum number of pending events to retrieve (must be positive).
+
+		Returns:
+			A tuple of (matching_pending_events_list, examined_nodes_count).
+		"""
 		return Queries.top_k_pending(self.tree, k)
 
 	def query_events_by_filters(
@@ -1175,7 +1181,20 @@ class Observatory:
 		start_date: datetime | None = None,
 		end_date: datetime | None = None
 	) -> tuple[list[Event], int]:
-		"""Delegates to Queries.events_by_filters."""
+		"""
+		Query 2 Facade: Filters active events across magnitude, depth, and occurrence date.
+		Delegates execution to Queries.events_by_filters with branch pruning on key bounds.
+
+		Args:
+			min_mag: Lower bound for magnitude (inclusive). None means no lower bound.
+			max_mag: Upper bound for magnitude (inclusive). None means no upper bound.
+			max_depth: Maximum focal depth in km (inclusive). None means no depth bound.
+			start_date: Earliest occurrence timestamp (inclusive). None means datetime.min.
+			end_date: Latest occurrence timestamp (inclusive). None means datetime.max.
+
+		Returns:
+			A tuple of (matching_events_list, examined_nodes_count).
+		"""
 		return Queries.events_by_filters(self.tree, min_mag, max_mag, max_depth, start_date, end_date)
 
 	def query_event_associations(
@@ -1184,17 +1203,40 @@ class Observatory:
 		max_time_hours: float | None = None,
 		max_distance_km: float | None = None
 	) -> tuple[dict, int]:
-		"""Delegates to Queries.event_associations."""
+		"""
+		Query 3 Facade: Locates candidate references, chosen reference, and child replicas for an event.
+		Delegates execution to Queries.event_associations across active tree, historic catalog, and associations.
+
+		Args:
+			event_id: ID of the event to inspect (can be active or archived).
+			max_time_hours: Maximum allowable time difference in hours (defaults to self.max_time).
+			max_distance_km: Maximum allowable spatial distance in km (defaults to self.distance_epicenter).
+
+		Returns:
+			A tuple of (report_dictionary, examined_nodes_count).
+		"""
 		max_t = max_time_hours if max_time_hours is not None else self.max_time
 		max_d = max_distance_km if max_distance_km is not None else self.distance_epicenter
 		return Queries.event_associations(self.tree, self.historic, self.associations, event_id, max_t, max_d)
 
 	def query_costly_high_priority_events(self) -> tuple[list[dict], int]:
-		"""Delegates to Queries.costly_high_priority_events."""
+		"""
+		Query 4 Facade: Identifies high-priority events (priority = 3) whose tree depth strictly exceeds limit L.
+		Delegates execution to Queries.costly_high_priority_events using self.limit.
+
+		Returns:
+			A tuple of (costly_events_info_list, examined_nodes_count).
+		"""
 		return Queries.costly_high_priority_events(self.tree, self.limit)
 
 	def save_scenario(self, filepath: str) -> None:
-		"""Delegates full structural scenario export to ScenarioPersistence."""
+		"""
+		Exports the full operational scenario state to a structured JSON file at filepath.
+		Delegates structural serialization to ScenarioPersistence.export_to_json.
+
+		Args:
+			filepath: Destination file path for the scenario JSON file.
+		"""
 		ScenarioPersistence.export_to_json(self, filepath)
 
 	def load_scenario_by_topology(self, filepath: str, stress_mode_override: bool | None = None) -> tuple[bool, list[str]]:
@@ -1235,11 +1277,37 @@ class Observatory:
 			self._suppress_undo_recording = False
 
 	def load_scenario_by_insertions(self, filepath: str, adopt_avl: bool = False) -> dict:
-		"""Delegates sequential insertion comparison to ScenarioPersistence."""
+		"""
+		Loads an event sequence and performs sequential insertions into both a balanced AVL and a regular BST.
+		Allows comparative structural analysis (heights, depths, leaf counts).
+
+		If adopt_avl is True:
+		- Atomically installs the constructed AVL tree into self.tree.
+		- Restores the decoupled self._handle_tree_rotation callback so subsequent rotations update metrics.
+		- Synchronizes self.events_dict and self.metrics.active_events.
+
+		Args:
+			filepath: Path to the JSON insertions sequence file.
+			adopt_avl: Whether to replace the Observatory's active tree with the constructed AVL.
+
+		Returns:
+			A dictionary containing 'avl', 'bst', 'events', and comparative 'metrics'.
+		"""
+		# Perform comparative sequential insertion load
 		result = ScenarioPersistence.load_by_insertions(filepath, self.geographical_map)
+		
+		# If user requested adoption of the balanced tree
 		if adopt_avl and result.get("avl") is not None:
-			self.tree = result["avl"]
+			adopted_avl = result["avl"]
+			# Restore decoupled rotation callback so subsequent operations properly update metrics
+			adopted_avl._AVL__on_rotation = self._handle_tree_rotation
+			self.tree = adopted_avl
+			# Re-index active events dictionary for O(1) lookup
 			self.events_dict = {ev.id: ev for ev in result.get("events", [])}
+			# Synchronize active event metric count
+			if self.metrics is not None:
+				self.metrics.active_events = len(self.events_dict)
+				
 		return result
 
 	def query_event(self, event_id: int) -> dict | None:
