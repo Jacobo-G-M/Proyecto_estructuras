@@ -1421,11 +1421,13 @@ class Observatory:
 		assoc_data = None
 		if hasattr(self, 'associations') and self.associations:
 			for assoc in self.associations:
-				if assoc.assoc_id == event_id:
-					assoc_data = {"role": "Reference", "replicas": [r.id for r in assoc.replicas]}
+				ref_id = assoc.chosen_reference.id if hasattr(assoc, 'chosen_reference') and assoc.chosen_reference else getattr(assoc, 'assoc_id', None)
+				replicas_list = getattr(assoc, 'referenced_by', getattr(assoc, 'replicas', []))
+				if ref_id == event_id:
+					assoc_data = {"role": "Reference", "replicas": [r.id for r in replicas_list]}
 					break
-				elif any(r.id == event_id for r in assoc.replicas):
-					assoc_data = {"role": "Replica", "reference": assoc.assoc_id}
+				elif any(r.id == event_id for r in replicas_list):
+					assoc_data = {"role": "Replica", "reference": ref_id}
 					break
 
 		if status == "Active":
