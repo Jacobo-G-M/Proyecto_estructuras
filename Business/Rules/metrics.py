@@ -7,12 +7,24 @@ class Metrics:
         self._active_events: int = 0
         self._removed_events: int = 0
         self._archived_events: int = 0
+        self._mass_archives: int = 0
 
         # Cumulative AVL rotation counters (centralized)
         self._cases: dict[str, int] = {"LL": 0, "RR": 0, "LR": 0, "RL": 0}
         self._turns: dict[str, int] = {"left": 0, "right": 0}
 
     # --- Business Getters and Setters ---
+
+    @property
+    def mass_archives(self) -> int:
+        return self._mass_archives
+
+    @mass_archives.setter
+    def mass_archives(self, value: int) -> None:
+        if isinstance(value, int) and value >= 0:
+            self._mass_archives = value
+        else:
+            raise ValueError("mass_archives must be a non-negative integer.")
 
     # Getter and Setter for _corrections_accepted
     @property
