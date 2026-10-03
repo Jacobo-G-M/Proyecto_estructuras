@@ -147,14 +147,17 @@ class TestQueries(unittest.TestCase):
         )
         historic.archive_event(archived_ref)
 
-        # Create an association where archived_ref is chosen reference of ev1, and ev1 has ev2 as replica
-        assoc = Association(assoc_id=self.ev1.id, chosen_reference=archived_ref)
-        assoc.add_replica(self.ev2)
+        # Create associations: archived_ref is chosen reference of ev1, and ev1 is chosen reference of ev2
+        assoc_parent = Association(assoc_id=1, chosen_reference=archived_ref)
+        assoc_parent.add_replica(self.ev1)
+
+        assoc_ev1 = Association(assoc_id=2, chosen_reference=self.ev1)
+        assoc_ev1.add_replica(self.ev2)
 
         report, examined = Queries.event_associations(
             tree=self.tree,
             historic=historic,
-            associations=[assoc],
+            associations=[assoc_parent, assoc_ev1],
             event_id=self.ev1.id,
             max_time_hours=48.0,
             max_distance_km=100.0
