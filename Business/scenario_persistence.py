@@ -203,13 +203,6 @@ class ScenarioPersistence:
         # a populated geographical zone. If zones are defined in the JSON payload, we
         # instantiate a temporary Geographical_map using polygon bounding vertices
         # (ubication_x, ubication_y) to allow spatial Point-in-Polygon queries in Step 6.
-        # ---------------------------------------------------------------------
-        # Step 1: Parse and instantiate geographical zones for priority evaluation
-        # ---------------------------------------------------------------------
-        # Priority rules require knowing whether an epicenter lies inside
-        # a populated geographical zone. If zones are defined in the JSON payload, we
-        # instantiate a temporary Geographical_map using polygon bounding vertices
-        # (ubication_x, ubication_y) to allow spatial Point-in-Polygon queries in Step 6.
         map_to_use = geographical_map
         # Conditional Check: Check if custom geographical zones are provided in scenario data
         if "zones" in data:
@@ -422,7 +415,7 @@ class ScenarioPersistence:
             errors.append(f"ID overlap between archived and deleted catalogs: {sorted(archived_deleted_overlap)}.")
 
         # ---------------------------------------------------------------------
-        # Step 4: Topology and Graph Integrity
+        # Step 4: Topology and Tree Integrity
         # ---------------------------------------------------------------------
         # Build an O(1) fast lookup table of all valid active nodes indexed by integer ID
         nodes_dict = {
