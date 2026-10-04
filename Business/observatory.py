@@ -1590,37 +1590,93 @@ class Observatory:
 	def global_recovery(self) -> dict:
 		"""
 		Fuerza un rebalanceo global del árbol y desactiva el modo de estrés (Sección 13).
-		Registra la acción en la pila para poder deshacerse.
+		Registra la acción en la pila para poder deshacerse y recopila el informe completo
+		de cambios topológicos, rotaciones y costo computacional para informar al usuario.
 		"""
+		import time
+		start_time = time.perf_counter()
+
 		if hasattr(self, '_record_action'):
 			self._record_action("GLOBAL_RECOVERY", "Restauración global post-estrés")
 			
+		# 1. Métricas previas del árbol
+		pre_height = self.tree.root.height if (self.tree and self.tree.root) else 0
+		pre_root_id = self.tree.root.id if (self.tree and self.tree.root) else None
+		pre_root_key = self.tree.root.get_key() if (self.tree and self.tree.root) else None
+
+		imbalanced_nodes_before = []
+		total_nodes_count = 0
+		if self.tree and self.tree.root:
+			for node in self.tree.inorder():
+				total_nodes_count += 1
+				bf = node.balance_factor()
+				if abs(bf) > 1:
+					imbalanced_nodes_before.append({"id": node.id, "bf": bf, "key": node.get_key()})
+
 		cases_before = self.metrics.cases.copy() if self.metrics is not None else {}
 		turns_before = self.metrics.turns.copy() if self.metrics is not None else {}
 
-		# El árbol rebalancea su topología de abajo hacia arriba y apaga su flag interno
+		# 2. El árbol rebalancea su topología de abajo hacia arriba in-situ y apaga su flag interno
 		if self.tree is not None:
 			self.tree.restore_balance()
 			
-		# Ejecutar auditoría para garantizar el equilibrio antes de retornar al modo normal
+		# 3. Métricas posteriores
+		post_height = self.tree.root.height if (self.tree and self.tree.root) else 0
+		post_root_id = self.tree.root.id if (self.tree and self.tree.root) else None
+		post_root_key = self.tree.root.get_key() if (self.tree and self.tree.root) else None
+
+		imbalanced_nodes_after = []
+		if self.tree and self.tree.root:
+			for node in self.tree.inorder():
+				bf = node.balance_factor()
+				if abs(bf) > 1:
+					imbalanced_nodes_after.append({"id": node.id, "bf": bf, "key": node.get_key()})
+
+		# 4. Sincronizamos el flag del Observatorio al modo normal
+		self.stress_mode = False
+
+		# 5. Ejecutar auditoría para garantizar el equilibrio restablecido
 		audit_report = self.verify_structure()
 		if any(e.startswith("Error") for e in audit_report):
 			print("Error: Global recovery failed audit. Stress mode remains ON.")
+			self.stress_mode = True
 			if self.tree is not None:
 				self.tree.stress_mode = True # Revert inner flag
 			return {"success": False, "audit": audit_report}
 
-		# Sincronizamos el flag del Observatorio
-		self.stress_mode = False
-
-		rotations_produced = {}
+		# 6. Rotaciones producidas y costo
+		cases_diff = {}
+		turns_diff = {}
 		if self.metrics is not None:
 			cases_diff = {k: self.metrics.cases[k] - cases_before.get(k, 0) for k in self.metrics.cases if self.metrics.cases[k] > cases_before.get(k, 0)}
 			turns_diff = {k: self.metrics.turns[k] - turns_before.get(k, 0) for k in self.metrics.turns if self.metrics.turns[k] > turns_before.get(k, 0)}
-			rotations_produced = {'cases': cases_diff, 'turns': turns_diff}
+
+		elapsed_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
+		rotations_produced = {'cases': cases_diff, 'turns': turns_diff}
 
 		print("Global recovery completed. Stress mode disabled and tree rebalanced.")
-		return {"success": True, "rotations": rotations_produced, "audit": audit_report}
+		return {
+			"success": True,
+			"rotations": rotations_produced,
+			"cases": cases_diff,
+			"turns": turns_diff,
+			"total_rotations": sum(cases_diff.values()),
+			"total_turns": sum(turns_diff.values()),
+			"total_nodes": total_nodes_count,
+			"imbalanced_count": len(imbalanced_nodes_before),
+			"imbalanced_nodes": imbalanced_nodes_before,
+			"imbalanced_after": len(imbalanced_nodes_after),
+			"pre_height": pre_height,
+			"post_height": post_height,
+			"pre_root_id": pre_root_id,
+			"post_root_id": post_root_id,
+			"pre_root_key": pre_root_key,
+			"post_root_key": post_root_key,
+			"elapsed_ms": elapsed_ms,
+			"audit": audit_report,
+			"in_place": True,
+			"paused_queue": True
+		}
 	# ---------------------------------------------------------
 	# ASSOCIATION LOGIC (REPLICAS AND REFERENCES)
 	# ---------------------------------------------------------

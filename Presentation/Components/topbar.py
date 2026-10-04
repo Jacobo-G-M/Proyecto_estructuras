@@ -230,15 +230,41 @@ class Topbar(ctk.CTkFrame):
             return
         if self.switch_stress.get() == 1:
             self.observatory.stress_mode = True
+            self.app.refresh_all()
         else:
-            self.observatory.global_recovery()
-        self.app.refresh_all()
+            self._execute_recovery_flow()
 
     def _on_recover_click(self):
+        self._execute_recovery_flow()
+
+    def _execute_recovery_flow(self):
+        """
+        Ejecuta el protocolo de recuperación global del equilibrio AVL:
+        1. Pausa el procesamiento continuo de reportes si estuviera activo (requerimiento oficial).
+        2. Ejecuta rebalanceo global in-situ en el observatorio.
+        3. Refresca todas las vistas de la aplicación.
+        4. Despliega la ventana emergente informativa con el desglose de rotaciones y costos.
+        """
         if not self.observatory or not self.app:
             return
-        self.observatory.global_recovery()
+
+        # 1. Pausar procesamiento de reportes si la vista de eventos está corriendo en ráfaga
+        if hasattr(self.app, "views") and isinstance(self.app.views, dict):
+            events_view = self.app.views.get("eventos")
+            if events_view and getattr(events_view, "burst_running", False):
+                if hasattr(events_view, "_handle_pause_burst"):
+                    events_view._handle_pause_burst()
+
+        # 2. Rebalanceo global in-situ
+        result = self.observatory.global_recovery()
+
+        # 3. Refrescar todas las pantallas para reflejar el nuevo árbol y estado normal
         self.app.refresh_all()
+
+        # 4. Mostrar ventana emergente informativa con informe de cambios y costos
+        if result:
+            from Presentation.Components.Molecules.recovery_modal import RecoveryReportModal
+            RecoveryReportModal(self.app, result=result)
 
     def _on_toggle_stress_or_recover(self):
         self._on_recover_click()

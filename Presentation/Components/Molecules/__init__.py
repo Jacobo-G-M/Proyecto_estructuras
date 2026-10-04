@@ -25,6 +25,10 @@ from Presentation.Components.Molecules.states import (
     EmptyState
 )
 
+from Presentation.Components.Molecules.recovery_modal import (
+    RecoveryReportModal
+)
+
 __all__ = [
     "Card",
     "MetricCard",
@@ -32,5 +36,7 @@ __all__ = [
     "SectionHeader",
     "InfoBanner",
     "KeyValueRow",
-    "EmptyState"
+    "EmptyState",
+    "RecoveryReportModal"
 ]
+
