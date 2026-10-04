@@ -35,7 +35,7 @@ class Sidebar(ctk.CTkFrame):
         
         self.title_lbl = ctk.CTkLabel(self.title_frame, text="SismoLab AVL", font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"), text_color="#e8eef3")
         self.title_lbl.pack(anchor="w", pady=0)
-        self.subtitle_lbl = ctk.CTkLabel(self.title_frame, text="OBS-UNI · v2.4.1", font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0")
+        self.subtitle_lbl = ctk.CTkLabel(self.title_frame, text="v1.0", font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0")
         self.subtitle_lbl.pack(anchor="w", pady=0)
 
         # 2. Menú de Navegación Interactivo

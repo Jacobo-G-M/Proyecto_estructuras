@@ -170,16 +170,13 @@ class TreeRenderer:
                     ch_x, ch_y = coords[id(child)]
                     if is_bst_degenerate:
                         line_color = "#422830"
-                        dash_pattern = (3, 3) if child == curr.right_son else ()
                     else:
                         line_color = "#1c2e42"
-                        dash_pattern = ()
 
                     canvas.create_line(
                         curr_x, curr_y, ch_x, ch_y,
                         fill=line_color,
-                        width=line_w,
-                        dash=dash_pattern
+                        width=line_w
                     )
                     draw_edges(child)
 
