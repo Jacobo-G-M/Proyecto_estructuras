@@ -44,15 +44,7 @@ class DashboardView(ctk.CTkFrame):
         )
         self.header.pack(fill="x", pady=(0, 10))
 
-        # Botón de acción en el encabezado
-        btn_refresh = SecondaryButton(
-            self.header,
-            text="🔄 Refrescar",
-            width=90,
-            height=28,
-            command=self.refresh
-        )
-        self.header.add_action(btn_refresh)
+
 
         # 2. Fila de Tarjetas de Métricas (MetricCards)
         metrics_grid = ctk.CTkFrame(container, fg_color="transparent")

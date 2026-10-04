@@ -128,23 +128,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.btn_undo.pack(side="left", padx=3)
         
-        self.btn_load = ctk.CTkButton(
-            self.actions_frame, text="▲ Cargar JSON", height=30, corner_radius=6,
-            fg_color="#0b131c", border_color="#1a2736", border_width=1,
-            text_color="#e8eef3", hover_color="#142130", font=ctk.CTkFont(family=FONT_MAIN, size=12),
-            command=self._on_load_json
-        )
-        self.btn_load.pack(side="left", padx=3)
-
-        self.btn_export = ctk.CTkButton(
-            self.actions_frame, text="▾ Exportar JSON", height=30, corner_radius=6,
-            fg_color="#0b131c", border_color="#1a2736", border_width=1,
-            text_color="#e8eef3", hover_color="#142130", font=ctk.CTkFont(family=FONT_MAIN, size=12),
-            command=self._on_save_json
-        )
-        self.btn_export.pack(side="left", padx=3)
-
-        # Pill interactivo de versión / Escenario Activo (Opción B)
+        # Pill interactivo de versión / Escenario Activo
         self.current_scenario_name = "Demo Activo"
         self.current_scenario_filepath = None
         self.version_pill = ctk.CTkFrame(
@@ -176,20 +160,8 @@ class Topbar(ctk.CTkFrame):
         is_narrow = event.width < 980
         if is_narrow != self._is_compact:
             self._is_compact = is_narrow
-            if is_narrow:
-                self.btn_load.configure(text="▲ Cargar")
-                self.btn_export.configure(text="▾ Guardar")
-                if hasattr(self, "version_pill") and self.version_pill.winfo_ismapped():
-                    self.version_pill.pack_forget()
-                if hasattr(self, "btn_recover"):
-                    self.btn_recover.configure(text="Recuperar AVL")
-            else:
-                self.btn_load.configure(text="▲ Cargar JSON")
-                self.btn_export.configure(text="▾ Exportar JSON")
-                if hasattr(self, "version_pill") and not self.version_pill.winfo_ismapped():
-                    self.version_pill.pack(side="left", padx=3)
-                if hasattr(self, "btn_recover"):
-                    self.btn_recover.configure(text="Recuperar Equilibrio AVL")
+            if hasattr(self, "btn_recover"):
+                self.btn_recover.configure(text="Recuperar AVL" if is_narrow else "Recuperar Equilibrio AVL")
 
     def refresh(self):
         """Actualiza el reloj y el estado de estrés desde el observatorio."""
@@ -349,11 +321,11 @@ class Topbar(ctk.CTkFrame):
             command=self._on_save_current_version
         )
         menu.add_command(
-            label="💾 Guardar como nuevo escenario...",
+            label="💾 Guardar como nueva versión...",
             command=self._on_save_json
         )
         menu.add_command(
-            label="📂 Examinar otro archivo...",
+            label="📂 Cargar otra versión (examinar archivo)...",
             command=self._on_load_json
         )
 
@@ -437,7 +409,7 @@ class Topbar(ctk.CTkFrame):
             target_dir = os.path.abspath(target_dir)
 
         filepath = filedialog.asksaveasfilename(
-            title="Exportar Escenario JSON",
+            title="Guardar Nueva Versión",
             initialdir=target_dir,
             defaultextension=".json",
             filetypes=[("Archivos JSON", "*.json"), ("Todos los archivos", "*.*")]
@@ -448,7 +420,7 @@ class Topbar(ctk.CTkFrame):
                 self.current_scenario_filepath = os.path.abspath(filepath)
                 name = os.path.splitext(os.path.basename(filepath))[0]
                 self.set_scenario_name(name)
-                messagebox.showinfo("Éxito", f"Escenario exportado con éxito a:\n{filepath}")
+                messagebox.showinfo("Éxito", f"Versión guardada con éxito en:\n{filepath}")
             except Exception as e:
                 messagebox.showerror("Error", f"Fallo al guardar: {e}")
 
@@ -461,7 +433,7 @@ class Topbar(ctk.CTkFrame):
             target_dir = os.path.abspath(target_dir)
 
         filepath = filedialog.askopenfilename(
-            title="Cargar Escenario JSON",
+            title="Cargar Versión desde Archivo",
             initialdir=target_dir,
             filetypes=[("Archivos JSON", "*.json"), ("Todos los archivos", "*.*")]
         )
