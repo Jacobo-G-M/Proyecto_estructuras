@@ -435,23 +435,8 @@ class QueriesView(ctk.CTkFrame):
         card = Card(parent, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
 
         # Header
-        header = ctk.CTkFrame(container, fg_color="transparent")
-        header.pack(fill="x", pady=(0, 20))
-        
-        ctk.CTkLabel(
-            header, text="SISMOLAB · CONSULTAS Y REPORTES",
-            font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#22d3ee"
-        ).pack(anchor="w")
-        
-        ctk.CTkLabel(
-            header, text="Consultas y Métricas · Top-k",
-            font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"), text_color="#e8eef3"
-        ).pack(anchor="w", pady=(2, 0))
-        
-        ctk.CTkLabel(
-            header, text="Consultas especializadas con poda de subárboles: Top-k pendientes, rango de magnitudes y réplicas.",
-            font=ctk.CTkFont(family=FONT_MAIN, size=11), text_color="#8a9bb0"
-        ).pack(anchor="w", pady=(2, 0))
+        header = ctk.CTkFrame(card, fg_color="transparent")
+        header.pack(fill="x", padx=16, pady=(16, 10))
 
         self.lbl_assoc_title = ctk.CTkLabel(
             header,
