@@ -159,9 +159,35 @@ class EventsView(ctk.CTkFrame):
         )
         self.option_station.pack(fill="x", pady=(2, 0))
 
-        # 7. Fecha ISO8601
-        current_iso = self.observatory.clock_simulation.strftime("%Y-%m-%dT%H:%M:%SZ") if self.observatory else "2025-06-13T15:00:00Z"
-        self.entry_date = self._create_form_row(form_body, "Fecha", "", current_iso, ACCENT_CYAN)
+        # 7. Fecha y Hora
+        row_dt = ctk.CTkFrame(form_body, fg_color="transparent")
+        row_dt.pack(fill="x", pady=3)
+        lbls_dt = ctk.CTkFrame(row_dt, fg_color="transparent")
+        lbls_dt.pack(fill="x")
+        ctk.CTkLabel(lbls_dt, text="Fecha (UTC)", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_SECONDARY).pack(side="left")
+        ctk.CTkLabel(lbls_dt, text="Hora (UTC)", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_SECONDARY).pack(side="right", padx=10)
+
+        inputs_dt = ctk.CTkFrame(row_dt, fg_color="transparent")
+        inputs_dt.pack(fill="x", pady=(2, 0))
+        inputs_dt.grid_columnconfigure((0, 1), weight=1, uniform="dt")
+
+        f_date = ctk.CTkFrame(inputs_dt, fg_color="transparent")
+        f_date.grid(row=0, column=0, sticky="ew", padx=(0, 2))
+        btn_d_down = ctk.CTkButton(f_date, text="◀", width=20, fg_color="#1a2736", hover_color="#24384e", text_color="#fff", command=lambda: self._step_datetime(days=-1))
+        btn_d_down.pack(side="left")
+        self.entry_date = ctk.CTkEntry(f_date, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, text_color=TEXT_PRIMARY, font=ctk.CTkFont(family=FONT_MONO, size=11), height=30)
+        self.entry_date.pack(side="left", fill="x", expand=True, padx=2)
+        btn_d_up = ctk.CTkButton(f_date, text="▶", width=20, fg_color="#1a2736", hover_color="#24384e", text_color="#fff", command=lambda: self._step_datetime(days=1))
+        btn_d_up.pack(side="left")
+
+        f_time = ctk.CTkFrame(inputs_dt, fg_color="transparent")
+        f_time.grid(row=0, column=1, sticky="ew", padx=(2, 0))
+        btn_t_down = ctk.CTkButton(f_time, text="◀", width=20, fg_color="#1a2736", hover_color="#24384e", text_color="#fff", command=lambda: self._step_datetime(hours=-1))
+        btn_t_down.pack(side="left")
+        self.entry_time = ctk.CTkEntry(f_time, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, text_color=TEXT_PRIMARY, font=ctk.CTkFont(family=FONT_MONO, size=11), height=30)
+        self.entry_time.pack(side="left", fill="x", expand=True, padx=2)
+        btn_t_up = ctk.CTkButton(f_time, text="▶", width=20, fg_color="#1a2736", hover_color="#24384e", text_color="#fff", command=lambda: self._step_datetime(hours=1))
+        btn_t_up.pack(side="left")
 
         # 8. Prioridad Calculada (Display)
         row_p = ctk.CTkFrame(form_body, fg_color="transparent")
@@ -427,14 +453,6 @@ class EventsView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=TEXT_PRIMARY
         )
         self.lbl_t_val.pack(side="right", padx=10)
-
-        # Botón Analizar Elegibilidad
-        self.btn_analyze = SecondaryButton(
-            card_archive,
-            text="Analizar Elegibilidad",
-            command=self._handle_analyze_archive
-        )
-        self.btn_analyze.pack(fill="x", padx=16, pady=(4, 6))
 
         # Tarjeta resultado de análisis (Ámbar)
         self.frame_eligibility_result = ctk.CTkFrame(
@@ -772,6 +790,25 @@ class EventsView(ctk.CTkFrame):
     # ACCIONES DEL FORMULARIO CRUD
     # =========================================================================
 
+    def _step_datetime(self, days=0, hours=0):
+        try:
+            date_part = self.entry_date.get().strip()
+            time_part = self.entry_time.get().strip()
+            if not date_part or not time_part:
+                dt = self.observatory.clock_simulation if self.observatory else datetime.now()
+            else:
+                dt = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S")
+            
+            from datetime import timedelta
+            dt += timedelta(days=days, hours=hours)
+            
+            self.entry_date.delete(0, "end")
+            self.entry_date.insert(0, dt.strftime("%Y-%m-%d"))
+            self.entry_time.delete(0, "end")
+            self.entry_time.insert(0, dt.strftime("%H:%M:%S"))
+        except ValueError:
+            pass
+
     def _on_form_change(self):
         """Se ejecuta al modificar campos clave para recalcular la prioridad y validar."""
         try:
@@ -801,11 +838,14 @@ class EventsView(ctk.CTkFrame):
             x = float(self.entry_x.get().strip())
             y = float(self.entry_y.get().strip())
 
-            date_str = self.entry_date.get().strip()
+            date_part = self.entry_date.get().strip()
+            time_part = self.entry_time.get().strip()
+            if not date_part or not time_part:
+                raise ValueError("La fecha y la hora no pueden estar vacías.")
             try:
-                dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
+                dt = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                dt = self.observatory.clock_simulation
+                raise ValueError("Formato de fecha u hora inválido. Usa YYYY-MM-DD y HH:MM:SS")
 
             st_name = self.option_station.get()
             station_obj = None
@@ -846,11 +886,14 @@ class EventsView(ctk.CTkFrame):
             x = float(self.entry_x.get().strip())
             y = float(self.entry_y.get().strip())
 
-            date_str = self.entry_date.get().strip()
+            date_part = self.entry_date.get().strip()
+            time_part = self.entry_time.get().strip()
+            if not date_part or not time_part:
+                raise ValueError("La fecha y la hora no pueden estar vacías.")
             try:
-                dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
+                dt = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                dt = self.observatory.clock_simulation
+                raise ValueError("Formato de fecha u hora inválido. Usa YYYY-MM-DD y HH:MM:SS")
 
             ev = self.observatory.edit_event(
                 event_id=eid,
@@ -928,7 +971,9 @@ class EventsView(ctk.CTkFrame):
 
         if hasattr(ev, 'date_time'):
             self.entry_date.delete(0, "end")
-            self.entry_date.insert(0, ev.date_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            self.entry_date.insert(0, ev.date_time.strftime("%Y-%m-%d"))
+            self.entry_time.delete(0, "end")
+            self.entry_time.insert(0, ev.date_time.strftime("%H:%M:%S"))
 
         self._on_form_change()
         self._show_msg(f"Cargado evento EV-{ev.id} en formulario.", TEXT_SECONDARY)
@@ -954,9 +999,17 @@ class EventsView(ctk.CTkFrame):
         self.entry_x.delete(0, "end")
         self.entry_y.delete(0, "end")
 
-        current_iso = self.observatory.clock_simulation.strftime("%Y-%m-%dT%H:%M:%SZ") if self.observatory else "2025-06-13T15:00:00Z"
+        if self.observatory:
+            cur_date = self.observatory.clock_simulation.strftime("%Y-%m-%d")
+            cur_time = self.observatory.clock_simulation.strftime("%H:%M:%S")
+        else:
+            cur_date = "2025-06-13"
+            cur_time = "15:00:00"
+
         self.entry_date.delete(0, "end")
-        self.entry_date.insert(0, current_iso)
+        self.entry_date.insert(0, cur_date)
+        self.entry_time.delete(0, "end")
+        self.entry_time.insert(0, cur_time)
 
         self.lbl_p_calc.configure(text="P=auto", text_color=TEXT_MUTED)
         self.lbl_form_msg.configure(text="")
@@ -1065,6 +1118,7 @@ class EventsView(ctk.CTkFrame):
         if self.observatory:
             self.observatory.max_tree_age = self.archive_threshold_hours
         self._check_eligible_badge()
+        self._handle_analyze_archive()
 
     def _handle_analyze_archive(self):
         """Ejecuta la vista previa de búsqueda de ramas elegibles."""
@@ -1080,9 +1134,8 @@ class EventsView(ctk.CTkFrame):
                 affected = res["affected_ids"]
                 self.lbl_elig_root.configure(text=f"Raíz candidata: EV-{root_id}")
                 self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > T")
-                self.lbl_elig_tiebreak.configure(text="desempate: menor M → mayor prof → ID menor ✓")
                 self.btn_exec_archive.configure(text=f"Ejecutar Archivo · {count} nodos", state="normal")
-                self._log(f"[ARCHIVO] Rama elegible identificada: raíz EV-{root_id} ({count} nodos)", WARNING)
+                # self._log(f"[ARCHIVO] Rama elegible identificada: raíz EV-{root_id} ({count} nodos)", WARNING)
             else:
                 self.lbl_elig_root.configure(text="Sin ramas elegibles")
                 self.lbl_elig_detail.configure(text="No hay subárboles con todos los nodos P=1 y edad > T.")
