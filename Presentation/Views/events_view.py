@@ -80,51 +80,13 @@ class EventsView(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(parent, fg_color="transparent")
         header_frame.pack(fill="x", pady=(0, 15))
 
-        left_box = ctk.CTkFrame(header_frame, fg_color="transparent")
-        left_box.pack(side="left", fill="y")
-
-        lbl_breadcrumb = ctk.CTkLabel(
-            left_box,
-            text="PRESENTATION / VIEWS / EVENTS_VIEW.PY · EXPANDIDO",
-            font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"),
-            text_color=ACCENT_CYAN
-        )
-        lbl_breadcrumb.pack(anchor="w")
-
         lbl_title = ctk.CTkLabel(
-            left_box,
-            text="Gestión de Eventos · CRUD + Cola + Archivo",
+            header_frame,
+            text="Gestión de Eventos",
             font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"),
             text_color=TEXT_PRIMARY
         )
         lbl_title.pack(anchor="w", pady=(2, 0))
-
-        lbl_subtitle = ctk.CTkLabel(
-            left_box,
-            text="Operativa en 3 columnas: formulario validado, ráfagas FIFO con log y archivo de subárboles.",
-            font=ctk.CTkFont(family=FONT_MAIN, size=11),
-            text_color=TEXT_SECONDARY
-        )
-        lbl_subtitle.pack(anchor="w", pady=(2, 0))
-
-        # Badges en la esquina superior derecha
-        right_box = ctk.CTkFrame(header_frame, fg_color="transparent")
-        right_box.pack(side="right", anchor="e")
-
-        b1 = ctk.CTkFrame(right_box, fg_color=BG_SURFACE, border_color=BORDER_SUBTLE, border_width=1, corner_radius=RADIUS_MD)
-        b1.pack(side="left", padx=(0, 8))
-        ctk.CTkLabel(
-            b1, text="validación: ID · M · prof · X/Y · ISO8601",
-            font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_SECONDARY
-        ).pack(padx=10, pady=5)
-
-        self.b_eligible = ctk.CTkFrame(right_box, fg_color=BG_SURFACE, border_color=BORDER_SUBTLE, border_width=1, corner_radius=RADIUS_MD)
-        self.b_eligible.pack(side="left")
-        self.lbl_eligible_badge = ctk.CTkLabel(
-            self.b_eligible, text="T=72h · 0 elegibles",
-            font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=WARNING
-        )
-        self.lbl_eligible_badge.pack(padx=10, pady=5)
 
     # -------------------------------------------------------------------------
     # Columna 1: Formulario de Evento · CRUD
@@ -138,7 +100,7 @@ class EventsView(ctk.CTkFrame):
         header.pack(fill="x", padx=16, pady=(16, 10))
 
         lbl_card_title = ctk.CTkLabel(
-            header, text="Formulario de Evento · CRUD",
+            header, text="Formulario de Evento",
             font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"), text_color=TEXT_PRIMARY
         )
         lbl_card_title.pack(side="left")
@@ -163,7 +125,7 @@ class EventsView(ctk.CTkFrame):
         self.entry_mag.bind("<KeyRelease>", lambda e: self._on_form_change())
 
         # 3. Profundidad
-        self.entry_depth = self._create_form_row(form_body, "Profundidad", "0.0 – 700.0 km", "12.5", TEXT_SECONDARY)
+        self.entry_depth = self._create_form_row(form_body, "Profundidad", "0.0 – 700.0 km", "12.5", ACCENT_CYAN)
         self.entry_depth.bind("<KeyRelease>", lambda e: self._on_form_change())
 
         # 4. Coord X
@@ -199,7 +161,7 @@ class EventsView(ctk.CTkFrame):
 
         # 7. Fecha ISO8601
         current_iso = self.observatory.clock_simulation.strftime("%Y-%m-%dT%H:%M:%SZ") if self.observatory else "2025-06-13T15:00:00Z"
-        self.entry_date = self._create_form_row(form_body, "Fecha ISO8601", "UTC", current_iso, ACCENT_CYAN)
+        self.entry_date = self._create_form_row(form_body, "Fecha", "", current_iso, ACCENT_CYAN)
 
         # 8. Prioridad Calculada (Display)
         row_p = ctk.CTkFrame(form_body, fg_color="transparent")
@@ -207,11 +169,10 @@ class EventsView(ctk.CTkFrame):
         lbls_p = ctk.CTkFrame(row_p, fg_color="transparent")
         lbls_p.pack(fill="x")
         ctk.CTkLabel(lbls_p, text="Prioridad", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_SECONDARY).pack(side="left")
-        ctk.CTkLabel(lbls_p, text="P=f(M, pob)", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="right")
 
         self.lbl_p_calc = ctk.CTkLabel(
             row_p,
-            text="P3 · auto (Alta)",
+            text="Alto",
             font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"),
             text_color=ACCENT_CYAN,
             fg_color="#101922",
@@ -235,7 +196,7 @@ class EventsView(ctk.CTkFrame):
 
         self.btn_create = PrimaryButton(
             btn_grid1,
-            text="Crear Manualmente",
+            text="Crear",
             command=self._handle_create_event
         )
         self.btn_create.grid(row=0, column=0, sticky="ew", padx=(0, 4))
@@ -282,14 +243,7 @@ class EventsView(ctk.CTkFrame):
         )
         btn_delete.grid(row=0, column=2, sticky="ew", padx=(3, 0))
 
-        # Pie de página técnico
-        lbl_caption = ctk.CTkLabel(
-            card,
-            text="via Observatory.create_event() · edit_event()",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        )
-        lbl_caption.pack(anchor="w", padx=16, pady=(0, 14))
+
 
         return card
 
@@ -327,7 +281,7 @@ class EventsView(ctk.CTkFrame):
         header.pack(fill="x", padx=16, pady=(16, 10))
 
         ctk.CTkLabel(
-            header, text="Cola FIFO · Gestor de Ráfagas",
+            header, text="Gestor de reportes",
             font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"), text_color=TEXT_PRIMARY
         ).pack(side="left")
 
@@ -422,14 +376,7 @@ class EventsView(ctk.CTkFrame):
         self.log_box.pack(fill="x", padx=16, pady=(0, 6))
         self.log_box.insert("end", "[14:31:02] Sistema listo. Esperando eventos o ráfagas en cola FIFO...\n")
 
-        # Pie técnico
-        lbl_caption = ctk.CTkLabel(
-            card,
-            text="via Observatory.process_report_step() · process_report()",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        )
-        lbl_caption.pack(anchor="w", padx=16, pady=(0, 14))
+
 
         return card
 
@@ -449,6 +396,14 @@ class EventsView(ctk.CTkFrame):
             header_arch, text="Archivar Rama · Eventos Antiguos",
             font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"), text_color=TEXT_PRIMARY
         ).pack(side="left")
+
+        self.b_eligible = ctk.CTkFrame(header_arch, fg_color=BG_SURFACE, border_color=BORDER_SUBTLE, border_width=1, corner_radius=RADIUS_MD)
+        self.b_eligible.pack(side="right")
+        self.lbl_eligible_badge = ctk.CTkLabel(
+            self.b_eligible, text="T=72h · 0 elegibles",
+            font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=WARNING
+        )
+        self.lbl_eligible_badge.pack(padx=10, pady=5)
 
         # Slider Umbral T
         slider_t_box = ctk.CTkFrame(card_archive, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=RADIUS_MD)
@@ -505,15 +460,7 @@ class EventsView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_MONO, size=10),
             text_color=TEXT_SECONDARY
         )
-        self.lbl_elig_detail.pack(anchor="w", padx=10, pady=1)
-
-        self.lbl_elig_tiebreak = ctk.CTkLabel(
-            self.frame_eligibility_result,
-            text="regla: todos P=1, edad > T · desempate por prof/ID",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        )
-        self.lbl_elig_tiebreak.pack(anchor="w", padx=10, pady=(1, 8))
+        self.lbl_elig_detail.pack(anchor="w", padx=10, pady=(1, 8))
 
         # Botón Ejecutar Archivo Masivo
         self.btn_exec_archive = ctk.CTkButton(
@@ -576,13 +523,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.frame_catalog_items.pack(fill="both", expand=True, padx=16, pady=(4, 6))
 
-        # Pie técnico
-        ctk.CTkLabel(
-            card_catalog,
-            text="via Observatory.preview_archive(T) · execute_archive()",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        ).pack(anchor="w", padx=16, pady=(0, 14))
+
 
         return container
 
@@ -590,22 +531,7 @@ class EventsView(ctk.CTkFrame):
     # 3. Footer
     # ---------------------------------------------------------
     def _build_footer(self, parent):
-        footer = ctk.CTkFrame(parent, fg_color="transparent")
-        footer.pack(fill="x", pady=(10, 0))
-
-        ctk.CTkLabel(
-            footer,
-            text="events_view.py consume Observatory CRUD · step_queue / burst / preview_archive(T) · decisiones: Alta·Confirm·Conflicto·Antiguo",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        ).pack(side="left")
-
-        ctk.CTkLabel(
-            footer,
-            text="log + rotaciones en vivo",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        ).pack(side="right")
+        pass
 
     # =========================================================================
     # LÓGICA DE ACTUALIZACIÓN Y SINCRONIZACIÓN DE LA VISTA
@@ -756,8 +682,15 @@ class EventsView(ctk.CTkFrame):
             row = ctk.CTkFrame(self.frame_catalog_items, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=RADIUS_SM)
             row.pack(fill="x", pady=2)
 
-            # Al hacer clic en un evento, cargarlo en el formulario de la Columna 1
+            # Funciones de hover
+            def on_enter(e, r=row):
+                r.configure(fg_color="#182736")
+            def on_leave(e, r=row):
+                r.configure(fg_color="#0b131c")
+
             row.bind("<Button-1>", lambda e, event_obj=ev: self._load_event_into_form(event_obj))
+            row.bind("<Enter>", on_enter)
+            row.bind("<Leave>", on_leave)
 
             lbl_id = ctk.CTkLabel(
                 row, text=f"EV-{ev.id}",
@@ -766,6 +699,8 @@ class EventsView(ctk.CTkFrame):
             )
             lbl_id.pack(side="left", padx=8, pady=4)
             lbl_id.bind("<Button-1>", lambda e, event_obj=ev: self._load_event_into_form(event_obj))
+            lbl_id.bind("<Enter>", on_enter)
+            lbl_id.bind("<Leave>", on_leave)
 
             k_tuple = ev.get_key() if hasattr(ev, 'get_key') else f"P{ev.priority}"
             lbl_k = ctk.CTkLabel(
@@ -775,6 +710,8 @@ class EventsView(ctk.CTkFrame):
             )
             lbl_k.pack(side="left", padx=6)
             lbl_k.bind("<Button-1>", lambda e, event_obj=ev: self._load_event_into_form(event_obj))
+            lbl_k.bind("<Enter>", on_enter)
+            lbl_k.bind("<Leave>", on_leave)
 
             # Status Badge a la derecha
             if ev.status == "Deleted":
@@ -793,6 +730,8 @@ class EventsView(ctk.CTkFrame):
             )
             badge.pack(side="right", padx=8)
             badge.bind("<Button-1>", lambda e, event_obj=ev: self._load_event_into_form(event_obj))
+            badge.bind("<Enter>", on_enter)
+            badge.bind("<Leave>", on_leave)
 
     def _switch_catalog_tab(self, tab: str):
         """Cambia la pestaña activa del catálogo de eventos."""
@@ -845,7 +784,7 @@ class EventsView(ctk.CTkFrame):
             is_valid = (-2.0 <= mag <= 10.0) and (0.0 <= depth <= 700.0) and (0.0 <= x <= 1000.0) and (0.0 <= y <= 1000.0)
             if is_valid:
                 p = self.observatory.calculate_priority(mag, depth, (x, y)) if self.observatory else 1
-                p_text = f"P{p} · auto (" + ("Alta" if p == 3 else "Media" if p == 2 else "Baja") + ")"
+                p_text = "Alto" if p == 3 else "Media" if p == 2 else "Baja"
                 self.lbl_p_calc.configure(text=p_text, text_color=ACCENT_CYAN)
                 self.badge_valid.configure(text="✓ válido", text_color=SUCCESS, fg_color="#0c281a")
             else:
