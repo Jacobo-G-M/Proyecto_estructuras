@@ -129,8 +129,8 @@ class Topbar(ctk.CTkFrame):
         self.btn_undo.pack(side="left", padx=3)
         
         # Pill interactivo de versión / Escenario Activo
-        self.current_scenario_name = "Demo Activo"
-        self.current_scenario_filepath = None
+        self.current_scenario_name = getattr(self.observatory, 'current_scenario_name', "Demo Activo") if self.observatory else "Demo Activo"
+        self.current_scenario_filepath = getattr(self.observatory, 'current_scenario_filepath', None) if self.observatory else None
         self.version_pill = ctk.CTkFrame(
             self.actions_frame, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=6,
             cursor="hand2"
@@ -200,6 +200,13 @@ class Topbar(ctk.CTkFrame):
                 border_width=1,
                 border_color="#1a2736"
             )
+
+        # Sincronizar escenario activo con el observatorio
+        if self.observatory and hasattr(self.observatory, 'current_scenario_name'):
+            obs_name = self.observatory.current_scenario_name or "Demo Activo"
+            if self.current_scenario_name != obs_name:
+                self.set_scenario_name(obs_name)
+            self.current_scenario_filepath = getattr(self.observatory, 'current_scenario_filepath', None)
 
     def _on_add_hour(self):
         if self.observatory and self.app:
@@ -272,18 +279,25 @@ class Topbar(ctk.CTkFrame):
     def _on_undo(self):
         if not self.observatory or not self.app:
             return
-        success = self.observatory.undo_action()
-        if not success:
-            messagebox.showinfo("Deshacer", "No hay más acciones en la pila de deshacer.")
+        try:
+            success = self.observatory.undo_action()
+            if not success:
+                messagebox.showinfo("Deshacer", "No hay más acciones en la pila de deshacer.")
+        except ValueError as e:
+            messagebox.showinfo("Deshacer", str(e))
         self.app.refresh_all()
 
     def set_scenario_name(self, name: str):
-        """Actualiza el nombre del escenario activo en el pill superior."""
+        """Actualiza el nombre del escenario activo en el pill superior y en el observatorio."""
         if not name:
             name = "Demo Activo"
         if name.endswith(".json"):
             name = name[:-5]
         self.current_scenario_name = name
+        if self.observatory and hasattr(self.observatory, 'current_scenario_name'):
+            self.observatory.current_scenario_name = name
+        if hasattr(self, 'current_scenario_filepath') and self.observatory and hasattr(self.observatory, 'current_scenario_filepath'):
+            self.observatory.current_scenario_filepath = self.current_scenario_filepath
         display = name if len(name) <= 16 else f"{name[:13]}..."
         if hasattr(self, "lbl_version"):
             self.lbl_version.configure(text=f"▾ {display}")

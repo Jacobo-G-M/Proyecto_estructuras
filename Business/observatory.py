@@ -46,6 +46,8 @@ class Observatory:
 		self.events_dict: dict[int, Event] = {}
 		self.versions: list[Version] = []
 		self._suppress_undo_recording: bool = False
+		self.current_scenario_name: str = "Demo Activo"
+		self.current_scenario_filepath: str | None = None
 
 	# Getter of clock_simulation attribute
 	@property
@@ -919,7 +921,9 @@ class Observatory:
 			'metrics': copied_state['metrics'],
 			'associations': copied_state['associations'],
 			'stations': copied_state['stations'],
-			'geographical_map': copied_state['geographical_map']
+			'geographical_map': copied_state['geographical_map'],
+			'current_scenario_name': getattr(self, 'current_scenario_name', "Demo Activo"),
+			'current_scenario_filepath': getattr(self, 'current_scenario_filepath', None)
 		}
 		
 		# Crear la acción y apilarla en la estructura Undo_stack
@@ -990,6 +994,8 @@ class Observatory:
 		# Restaurar métricas acumuladas y asociaciones
 		self.metrics = s.get('metrics')
 		self.associations = s.get('associations', [])
+		self.current_scenario_name = s.get('current_scenario_name', "Demo Activo")
+		self.current_scenario_filepath = s.get('current_scenario_filepath', None)
 
 		return True
 	
@@ -1139,6 +1145,8 @@ class Observatory:
 				)
 				self.versions.append(version_obj)
 
+			self.current_scenario_name = clean_name
+			self.current_scenario_filepath = file_path
 			print(f"Version '{clean_name}' saved successfully to {file_path}.")
 			return True
 		except Exception as e:
@@ -1222,6 +1230,8 @@ class Observatory:
 
 			# Aplicar la reconstrucción completa del estado (atómica, ya validada)
 			self._deserialize_scenario(data)
+			self.current_scenario_name = clean_name
+			self.current_scenario_filepath = file_path
 			print(f"Version '{clean_name}' successfully restored into the observatory.")
 			return True
 		except Exception as e:
@@ -1323,6 +1333,9 @@ class Observatory:
 			filepath: Destination file path for the scenario JSON file.
 		"""
 		ScenarioPersistence.export_to_json(self, filepath)
+		base_name = os.path.splitext(os.path.basename(filepath))[0]
+		self.current_scenario_name = base_name
+		self.current_scenario_filepath = os.path.abspath(filepath)
 
 	def load_scenario_by_topology(self, filepath: str, stress_mode_override: bool | None = None) -> tuple[bool, list[str]]:
 		"""
@@ -1357,7 +1370,12 @@ class Observatory:
 		# Aplicamos la reconstrucción atómica delegando a ScenarioPersistence
 		self._suppress_undo_recording = True
 		try:
-			return ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+			res = ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+			if res[0]:
+				base_name = os.path.splitext(os.path.basename(filepath))[0]
+				self.current_scenario_name = base_name
+				self.current_scenario_filepath = os.path.abspath(filepath)
+			return res
 		finally:
 			self._suppress_undo_recording = False
 
@@ -1405,6 +1423,10 @@ class Observatory:
 			# Synchronize active event metric count
 			if self.metrics is not None:
 				self.metrics.active_events = len(self.events_dict)
+				
+			base_name = os.path.splitext(os.path.basename(filepath))[0]
+			self.current_scenario_name = base_name
+			self.current_scenario_filepath = os.path.abspath(filepath)
 				
 		return result
 

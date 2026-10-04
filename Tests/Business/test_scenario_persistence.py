@@ -561,6 +561,35 @@ class TestScenarioPersistence(unittest.TestCase):
         self.assertEqual(obs.metrics.active_events, 3, "metrics.active_events was not updated!")
         self.assertEqual(len(obs.events_dict), 3)
 
+    def test_scenario_switch_and_undo_restores_scenario_name(self):
+        """Switching between scenarios and invoking undo_action restores active scenario name and filepath."""
+        obs = Observatory()
+        self.assertEqual(obs.current_scenario_name, "Demo Activo")
+
+        file_a = os.path.join(self.temp_dir.name, "scenario_a.json")
+        file_b = os.path.join(self.temp_dir.name, "scenario_b.json")
+
+        # Save two distinct scenarios
+        obs.save_scenario(file_a)
+        self.assertEqual(obs.current_scenario_name, "scenario_a")
+
+        obs.save_scenario(file_b)
+        self.assertEqual(obs.current_scenario_name, "scenario_b")
+
+        # Load scenario A
+        ok, _ = obs.load_scenario_by_topology(file_a)
+        self.assertTrue(ok)
+        self.assertEqual(obs.current_scenario_name, "scenario_a")
+
+        # Load scenario B
+        ok, _ = obs.load_scenario_by_topology(file_b)
+        self.assertTrue(ok)
+        self.assertEqual(obs.current_scenario_name, "scenario_b")
+
+        # Undo loading scenario B -> should restore to scenario A
+        self.assertTrue(obs.undo_action())
+        self.assertEqual(obs.current_scenario_name, "scenario_a")
+
 
 if __name__ == "__main__":
     unittest.main()
