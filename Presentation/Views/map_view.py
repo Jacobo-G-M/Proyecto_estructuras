@@ -65,26 +65,18 @@ class MapView(ctk.CTkFrame):
         header = ctk.CTkFrame(container, fg_color="transparent")
         header.pack(fill="x", pady=(0, 16))
 
-        title_section = ctk.CTkFrame(header, fg_color="transparent")
-        title_section.pack(side="left")
-
         ctk.CTkLabel(
             header, text="SISMOLAB · CARTOGRAFÍA REGIONAL",
             font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#22d3ee"
         ).pack(anchor="w")
         
         ctk.CTkLabel(
-            header, text="Mapa Geográfico · 1000x1000 km",
+            header, text="Mapa Geográfico",
             font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"), text_color="#e8eef3"
-        ).pack(anchor="w", pady=(2, 0))
-        
-        ctk.CTkLabel(
-            header, text="Visualización bidimensional de estaciones sismológicas, zonas pobladas y epicentros.",
-            font=ctk.CTkFont(family=FONT_MAIN, size=11), text_color="#8a9bb0"
         ).pack(anchor="w", pady=(2, 0))
 
         ctk.CTkLabel(
-            title_section,
+            header,
             text="Mapa que muestra sismos con retícula cada 100 km, filtros y medición.",
             font=ctk.CTkFont(family=FONT_MAIN, size=11),
             text_color=TEXT_SECONDARY
@@ -233,7 +225,7 @@ class MapView(ctk.CTkFrame):
         title_box = ctk.CTkFrame(top_bar, fg_color="transparent")
         title_box.pack(side="left")
 
-        StyledLabel(title_box, text="Plano 0–1000 km · Gran Escala", variant="h3").pack(side="left")
+        StyledLabel(title_box, text="Plano 0–1000 km", variant="h3").pack(side="left")
 
         right_box = ctk.CTkFrame(top_bar, fg_color="transparent")
         right_box.pack(side="right")
@@ -763,8 +755,7 @@ class MapView(ctk.CTkFrame):
         active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"] if self.observatory else []
         archived_count = len(self.observatory.historic.archived) if (self.observatory and self.observatory.historic and hasattr(self.observatory.historic, "archived")) else 0
 
-        st_status = "link OK" if len(stations) > 0 else "sin enlace"
-        self.lbl_station_count.configure(text=f"{len(stations)} estaciones · {st_status}")
+        self.lbl_station_count.configure(text=f"{len(stations)} estaciones")
         self.lbl_header_counts.configure(text=f"{len(active_events)} activos · {archived_count} archivados")
 
     def _update_candidate_counts(self):
