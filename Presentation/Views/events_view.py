@@ -781,23 +781,15 @@ class EventsView(ctk.CTkFrame):
         """Actualiza el badge T=X en el encabezado con el umbral de prueba."""
         if not self.observatory:
             return
-<<<<<<< HEAD
-        t_val = self.archive_threshold_hours
-=======
             
-        original_t = self.observatory.max_tree_age
-        self.observatory.max_tree_age = getattr(self, 'archive_threshold_hours', original_t)
-        
->>>>>>> 41f2231e74c7be828c28e4085ea7b3f358edf646
+        t_val = getattr(self, 'archive_threshold_hours', getattr(self.observatory, 'max_tree_age', 72))
         try:
             res = self.observatory.archive_subtree(execute=False, max_age_hours=t_val)
             cnt = res["count"] if res else 0
         except Exception:
             cnt = 0
-        finally:
-            self.observatory.max_tree_age = original_t
             
-        self.lbl_eligible_badge.configure(text=f"T={getattr(self, 'archive_threshold_hours', original_t)}h · {cnt} elegibles")
+        self.lbl_eligible_badge.configure(text=f"T={t_val}h · {cnt} elegibles")
 
     # =========================================================================
     # ACCIONES DEL FORMULARIO CRUD
@@ -1128,12 +1120,8 @@ class EventsView(ctk.CTkFrame):
     def _on_t_change(self, value):
         self.archive_threshold_hours = int(value)
         self.lbl_t_val.configure(text=f"{self.archive_threshold_hours} h")
-<<<<<<< HEAD
-        # Modo previsualizador: NO modificamos el valor global self.observatory.max_tree_age aquí
-=======
         # Ya no modificamos self.observatory.max_tree_age permanentemente aquí.
         # Solo actualizamos la vista previa.
->>>>>>> 41f2231e74c7be828c28e4085ea7b3f358edf646
         self._check_eligible_badge()
         self._handle_analyze_archive()
 
@@ -1142,33 +1130,24 @@ class EventsView(ctk.CTkFrame):
         if not self.observatory:
             return
 
-<<<<<<< HEAD
-=======
-        original_t = self.observatory.max_tree_age
-        # Modificar temporalmente para ver qué pasaría con este T
-        self.observatory.max_tree_age = self.archive_threshold_hours
-        
->>>>>>> 41f2231e74c7be828c28e4085ea7b3f358edf646
+        t_val = getattr(self, 'archive_threshold_hours', getattr(self.observatory, 'max_tree_age', 72))
         try:
-            res = self.observatory.archive_subtree(execute=False, max_age_hours=self.archive_threshold_hours)
+            res = self.observatory.archive_subtree(execute=False, max_age_hours=t_val)
             if res:
                 root_id = res["best_root_id"]
                 count = res["count"]
                 affected = res["affected_ids"]
                 self.lbl_elig_root.configure(text=f"Raíz candidata: EV-{root_id}")
-                self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > {self.archive_threshold_hours}h")
+                self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > {t_val}h")
                 self.btn_exec_archive.configure(text=f"Ejecutar Archivo · {count} nodos", state="normal")
             else:
                 self.lbl_elig_root.configure(text="Sin ramas elegibles")
-                self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {self.archive_threshold_hours}h.")
+                self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {t_val}h.")
                 self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
         except Exception:
             self.lbl_elig_root.configure(text="Sin ramas elegibles")
-            self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {self.archive_threshold_hours}h.")
+            self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {t_val}h.")
             self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
-        finally:
-            # Restaurar el valor global
-            self.observatory.max_tree_age = original_t
 
     def _handle_execute_archive(self):
         """Ejecuta el archivo masivo de la rama elegible seleccionada y fija el nuevo valor global de T."""
