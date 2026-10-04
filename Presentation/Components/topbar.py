@@ -129,15 +129,16 @@ class Topbar(ctk.CTkFrame):
         self.btn_undo.pack(side="left", padx=3)
         
         # Pill interactivo de versión / Escenario Activo
-        self.current_scenario_name = getattr(self.observatory, 'current_scenario_name', "Demo Activo") if self.observatory else "Demo Activo"
+        self.current_scenario_name = getattr(self.observatory, 'current_scenario_name', "Sin_titulo") if self.observatory else "Sin_titulo"
         self.current_scenario_filepath = getattr(self.observatory, 'current_scenario_filepath', None) if self.observatory else None
         self.version_pill = ctk.CTkFrame(
             self.actions_frame, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=6,
             cursor="hand2"
         )
         self.version_pill.pack(side="left", padx=3)
+        display = self.current_scenario_name if len(self.current_scenario_name) <= 16 else f"{self.current_scenario_name[:13]}..."
         self.lbl_version = ctk.CTkLabel(
-            self.version_pill, text=f"▾ {self.current_scenario_name}",
+            self.version_pill, text=f"▾ {display}",
             font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#38bdf8",
             cursor="hand2"
         )
@@ -395,6 +396,8 @@ class Topbar(ctk.CTkFrame):
             self.current_scenario_filepath = os.path.abspath(filepath)
             name = os.path.splitext(os.path.basename(filepath))[0]
             self.set_scenario_name(name)
+            if self.app and hasattr(self.app, 'capture_saved_state'):
+                self.app.capture_saved_state()
             messagebox.showinfo(
                 "Versión Guardada",
                 f"Se sobrescribió con éxito la versión actual:\n'{name}'\n({os.path.basename(filepath)})"
@@ -414,6 +417,8 @@ class Topbar(ctk.CTkFrame):
             if ok:
                 self.current_scenario_filepath = os.path.abspath(filepath)
                 self.set_scenario_name(name)
+                if self.app and hasattr(self.app, 'capture_saved_state'):
+                    self.app.capture_saved_state()
                 messagebox.showinfo(
                     "Éxito",
                     f"Escenario '{name}' cargado exitosamente desde:\n{os.path.basename(filepath)}"
@@ -426,6 +431,8 @@ class Topbar(ctk.CTkFrame):
                     if res and "avl" in res:
                         self.current_scenario_filepath = os.path.abspath(filepath)
                         self.set_scenario_name(name)
+                        if self.app and hasattr(self.app, 'capture_saved_state'):
+                            self.app.capture_saved_state()
                         messagebox.showinfo(
                             "Éxito",
                             f"Escenario de eventos '{name}' cargado exitosamente desde:\n{os.path.basename(filepath)}"
@@ -460,6 +467,8 @@ class Topbar(ctk.CTkFrame):
                 self.current_scenario_filepath = os.path.abspath(filepath)
                 name = os.path.splitext(os.path.basename(filepath))[0]
                 self.set_scenario_name(name)
+                if self.app and hasattr(self.app, 'capture_saved_state'):
+                    self.app.capture_saved_state()
                 messagebox.showinfo("Éxito", f"Versión guardada con éxito en:\n{filepath}")
             except Exception as e:
                 messagebox.showerror("Error", f"Fallo al guardar: {e}")
