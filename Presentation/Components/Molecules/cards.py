@@ -7,7 +7,7 @@ import customtkinter as ctk
 
 from Presentation.Components.theme import (
     FONT_MONO,
-    BG_SURFACE,
+    BG_CARD,
     BORDER_SUBTLE,
     TEXT_PRIMARY, TEXT_MUTED,
     ACCENT_CYAN,
@@ -27,7 +27,7 @@ class Card(ctk.CTkFrame):
         master,
         corner_radius: int = RADIUS_LG,
         border_width: int = 1,
-        fg_color: str = BG_SURFACE,
+        fg_color: str = BG_CARD,
         border_color: str = BORDER_SUBTLE,
         **kwargs
     ):

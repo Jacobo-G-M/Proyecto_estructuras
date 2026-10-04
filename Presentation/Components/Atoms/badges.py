@@ -40,12 +40,16 @@ class StatusDot(ctk.CTkFrame):
         size: int = 8,
         **kwargs
     ):
-        dot_color = self.COLOR_MAP.get(variant, SUCCESS)
+        dot_color = kwargs.pop("fg_color", self.COLOR_MAP.get(variant, SUCCESS))
+        dot_width = kwargs.pop("width", size)
+        dot_height = kwargs.pop("height", size)
+        dot_radius = kwargs.pop("corner_radius", size // 2)
+
         super().__init__(
             master=master,
-            width=size,
-            height=size,
-            corner_radius=size // 2,
+            width=dot_width,
+            height=dot_height,
+            corner_radius=dot_radius,
             fg_color=dot_color,
             **kwargs
         )
