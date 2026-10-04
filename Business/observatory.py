@@ -1579,12 +1579,11 @@ class Observatory:
 			# 6. Calculate and verify balance factor
 			factor_calculado = altura_izq - altura_der
 			
-			if not self.stress_mode:
-				if factor_calculado not in (-1, 0, 1):
-					reporte.append(f"Error de Balance (Modo Normal): ID {nodo.id} tiene un factor de {factor_calculado}.")
-			else:
-				if factor_calculado not in (-1, 0, 1):
-					reporte.append(f"Aviso (Modo Estrés): Desbalance esperado en ID {nodo.id} con factor {factor_calculado}.")
+			if factor_calculado not in (-1, 0, 1):
+				if not self.stress_mode:
+					reporte.append(f"Error de Balance: ID {nodo.id} tiene un factor de {factor_calculado} (fuera de [-1, 1]).")
+				else:
+					reporte.append(f"Desbalance (Modo Estrés): ID {nodo.id} tiene un factor de {factor_calculado} (fuera de [-1, 1]).")
 
 			return altura_real
 
