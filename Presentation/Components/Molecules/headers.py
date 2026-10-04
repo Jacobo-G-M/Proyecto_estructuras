@@ -16,8 +16,8 @@ class SectionHeader(ctk.CTkFrame):
     def __init__(
         self,
         master,
-        category: str,
-        title: str,
+        category: str = "",
+        title: str = "",
         description: str = "",
         **kwargs
     ):
@@ -27,11 +27,12 @@ class SectionHeader(ctk.CTkFrame):
         text_col = ctk.CTkFrame(self, fg_color="transparent")
         text_col.pack(side="left", fill="x", expand=True)
 
-        self.lbl_category = StyledLabel(text_col, text=category.upper(), variant="tag")
-        self.lbl_category.pack(anchor="w")
+        if category:
+            self.lbl_category = StyledLabel(text_col, text=category.upper(), variant="tag")
+            self.lbl_category.pack(anchor="w")
 
         self.lbl_title = StyledLabel(text_col, text=title, variant="h1")
-        self.lbl_title.pack(anchor="w", pady=(2, 0))
+        self.lbl_title.pack(anchor="w", pady=(2, 0) if category else (0, 0))
 
         if description:
             self.lbl_desc = StyledLabel(text_col, text=description, variant="body")

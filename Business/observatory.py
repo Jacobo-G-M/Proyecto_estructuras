@@ -684,12 +684,12 @@ class Observatory:
 
 		return event_to_remove
 
-	def archive_subtree(self, execute: bool = False) -> dict | None:
+	def archive_subtree(self, execute: bool = False, max_age_hours: float | None = None) -> dict | None:
 		if self.tree is None or self.tree.root is None:
 			raise ValueError("El catálogo activo está vacío. No hay nada que archivar.")
 
 		# Search for the best branch to archive based on the defined rules
-		best_root_node, nodes_to_archive = self._find_best_branch()
+		best_root_node, nodes_to_archive = self._find_best_branch(max_age_hours=max_age_hours)
 
 		if not nodes_to_archive:
 			raise ValueError("No existe ninguna rama que cumpla los criterios para ser archivada.")
@@ -743,14 +743,15 @@ class Observatory:
 
 	# --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
 
-	def _find_best_branch(self) -> tuple:
+	def _find_best_branch(self, max_age_hours: float | None = None) -> tuple:
 		"""
 		Traverse the tree to find the branch that meets the strict rules.
 		Delegates evaluation and tie-breaking to SubtreeArchiver.
 		"""
+		target_age = max_age_hours if max_age_hours is not None else self.max_tree_age
 		return SubtreeArchiver.find_best_branch(
 			tree=self.tree,
-			max_age_hours=self.max_tree_age,
+			max_age_hours=target_age,
 			simulation_clock=self.clock_simulation
 		)
 
@@ -806,6 +807,11 @@ class Observatory:
 		
 		# Identify expired events before deleting to avoid modifying dict during iteration
 		for event in self.events_dict.values():
+			# Regla 6: Solo los eventos NO gestionados ('Pending') expiran y se auto-archivan al superar W
+			state = str(getattr(event, 'attention_state', 'Pending')).strip().lower()
+			if state in ('reviewed', 'revisado'):
+				continue
+
 			age_hours = (self.clock_simulation - event.date_time).total_seconds() / 3600.0
 			if age_hours > self.max_time:
 				expired_ids.append(event.id)

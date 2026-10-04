@@ -306,29 +306,35 @@ class MapRenderer:
         # Bottom axis numbers
         first_x = math.ceil(x_min / tick_step) * tick_step
         km_curr = first_x
+        last_drawn_px = -9999
         while km_curr <= x_max:
             px, _ = cls.km_to_px(km_curr, 0, canvas_w, canvas_h, view_bounds=view_bounds)
             if cls.MARGIN_LEFT <= px <= cls.MARGIN_LEFT + usable_w:
-                canvas.create_text(
-                    px, cls.MARGIN_TOP + usable_h + 10,
-                    text=f"{int(km_curr)}",
-                    fill=TEXT_MUTED,
-                    font=("Consolas", 8)
-                )
+                if px - last_drawn_px >= 36:
+                    canvas.create_text(
+                        px, cls.MARGIN_TOP + usable_h + 10,
+                        text=f"{int(km_curr)}",
+                        fill=TEXT_MUTED,
+                        font=("Consolas", 8)
+                    )
+                    last_drawn_px = px
             km_curr += tick_step
 
         # Left axis numbers
         first_y = math.ceil(y_min / tick_step) * tick_step
         km_curr = first_y
+        last_drawn_py = 99999
         while km_curr <= y_max:
             _, py = cls.km_to_px(0, km_curr, canvas_w, canvas_h, view_bounds=view_bounds)
             if cls.MARGIN_TOP <= py <= cls.MARGIN_TOP + usable_h:
-                canvas.create_text(
-                    cls.MARGIN_LEFT - 14, py,
-                    text=f"{int(km_curr)}",
-                    fill=TEXT_MUTED,
-                    font=("Consolas", 8)
-                )
+                if last_drawn_py - py >= 20:
+                    canvas.create_text(
+                        cls.MARGIN_LEFT - 14, py,
+                        text=f"{int(km_curr)}",
+                        fill=TEXT_MUTED,
+                        font=("Consolas", 8)
+                    )
+                    last_drawn_py = py
             km_curr += tick_step
 
     # -------------------------------------------------------------

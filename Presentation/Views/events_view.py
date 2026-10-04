@@ -438,8 +438,8 @@ class EventsView(ctk.CTkFrame):
         ctk.CTkLabel(slider_t_box, text="Umbral T", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_SECONDARY).pack(side="left", padx=10, pady=8)
         self.slider_t = ctk.CTkSlider(
             slider_t_box,
-            from_=12, to=168,
-            number_of_steps=26,
+            from_=1, to=168,
+            number_of_steps=167,
             progress_color=WARNING,
             button_color="#ffffff",
             button_hover_color=WARNING,
@@ -476,7 +476,9 @@ class EventsView(ctk.CTkFrame):
             self.frame_eligibility_result,
             text="Haz clic en 'Analizar Elegibilidad' para evaluar.",
             font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_SECONDARY
+            text_color=TEXT_SECONDARY,
+            justify="left",
+            wraplength=300
         )
         self.lbl_elig_detail.pack(anchor="w", padx=10, pady=(1, 8))
 
@@ -579,8 +581,9 @@ class EventsView(ctk.CTkFrame):
         self.btn_tab_archiv.configure(text=f"Archiv. {n_arc}")
         self.btn_tab_elim.configure(text=f"Elim. {n_del}")
 
-        # 5. Actualizar badge de elegibilidad en encabezado
+        # 5. Evaluar elegibilidad según el umbral de prueba actual del previsualizador
         self._check_eligible_badge()
+        self._handle_analyze_archive()
 
     def _render_queue_items(self):
         """Dibuja las tarjetas de los reportes en espera en la cola FIFO."""
@@ -775,12 +778,12 @@ class EventsView(ctk.CTkFrame):
         self._render_catalog_items()
 
     def _check_eligible_badge(self):
-        """Actualiza el badge T=X en el encabezado."""
+        """Actualiza el badge T=X en el encabezado con el umbral de prueba."""
         if not self.observatory:
             return
-        t_val = self.observatory.max_tree_age
+        t_val = self.archive_threshold_hours
         try:
-            res = self.observatory.archive_subtree(execute=False)
+            res = self.observatory.archive_subtree(execute=False, max_age_hours=t_val)
             cnt = res["count"] if res else 0
         except Exception:
             cnt = 0
@@ -1115,51 +1118,50 @@ class EventsView(ctk.CTkFrame):
     def _on_t_change(self, value):
         self.archive_threshold_hours = int(value)
         self.lbl_t_val.configure(text=f"{self.archive_threshold_hours} h")
-        if self.observatory:
-            self.observatory.max_tree_age = self.archive_threshold_hours
+        # Modo previsualizador: NO modificamos el valor global self.observatory.max_tree_age aquí
         self._check_eligible_badge()
         self._handle_analyze_archive()
 
     def _handle_analyze_archive(self):
-        """Ejecuta la vista previa de búsqueda de ramas elegibles."""
+        """Ejecuta la vista previa de búsqueda de ramas elegibles usando el umbral del slider."""
         if not self.observatory:
             return
 
-        self.observatory.max_tree_age = self.archive_threshold_hours
         try:
-            res = self.observatory.archive_subtree(execute=False)
+            res = self.observatory.archive_subtree(execute=False, max_age_hours=self.archive_threshold_hours)
             if res:
                 root_id = res["best_root_id"]
                 count = res["count"]
                 affected = res["affected_ids"]
                 self.lbl_elig_root.configure(text=f"Raíz candidata: EV-{root_id}")
-                self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > T")
+                self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > {self.archive_threshold_hours}h")
                 self.btn_exec_archive.configure(text=f"Ejecutar Archivo · {count} nodos", state="normal")
                 # self._log(f"[ARCHIVO] Rama elegible identificada: raíz EV-{root_id} ({count} nodos)", WARNING)
             else:
                 self.lbl_elig_root.configure(text="Sin ramas elegibles")
-                self.lbl_elig_detail.configure(text="No hay subárboles con todos los nodos P=1 y edad > T.")
+                self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {self.archive_threshold_hours}h.")
                 self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
-        except Exception as ex:
+        except Exception:
             self.lbl_elig_root.configure(text="Sin ramas elegibles")
-            self.lbl_elig_detail.configure(text=str(ex))
+            self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {self.archive_threshold_hours}h.")
             self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
 
         self._check_eligible_badge()
 
     def _handle_execute_archive(self):
-        """Ejecuta el archivo masivo de la rama elegible seleccionada."""
+        """Ejecuta el archivo masivo de la rama elegible seleccionada y fija el nuevo valor global de T."""
         if not self.observatory:
             return
 
+        # El usuario confirmó la acción: ahora sí fijamos el nuevo valor global de T en el observatorio
         self.observatory.max_tree_age = self.archive_threshold_hours
         try:
             res = self.observatory.archive_subtree(execute=True)
             if res:
                 root_id = res["best_root_id"]
                 count = res["count"]
-                self._show_msg(f"Rama con raíz {root_id} ({count} eventos) archivada con éxito.", SUCCESS)
-                self._log(f"[ARCHIVO MASIVO] {count} eventos trasladados al Histórico.", SUCCESS)
+                self._show_msg(f"Rama con raíz {root_id} ({count} eventos) archivada con éxito. T global fijado en {self.archive_threshold_hours}h.", SUCCESS)
+                self._log(f"[ARCHIVO MASIVO] {count} eventos trasladados al Histórico (T global = {self.archive_threshold_hours}h).", SUCCESS)
                 self.lbl_elig_root.configure(text="Archivo ejecutado con éxito")
                 self.btn_exec_archive.configure(text="Ejecutar Archivo de Rama", state="disabled")
                 self.refresh()
