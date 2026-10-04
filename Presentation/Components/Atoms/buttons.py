@@ -32,6 +32,10 @@ class PrimaryButton(ctk.CTkButton):
         corner_radius: int = RADIUS_SM,
         **kwargs
     ):
+        fg_color = kwargs.pop("fg_color", ACCENT_CYAN)
+        hover_color = kwargs.pop("hover_color", ACCENT_CYAN_HOVER)
+        text_color = kwargs.pop("text_color", TEXT_INVERSE)
+        font = kwargs.pop("font", ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"))
         super().__init__(
             master=master,
             text=text,
@@ -39,10 +43,10 @@ class PrimaryButton(ctk.CTkButton):
             width=width,
             height=height,
             corner_radius=corner_radius,
-            fg_color=ACCENT_CYAN,
-            hover_color=ACCENT_CYAN_HOVER,
-            text_color=TEXT_INVERSE,
-            font=ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"),
+            fg_color=fg_color,
+            hover_color=hover_color,
+            text_color=text_color,
+            font=font,
             **kwargs
         )
 
@@ -62,6 +66,12 @@ class SecondaryButton(ctk.CTkButton):
         corner_radius: int = RADIUS_SM,
         **kwargs
     ):
+        fg_color = kwargs.pop("fg_color", BG_SURFACE)
+        hover_color = kwargs.pop("hover_color", BG_HOVER)
+        border_color = kwargs.pop("border_color", BORDER_SUBTLE)
+        border_width = kwargs.pop("border_width", 1)
+        text_color = kwargs.pop("text_color", TEXT_PRIMARY)
+        font = kwargs.pop("font", ctk.CTkFont(family=FONT_MAIN, size=12))
         super().__init__(
             master=master,
             text=text,
@@ -69,12 +79,12 @@ class SecondaryButton(ctk.CTkButton):
             width=width,
             height=height,
             corner_radius=corner_radius,
-            fg_color=BG_SURFACE,
-            hover_color=BG_HOVER,
-            border_color=BORDER_SUBTLE,
-            border_width=1,
-            text_color=TEXT_PRIMARY,
-            font=ctk.CTkFont(family=FONT_MAIN, size=12),
+            fg_color=fg_color,
+            hover_color=hover_color,
+            border_color=border_color,
+            border_width=border_width,
+            text_color=text_color,
+            font=font,
             **kwargs
         )
 
@@ -94,6 +104,10 @@ class DangerButton(ctk.CTkButton):
         corner_radius: int = RADIUS_SM,
         **kwargs
     ):
+        fg_color = kwargs.pop("fg_color", DANGER)
+        hover_color = kwargs.pop("hover_color", "#dc2626")
+        text_color = kwargs.pop("text_color", "#ffffff")
+        font = kwargs.pop("font", ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"))
         super().__init__(
             master=master,
             text=text,
@@ -101,10 +115,10 @@ class DangerButton(ctk.CTkButton):
             width=width,
             height=height,
             corner_radius=corner_radius,
-            fg_color=DANGER,
-            hover_color="#dc2626",
-            text_color="#ffffff",
-            font=ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"),
+            fg_color=fg_color,
+            hover_color=hover_color,
+            text_color=text_color,
+            font=font,
             **kwargs
         )
 
@@ -124,6 +138,10 @@ class WarningButton(ctk.CTkButton):
         corner_radius: int = RADIUS_SM,
         **kwargs
     ):
+        fg_color = kwargs.pop("fg_color", WARNING)
+        hover_color = kwargs.pop("hover_color", "#ea580c")
+        text_color = kwargs.pop("text_color", "#ffffff")
+        font = kwargs.pop("font", ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"))
         super().__init__(
             master=master,
             text=text,
@@ -131,10 +149,10 @@ class WarningButton(ctk.CTkButton):
             width=width,
             height=height,
             corner_radius=corner_radius,
-            fg_color=WARNING,
-            hover_color="#ea580c",
-            text_color="#ffffff",
-            font=ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"),
+            fg_color=fg_color,
+            hover_color=hover_color,
+            text_color=text_color,
+            font=font,
             **kwargs
         )
 
@@ -154,6 +172,10 @@ class GhostButton(ctk.CTkButton):
         corner_radius: int = RADIUS_SM,
         **kwargs
     ):
+        fg_color = kwargs.pop("fg_color", "transparent")
+        hover_color = kwargs.pop("hover_color", BG_HOVER)
+        text_color = kwargs.pop("text_color", TEXT_PRIMARY)
+        font = kwargs.pop("font", ctk.CTkFont(family=FONT_MAIN, size=12))
         super().__init__(
             master=master,
             text=text,
@@ -161,9 +183,9 @@ class GhostButton(ctk.CTkButton):
             width=width,
             height=height,
             corner_radius=corner_radius,
-            fg_color="transparent",
-            hover_color=BG_HOVER,
-            text_color=TEXT_PRIMARY,
-            font=ctk.CTkFont(family=FONT_MAIN, size=12),
+            fg_color=fg_color,
+            hover_color=hover_color,
+            text_color=text_color,
+            font=font,
             **kwargs
         )

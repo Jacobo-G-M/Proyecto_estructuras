@@ -43,7 +43,8 @@ class MapView(ctk.CTkFrame):
 
         # Reticle density and radius control variables
         self.grid_density = ctk.StringVar(value="100 km")
-        self.radius_var = ctk.IntVar(value=60)
+        init_r = int(self.observatory.distance_epicenter) if (self.observatory and hasattr(self.observatory, "distance_epicenter")) else 40
+        self.radius_var = ctk.IntVar(value=init_r)
         self.selected_event = None
         self.selected_station = None
         self.selected_event_id = None
@@ -355,6 +356,7 @@ class MapView(ctk.CTkFrame):
 
         self.lbl_row_radio = self._add_table_row(table_box, "Radio R", "--", ACCENT_CYAN)
         self.lbl_row_candidatos = self._add_table_row(table_box, "Candidatos en R", "--", ACCENT_AMBER)
+        self.lbl_row_ventana_w = self._add_table_row(table_box, "Ventana W", "--", TEXT_PRIMARY)
         self.lbl_row_referencia = self._add_table_row(table_box, "Referencia", "--", TEXT_PRIMARY)
         self.lbl_row_zona = self._add_table_row(table_box, "Zona", "--", WARNING)
         self.lbl_row_estacion = self._add_table_row(table_box, "Estación cerc.", "--", TEXT_PRIMARY)
@@ -362,7 +364,7 @@ class MapView(ctk.CTkFrame):
 
         # Radius R interactive slider
         slider_box = ctk.CTkFrame(card_inspector, fg_color="transparent")
-        slider_box.pack(fill="x", padx=14, pady=(12, 14))
+        slider_box.pack(fill="x", padx=14, pady=(10, 6))
 
         StyledLabel(slider_box, text="R", variant="mono", text_color=TEXT_MUTED).pack(side="left", padx=(0, 8))
 
@@ -391,39 +393,19 @@ class MapView(ctk.CTkFrame):
         )
         self.lbl_radius_val.pack(side="right")
 
-        # ---------------------------------------------------------
-        # Card 2: Quick Measurement (Euclidean Distance & W Window)
-        # ---------------------------------------------------------
-        card_measure = Card(self.right_panel, corner_radius=12)
-        card_measure.pack(fill="x")
-
-        StyledLabel(
-            card_measure,
-            text="MEDICIÓN RÁPIDA",
-            variant="tag",
+        # Confirm / Apply global radius R button
+        initial_r = self.radius_var.get()
+        self.btn_apply_r = PrimaryButton(
+            card_inspector,
+            text=f"R oficial: {initial_r} km ✓",
+            command=self._on_apply_global_radius,
+            height=30,
+            corner_radius=6,
+            state="disabled",
+            fg_color=BG_MUTED,
             text_color=TEXT_MUTED
-        ).pack(anchor="w", padx=14, pady=(14, 6))
-
-        measure_box = Card(card_measure, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE)
-        measure_box.pack(fill="x", padx=14, pady=(0, 14))
-
-        row1 = ctk.CTkFrame(measure_box, fg_color="transparent")
-        row1.pack(fill="x", padx=12, pady=(8, 3))
-        StyledLabel(row1, text="A → B", variant="mono", text_color=TEXT_MUTED).pack(side="left")
-        self.lbl_measure_pair = StyledLabel(row1, text="--", variant="mono", text_color=TEXT_PRIMARY)
-        self.lbl_measure_pair.pack(side="right")
-
-        row2 = ctk.CTkFrame(measure_box, fg_color="transparent")
-        row2.pack(fill="x", padx=12, pady=3)
-        StyledLabel(row2, text="Distancia", variant="mono", text_color=TEXT_MUTED).pack(side="left")
-        self.lbl_measure_dist = StyledLabel(row2, text="--", variant="mono", text_color=ACCENT_CYAN)
-        self.lbl_measure_dist.pack(side="right")
-
-        row3 = ctk.CTkFrame(measure_box, fg_color="transparent")
-        row3.pack(fill="x", padx=12, pady=(3, 8))
-        StyledLabel(row3, text="Δt ventana W", variant="mono", text_color=TEXT_MUTED).pack(side="left")
-        self.lbl_measure_window = StyledLabel(row3, text="--", variant="mono", text_color=TEXT_PRIMARY)
-        self.lbl_measure_window.pack(side="right")
+        )
+        self.btn_apply_r.pack(fill="x", padx=14, pady=(0, 14))
 
     def _add_table_row(self, master, label: str, value: str, value_color: str, is_last: bool = False):
         """Creates a clean inspection table row with a subtle horizontal divider."""
@@ -572,13 +554,79 @@ class MapView(ctk.CTkFrame):
     # Event Handlers & Controllers
     # =============================================================
     def _on_radius_slider_change(self, value):
-        """Synchronizes slider value with radius labels and triggers map redraw."""
+        """
+        Synchronizes slider value with preview labels, candidate count, and confirmation button.
+        Allows the user to preview radius R without altering the global domain parameter until confirmed.
+        """
         r_km = int(value)
         self.lbl_radius_val.configure(text=f"{r_km}km")
-        self.lbl_row_radio.configure(text=f"{r_km} km dibujado")
+
+        official_r = int(self.observatory.distance_epicenter) if (self.observatory and hasattr(self.observatory, "distance_epicenter")) else 40
+
+        if self.selected_station:
+            self.lbl_row_radio.configure(text="N/A (Estación)", text_color=TEXT_MUTED)
+        elif r_km != official_r:
+            self.lbl_row_radio.configure(text=f"{r_km} km (Previa)", text_color=ACCENT_AMBER)
+        else:
+            self.lbl_row_radio.configure(text=f"{r_km} km (Oficial)", text_color=ACCENT_CYAN)
+
+        if hasattr(self, "btn_apply_r"):
+            if r_km != official_r:
+                self.btn_apply_r.configure(
+                    state="normal",
+                    text=f"Confirmar R = {r_km} km",
+                    fg_color=ACCENT_CYAN,
+                    text_color=TEXT_INVERSE
+                )
+            else:
+                self.btn_apply_r.configure(
+                    state="disabled",
+                    text=f"R oficial: {official_r} km ✓",
+                    fg_color=BG_MUTED,
+                    text_color=TEXT_MUTED
+                )
+
         if self.selected_event:
             self._update_candidate_counts()
         self._redraw_map()
+
+    def _on_apply_global_radius(self):
+        """
+        Confirms and commits the previewed radius as the new global observatory distance_epicenter.
+        Records an undoable action in the observatory and recalculates domain replica associations.
+        """
+        if not self.observatory:
+            return
+
+        new_r = float(self.radius_var.get())
+        self.observatory.distance_epicenter = new_r
+
+        if hasattr(self, "btn_apply_r"):
+            self.btn_apply_r.configure(
+                state="disabled",
+                text=f"R oficial: {int(new_r)} km ✓",
+                fg_color=BG_MUTED,
+                text_color=TEXT_MUTED
+            )
+
+        if not self.selected_station:
+            self.lbl_row_radio.configure(text=f"{int(new_r)} km (Oficial)", text_color=ACCENT_CYAN)
+
+        # Refresh inspection panel to reflect new replica associations and re-render map
+        if self.selected_event:
+            eid = getattr(self.selected_event, "id", None)
+            if eid is not None:
+                all_events = dict(self.observatory.events_dict)
+                if self.observatory.historic and hasattr(self.observatory.historic, "archived"):
+                    all_events.update(self.observatory.historic.archived)
+                if eid in all_events:
+                    self.inspect_event(all_events[eid])
+                else:
+                    self.inspect_event(self.selected_event)
+            else:
+                self.inspect_event(self.selected_event)
+        else:
+            self._redraw_map()
 
     def inspect_event(self, event):
         """
@@ -620,12 +668,8 @@ class MapView(ctk.CTkFrame):
 
         if closest_st:
             st_text = f"{closest_st.name} · Δ {st_dist:.1f} km"
-            self.lbl_measure_pair.configure(text=f"EV-{eid} → {closest_st.name}")
-            self.lbl_measure_dist.configure(text=f"{st_dist:.1f} km")
         else:
             st_text = "Sin estaciones registradas"
-            self.lbl_measure_pair.configure(text=f"EV-{eid} → --")
-            self.lbl_measure_dist.configure(text="--")
 
         self.lbl_row_estacion.configure(text=st_text)
 
@@ -667,11 +711,17 @@ class MapView(ctk.CTkFrame):
         if sim_clock and ev_dt:
             delta_h = max(0.0, (sim_clock - ev_dt).total_seconds() / 3600.0)
             in_w = "dentro ✓" if delta_h <= max_w else "fuera ✗"
-            self.lbl_measure_window.configure(text=f"{delta_h:.1f} h · {in_w}")
+            w_color = SUCCESS if delta_h <= max_w else DANGER
+            self.lbl_row_ventana_w.configure(text=f"{delta_h:.1f} h · {in_w} (W={int(max_w)}h)", text_color=w_color)
         else:
-            self.lbl_measure_window.configure(text="--")
+            self.lbl_row_ventana_w.configure(text=f"-- (W={int(max_w)}h)", text_color=TEXT_MUTED)
 
-        self.lbl_row_radio.configure(text=f"{self.radius_var.get()} km dibujado")
+        official_r = int(self.observatory.distance_epicenter) if (self.observatory and hasattr(self.observatory, "distance_epicenter")) else 40
+        curr_r = self.radius_var.get()
+        if curr_r == official_r:
+            self.lbl_row_radio.configure(text=f"{curr_r} km (Oficial)", text_color=ACCENT_CYAN)
+        else:
+            self.lbl_row_radio.configure(text=f"{curr_r} km (Previa)", text_color=ACCENT_AMBER)
         self._update_candidate_counts()
         self._redraw_map()
 
@@ -710,20 +760,18 @@ class MapView(ctk.CTkFrame):
         closest_ev = MapRenderer.find_nearest_event(coords[0], coords[1], active_events)
         if closest_ev:
             ev_dist = MapRenderer.distance_km(coords, closest_ev.epicenter)
-            self.lbl_row_estacion.configure(text=f"EV-{closest_ev.id} · Δ {ev_dist:.1f} km")
-            self.lbl_measure_pair.configure(text=f"{sname} → EV-{closest_ev.id}")
-            self.lbl_measure_dist.configure(text=f"{ev_dist:.1f} km")
+            ev_text = f"EV-{closest_ev.id} · Δ {ev_dist:.1f} km"
         else:
-            self.lbl_row_estacion.configure(text="Sin sismos cercanos")
-            self.lbl_measure_pair.configure(text=f"{sname} → --")
-            self.lbl_measure_dist.configure(text="--")
+            ev_text = "Sin sismos cercanos"
 
-        self.lbl_row_radio.configure(text="N/A (Estación)")
+        self.lbl_row_estacion.configure(text=ev_text)
+        self.lbl_row_radio.configure(text="N/A (Estación)", text_color=TEXT_MUTED)
         rep_count = len(getattr(station, "my_reports", []))
         self.lbl_row_candidatos.configure(text=f"{rep_count} reportes emitidos")
+        max_w = getattr(self.observatory, "max_time", 48.0) if self.observatory else 48.0
+        self.lbl_row_ventana_w.configure(text=f"W = {int(max_w)}h · activa", text_color=SUCCESS)
         self.lbl_row_referencia.configure(text=f"Coords ({coords[0]:.1f}, {coords[1]:.1f})")
         self.lbl_row_estado.configure(text="OPERATIVA · link OK")
-        self.lbl_measure_window.configure(text="Enlace activo ✓")
 
         self._redraw_map()
 
@@ -736,15 +784,13 @@ class MapView(ctk.CTkFrame):
         self.dot_inspector.configure(fg_color=TEXT_MUTED)
         self.lbl_stat_mag.configure(text="--")
         self.lbl_stat_coords.configure(text="Selecciona un sismo o estación en el mapa")
-        self.lbl_row_radio.configure(text="--")
+        self.lbl_row_radio.configure(text="--", text_color=ACCENT_CYAN)
         self.lbl_row_candidatos.configure(text="--")
+        self.lbl_row_ventana_w.configure(text="--", text_color=TEXT_MUTED)
         self.lbl_row_referencia.configure(text="--")
         self.lbl_row_zona.configure(text="--")
         self.lbl_row_estacion.configure(text="--")
         self.lbl_row_estado.configure(text="--")
-        self.lbl_measure_pair.configure(text="--")
-        self.lbl_measure_dist.configure(text="--")
-        self.lbl_measure_window.configure(text="--")
 
     def _update_header_counts(self):
         """Updates header metrics dynamically based on current observatory state."""
@@ -896,6 +942,15 @@ class MapView(ctk.CTkFrame):
     def refresh(self):
         """Refreshes header metrics and triggers a map re-render."""
         self._update_header_counts()
+
+        # Synchronize slider with official distance_epicenter if not in an active preview
+        if self.observatory and hasattr(self.observatory, "distance_epicenter"):
+            official_r = int(self.observatory.distance_epicenter)
+            if hasattr(self, "btn_apply_r") and self.btn_apply_r.cget("state") == "disabled":
+                self.radius_var.set(official_r)
+                if hasattr(self, "lbl_radius_val"):
+                    self.lbl_radius_val.configure(text=f"{official_r}km")
+                self.btn_apply_r.configure(text=f"R oficial: {official_r} km ✓")
 
         # If previous selected event still exists, re-inspect it
         if self.selected_event and self.observatory:

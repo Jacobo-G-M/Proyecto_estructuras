@@ -153,7 +153,14 @@ class MapRenderer:
 
         # 4. Archived Events Layer
         if show_archived and archived_events:
-            cls.draw_archived_events(canvas, archived_events, canvas_w, canvas_h, view_bounds=view_bounds)
+            cls.draw_archived_events(
+                canvas=canvas,
+                events=archived_events,
+                canvas_w=canvas_w,
+                canvas_h=canvas_h,
+                selected_id=selected_event.id if selected_event else None,
+                view_bounds=view_bounds
+            )
 
         # 5. Active Events Layer
         if show_active and active_events:
@@ -514,6 +521,7 @@ class MapRenderer:
         events: list,
         canvas_w: int,
         canvas_h: int,
+        selected_id: Optional[int] = None,
         view_bounds: Tuple[float, float, float, float] = (0.0, 1000.0, 0.0, 1000.0)
     ) -> None:
         """Renders archived earthquakes as subtle hollow gray rings."""
@@ -522,6 +530,7 @@ class MapRenderer:
         for event in events:
             try:
                 ex, ey = event.epicenter
+                eid = getattr(event, "id", None)
             except (AttributeError, TypeError, ValueError):
                 continue
 
@@ -531,12 +540,31 @@ class MapRenderer:
             px, py = cls.km_to_px(ex, ey, canvas_w, canvas_h, view_bounds=view_bounds)
             r = 4.0
 
+            is_selected = (selected_id is not None and str(eid) == str(selected_id))
+            if is_selected:
+                canvas.create_oval(
+                    px - 10, py - 10,
+                    px + 10, py + 10,
+                    outline="#ffffff",
+                    width=1.2,
+                    dash=(3, 3)
+                )
+
             canvas.create_oval(
                 px - r, py - r,
                 px + r, py + r,
-                outline=TEXT_MUTED,
-                width=1.2
+                outline="#ffffff" if is_selected else TEXT_MUTED,
+                width=1.5 if is_selected else 1.2
             )
+
+            if is_selected:
+                canvas.create_text(
+                    px + r + 5, py,
+                    text=f"EV-{eid} (Arch)",
+                    anchor="w",
+                    fill="#ffffff",
+                    font=("Consolas", 8, "bold")
+                )
 
     # -------------------------------------------------------------
     # 6. Radius R & Replica Vectors
