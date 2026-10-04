@@ -31,6 +31,7 @@ class Card(ctk.CTkFrame):
         border_color: str = BORDER_SUBTLE,
         **kwargs
     ):
+        kwargs.setdefault("height", 0)
         super().__init__(
             master=master,
             corner_radius=corner_radius,
@@ -63,13 +64,14 @@ class MetricCard(Card):
 
         # Header row: Icon & Title + Optional Badge
         header_row = ctk.CTkFrame(self, fg_color="transparent")
-        header_row.pack(fill="x", padx=16, pady=(14, 4))
+        header_row.pack(fill="x", padx=12, pady=(10, 4))
+        header_row.grid_columnconfigure(0, weight=1)
 
         title_box = ctk.CTkFrame(header_row, fg_color="transparent")
-        title_box.pack(side="left")
+        title_box.grid(row=0, column=0, sticky="w")
 
-        self.lbl_icon = ctk.CTkLabel(title_box, text=icon, font=ctk.CTkFont(size=14))
-        self.lbl_icon.pack(side="left", padx=(0, 6))
+        self.lbl_icon = ctk.CTkLabel(title_box, text=icon, font=ctk.CTkFont(size=13))
+        self.lbl_icon.pack(side="left", padx=(0, 4))
 
         self.lbl_title = StyledLabel(title_box, text=title.upper(), variant="tag")
         self.lbl_title.configure(text_color=TEXT_MUTED)
@@ -77,7 +79,7 @@ class MetricCard(Card):
 
         if badge_text:
             self.badge = StatusBadge(header_row, text=badge_text, variant=badge_variant)
-            self.badge.pack(side="right")
+            self.badge.grid(row=0, column=1, sticky="e", padx=(4, 0))
         else:
             self.badge = None
 
@@ -86,13 +88,13 @@ class MetricCard(Card):
             self,
             text=str(value),
             text_color=TEXT_PRIMARY,
-            font=ctk.CTkFont(family=FONT_MONO, size=24, weight="bold")
+            font=ctk.CTkFont(family=FONT_MONO, size=22, weight="bold")
         )
-        self.lbl_value.pack(anchor="w", padx=16, pady=(2, 2))
+        self.lbl_value.pack(anchor="w", padx=12, pady=(2, 2))
 
         # Subtitle / description note
         self.lbl_sub = StyledLabel(self, text=subtitle, variant="caption")
-        self.lbl_sub.pack(anchor="w", padx=16, pady=(0, 14))
+        self.lbl_sub.pack(anchor="w", padx=12, pady=(0, 10))
 
     def set_value(self, new_value: str | int | float):
         """Dynamically update the main KPI value."""

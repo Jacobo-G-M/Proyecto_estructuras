@@ -1,6 +1,7 @@
 import os
-import customtkinter as ctk
+import tkinter as tk
 from tkinter import filedialog, messagebox
+import customtkinter as ctk
 
 FONT_MAIN = "Segoe UI"
 FONT_MONO = "Consolas"
@@ -13,57 +14,74 @@ class Topbar(ctk.CTkFrame):
         
         self.grid_columnconfigure(3, weight=1)
 
+        self._is_compact = False
+
         # 1. Módulo del Reloj (Izquierda)
         self.clock_frame = ctk.CTkFrame(
             self, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=10
         )
-        self.clock_frame.grid(row=0, column=0, padx=20, pady=10, sticky="w")
+        self.clock_frame.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="w")
         
-        self.indicator = ctk.CTkFrame(self.clock_frame, width=8, height=8, corner_radius=4, fg_color="#2ecc71")
-        self.indicator.grid(row=0, column=0, rowspan=2, padx=(12, 8), pady=10)
+        # Contenedor simétrico para Etiqueta, Hora y Fecha
+        time_box = ctk.CTkFrame(self.clock_frame, fg_color="transparent")
+        time_box.grid(row=0, column=0, rowspan=2, padx=(12, 10), pady=4)
         
-        self.lbl_clock_title = ctk.CTkLabel(
-            self.clock_frame, text="Reloj", font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#8a9bb0"
+        # Etiqueta de contexto superior
+        self.lbl_clock_tag = ctk.CTkLabel(
+            time_box, text="RELOJ", height=12,
+            font=ctk.CTkFont(family=FONT_MAIN, size=9, weight="bold"),
+            text_color="#22d3ee"
         )
-        self.lbl_clock_title.grid(row=0, column=1, sticky="w", pady=(6, 0))
-        
+        self.lbl_clock_tag.pack(anchor="center", pady=(1, 0))
+
+        # Hora prominente al centro
         self.lbl_clock_time = ctk.CTkLabel(
-            self.clock_frame, text="--", font=ctk.CTkFont(family=FONT_MONO, size=13, weight="bold"), text_color="#e8eef3"
+            time_box, text="--:--:--", height=18,
+            font=ctk.CTkFont(family=FONT_MONO, size=14, weight="bold"),
+            text_color="#ffffff"
         )
-        self.lbl_clock_time.grid(row=1, column=1, sticky="w", pady=(0, 6), padx=(0, 12))
+        self.lbl_clock_time.pack(anchor="center", pady=(0, 0))
+        
+        # Fecha abajo
+        self.lbl_clock_date = ctk.CTkLabel(
+            time_box, text="----/--/--", height=12,
+            font=ctk.CTkFont(family=FONT_MAIN, size=10),
+            text_color="#8a9bb0"
+        )
+        self.lbl_clock_date.pack(anchor="center", pady=(0, 1))
         
         # Botón +1h rápido
         self.btn_add_time = ctk.CTkButton(
-            self.clock_frame, text="+1h", width=44, height=28, corner_radius=6,
+            self.clock_frame, text="+1h", width=40, height=28, corner_radius=6,
             fg_color="#22d3ee", text_color="#06202a", font=ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"),
             hover_color="#38e1fc", command=self._on_add_hour
         )
-        self.btn_add_time.grid(row=0, column=2, rowspan=2, padx=(0, 6), pady=8)
+        self.btn_add_time.grid(row=0, column=1, rowspan=2, padx=(0, 4), pady=6)
 
         # Entrada de horas personalizada y botón de suma
         self.entry_custom_hours = ctk.CTkEntry(
-            self.clock_frame, width=46, height=28, corner_radius=6,
+            self.clock_frame, width=42, height=28, corner_radius=6,
             placeholder_text="h", justify="center",
             fg_color="#101922", border_color="#1a2736", text_color="#e8eef3",
             font=ctk.CTkFont(family=FONT_MAIN, size=12)
         )
-        self.entry_custom_hours.grid(row=0, column=3, rowspan=2, padx=(0, 4), pady=8)
+        self.entry_custom_hours.grid(row=0, column=2, rowspan=2, padx=(0, 4), pady=6)
         self.entry_custom_hours.bind("<Return>", self._on_add_custom_hours)
 
         self.btn_add_custom = ctk.CTkButton(
-            self.clock_frame, text="+", width=30, height=28, corner_radius=6,
+            self.clock_frame, text="+", width=28, height=28, corner_radius=6,
             fg_color="#101922", border_color="#22d3ee", border_width=1,
             hover_color="#1b2a3a", text_color="#22d3ee",
             font=ctk.CTkFont(family=FONT_MAIN, size=13, weight="bold"),
             command=self._on_add_custom_hours
         )
-        self.btn_add_custom.grid(row=0, column=4, rowspan=2, padx=(0, 10), pady=8)
+        self.btn_add_custom.grid(row=0, column=3, rowspan=2, padx=(0, 8), pady=6)
 
         # 2. Módulo de Estrés (Centro)
         self.stress_frame = ctk.CTkFrame(
             self, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=10
         )
-        self.stress_frame.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        self.stress_frame.grid(row=0, column=1, padx=5, pady=8, sticky="w")
         
         # Switch interactivo en el lado izquierdo
         self.switch_stress = ctk.CTkSwitch(
@@ -75,11 +93,11 @@ class Topbar(ctk.CTkFrame):
             button_color="#ffffff",
             button_hover_color="#f0f0f0",
             fg_color="#1a2736",
-            switch_width=38,
-            switch_height=20,
+            switch_width=36,
+            switch_height=18,
             command=self._on_switch_stress_toggle
         )
-        self.switch_stress.grid(row=0, column=0, padx=(12, 10), pady=8)
+        self.switch_stress.grid(row=0, column=0, padx=(10, 8), pady=6)
         
         # Botón de recuperación: se activa solo cuando el switch pone el sistema en estrés
         self.btn_recover = ctk.CTkButton(
@@ -92,15 +110,15 @@ class Topbar(ctk.CTkFrame):
             border_color="#1a2736",
             border_width=1,
             hover_color="#101922",
-            font=ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"),
+            font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"),
             state="disabled",
             command=self._on_recover_click
         )
-        self.btn_recover.grid(row=0, column=1, padx=(0, 10), pady=8)
+        self.btn_recover.grid(row=0, column=1, padx=(0, 8), pady=6)
 
         # 3. Acciones (Deshacer, JSON, Versión)
         self.actions_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.actions_frame.grid(row=0, column=3, padx=20, pady=10, sticky="e")
+        self.actions_frame.grid(row=0, column=3, padx=(5, 12), pady=8, sticky="e")
         
         self.btn_undo = ctk.CTkButton(
             self.actions_frame, text="↩ Deshacer", height=30, corner_radius=6,
@@ -108,7 +126,7 @@ class Topbar(ctk.CTkFrame):
             text_color="#e8eef3", hover_color="#142130", font=ctk.CTkFont(family=FONT_MAIN, size=12),
             command=self._on_undo
         )
-        self.btn_undo.pack(side="left", padx=4)
+        self.btn_undo.pack(side="left", padx=3)
         
         self.btn_load = ctk.CTkButton(
             self.actions_frame, text="▲ Cargar JSON", height=30, corner_radius=6,
@@ -116,7 +134,7 @@ class Topbar(ctk.CTkFrame):
             text_color="#e8eef3", hover_color="#142130", font=ctk.CTkFont(family=FONT_MAIN, size=12),
             command=self._on_load_json
         )
-        self.btn_load.pack(side="left", padx=4)
+        self.btn_load.pack(side="left", padx=3)
 
         self.btn_export = ctk.CTkButton(
             self.actions_frame, text="▾ Exportar JSON", height=30, corner_radius=6,
@@ -124,19 +142,54 @@ class Topbar(ctk.CTkFrame):
             text_color="#e8eef3", hover_color="#142130", font=ctk.CTkFont(family=FONT_MAIN, size=12),
             command=self._on_save_json
         )
-        self.btn_export.pack(side="left", padx=4)
+        self.btn_export.pack(side="left", padx=3)
 
-        # Pill de versión
+        # Pill interactivo de versión / Escenario Activo (Opción B)
+        self.current_scenario_name = "Demo Activo"
+        self.current_scenario_filepath = None
         self.version_pill = ctk.CTkFrame(
-            self.actions_frame, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=6
+            self.actions_frame, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=6,
+            cursor="hand2"
         )
-        self.version_pill.pack(side="left", padx=4)
-        ctk.CTkLabel(
-            self.version_pill, text="▾ v12 · Andina-Norte",
-            font=ctk.CTkFont(family=FONT_MAIN, size=12), text_color="#8a9bb0"
-        ).pack(padx=10, pady=4)
+        self.version_pill.pack(side="left", padx=3)
+        self.lbl_version = ctk.CTkLabel(
+            self.version_pill, text=f"▾ {self.current_scenario_name}",
+            font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#38bdf8",
+            cursor="hand2"
+        )
+        self.lbl_version.pack(padx=8, pady=4)
 
+        for widget in (self.version_pill, self.lbl_version):
+            widget.bind("<Button-1>", self._on_scenario_pill_click)
+            widget.bind("<Enter>", lambda e: self.version_pill.configure(border_color="#38bdf8", fg_color="#101a26"))
+            widget.bind("<Leave>", lambda e: self.version_pill.configure(border_color="#1a2736", fg_color="#0b131c"))
+
+        # Adaptabilidad automática ante cambios de tamaño de ventana
+        self.bind("<Configure>", self._on_resize)
         self.refresh()
+
+    def _on_resize(self, event):
+        """Ajusta dinámicamente los botones y componentes para evitar recortes."""
+        if event.width <= 10:
+            return
+
+        is_narrow = event.width < 980
+        if is_narrow != self._is_compact:
+            self._is_compact = is_narrow
+            if is_narrow:
+                self.btn_load.configure(text="▲ Cargar")
+                self.btn_export.configure(text="▾ Guardar")
+                if hasattr(self, "version_pill") and self.version_pill.winfo_ismapped():
+                    self.version_pill.pack_forget()
+                if hasattr(self, "btn_recover"):
+                    self.btn_recover.configure(text="Recuperar AVL")
+            else:
+                self.btn_load.configure(text="▲ Cargar JSON")
+                self.btn_export.configure(text="▾ Exportar JSON")
+                if hasattr(self, "version_pill") and not self.version_pill.winfo_ismapped():
+                    self.version_pill.pack(side="left", padx=3)
+                if hasattr(self, "btn_recover"):
+                    self.btn_recover.configure(text="Recuperar Equilibrio AVL")
 
     def refresh(self):
         """Actualiza el reloj y el estado de estrés desde el observatorio."""
@@ -145,16 +198,19 @@ class Topbar(ctk.CTkFrame):
 
         dt = self.observatory.clock_simulation
         if dt:
-            self.lbl_clock_time.configure(text=dt.strftime("%Y-%m-%d  %H:%M:%S"))
+            self.lbl_clock_time.configure(text=dt.strftime("%H:%M:%S"))
+            self.lbl_clock_date.configure(text=dt.strftime("%Y-%m-%d"))
         else:
-            self.lbl_clock_time.configure(text="--")
+            self.lbl_clock_time.configure(text="--:--:--")
+            self.lbl_clock_date.configure(text="--")
 
+        recover_text = "Recuperar AVL" if self._is_compact else "Recuperar Equilibrio AVL"
         if self.observatory.stress_mode:
             self.switch_stress.select()
             self.switch_stress.configure(text="Estrés: Activo", text_color="#ff7a1a")
             self.btn_recover.configure(
                 state="normal",
-                text="Recuperar Equilibrio AVL",
+                text=recover_text,
                 fg_color="#ff7a1a",
                 text_color="#fff4e8",
                 hover_color="#d96311",
@@ -165,7 +221,7 @@ class Topbar(ctk.CTkFrame):
             self.switch_stress.configure(text="Estrés: Inactivo", text_color="#2ecc71")
             self.btn_recover.configure(
                 state="disabled",
-                text="Recuperar Equilibrio AVL",
+                text=recover_text,
                 fg_color="#101922",
                 text_color="#536477",
                 hover_color="#101922",
@@ -223,6 +279,155 @@ class Topbar(ctk.CTkFrame):
             messagebox.showinfo("Deshacer", "No hay más acciones en la pila de deshacer.")
         self.app.refresh_all()
 
+    def set_scenario_name(self, name: str):
+        """Actualiza el nombre del escenario activo en el pill superior."""
+        if not name:
+            name = "Demo Activo"
+        if name.endswith(".json"):
+            name = name[:-5]
+        self.current_scenario_name = name
+        display = name if len(name) <= 16 else f"{name[:13]}..."
+        if hasattr(self, "lbl_version"):
+            self.lbl_version.configure(text=f"▾ {display}")
+
+    def _on_scenario_pill_click(self, event=None):
+        """Despliega un menú emergente con los escenarios disponibles en saved_versions/."""
+        if not self.observatory:
+            return
+
+        target_dir = getattr(self.observatory, "VERSIONS_DIR", None)
+        if not target_dir:
+            target_dir = os.path.abspath("saved_versions")
+        os.makedirs(target_dir, exist_ok=True)
+
+        self.version_pill.update_idletasks()
+
+        menu = tk.Menu(
+            self,
+            tearoff=0,
+            bg="#0b131c",
+            fg="#e8eef3",
+            activebackground="#1e293b",
+            activeforeground="#38bdf8",
+            relief="solid",
+            bd=1,
+            font=(FONT_MAIN, 10)
+        )
+
+        menu.add_command(
+            label="📁 Escenarios Guardados:",
+            state="disabled"
+        )
+        menu.add_separator()
+
+        # Listar archivos JSON existentes en saved_versions/
+        json_files = []
+        try:
+            for f in sorted(os.listdir(target_dir)):
+                if f.lower().endswith(".json"):
+                    json_files.append(f)
+        except Exception:
+            pass
+
+        if json_files:
+            for fname in json_files:
+                stem = os.path.splitext(fname)[0]
+                is_active = (stem.lower() == self.current_scenario_name.lower())
+                prefix = "● " if is_active else "   "
+                full_path = os.path.join(target_dir, fname)
+                menu.add_command(
+                    label=f"{prefix}{stem}",
+                    command=lambda p=full_path, s=stem: self._load_specific_scenario(p, s)
+                )
+        else:
+            menu.add_command(label="  (Sin archivos en saved_versions/)", state="disabled")
+
+        menu.add_separator()
+        disp_current = self.current_scenario_name if len(self.current_scenario_name) <= 15 else f"{self.current_scenario_name[:12]}..."
+        menu.add_command(
+            label=f"💾 Guardar versión actual ({disp_current})",
+            command=self._on_save_current_version
+        )
+        menu.add_command(
+            label="💾 Guardar como nuevo escenario...",
+            command=self._on_save_json
+        )
+        menu.add_command(
+            label="📂 Examinar otro archivo...",
+            command=self._on_load_json
+        )
+
+        try:
+            x = self.version_pill.winfo_rootx()
+            y = self.version_pill.winfo_rooty() + self.version_pill.winfo_height() + 4
+            menu.tk_popup(x, y)
+        finally:
+            menu.grab_release()
+
+    def _on_save_current_version(self):
+        """Sobrescribe y guarda directamente el escenario/versión actual."""
+        if not self.observatory:
+            return
+
+        target_dir = getattr(self.observatory, "VERSIONS_DIR", None)
+        if not target_dir:
+            target_dir = os.path.abspath("saved_versions")
+        os.makedirs(target_dir, exist_ok=True)
+
+        filepath = self.current_scenario_filepath
+        if not filepath:
+            filepath = os.path.join(target_dir, f"{self.current_scenario_name}.json")
+
+        try:
+            self.observatory.save_scenario(filepath)
+            self.current_scenario_filepath = os.path.abspath(filepath)
+            name = os.path.splitext(os.path.basename(filepath))[0]
+            self.set_scenario_name(name)
+            messagebox.showinfo(
+                "Versión Guardada",
+                f"Se sobrescribió con éxito la versión actual:\n'{name}'\n({os.path.basename(filepath)})"
+            )
+        except Exception as e:
+            messagebox.showerror("Error al Guardar", f"No se pudo guardar la versión actual:\n{e}")
+
+    def _load_specific_scenario(self, filepath: str, name: str = None):
+        """Carga un archivo de escenario JSON específico y actualiza la aplicación."""
+        if not self.observatory or not self.app:
+            return
+        if not name:
+            name = os.path.splitext(os.path.basename(filepath))[0]
+        try:
+            # 1. Intentar carga atómica canónica por topología
+            ok, errors = self.observatory.load_scenario_by_topology(filepath)
+            if ok:
+                self.current_scenario_filepath = os.path.abspath(filepath)
+                self.set_scenario_name(name)
+                messagebox.showinfo(
+                    "Éxito",
+                    f"Escenario '{name}' cargado exitosamente desde:\n{os.path.basename(filepath)}"
+                )
+                self.app.refresh_all()
+            else:
+                # 2. Fallback a inserciones si el JSON contiene lista plana de eventos
+                try:
+                    res = self.observatory.load_scenario_by_insertions(filepath, adopt_avl=True)
+                    if res and "avl" in res:
+                        self.current_scenario_filepath = os.path.abspath(filepath)
+                        self.set_scenario_name(name)
+                        messagebox.showinfo(
+                            "Éxito",
+                            f"Escenario de eventos '{name}' cargado exitosamente desde:\n{os.path.basename(filepath)}"
+                        )
+                        self.app.refresh_all()
+                    else:
+                        err_msg = "\n".join(errors[:5]) if errors else "Estructura de archivo inválida."
+                        messagebox.showerror("Error al Cargar", f"No se pudo cargar el archivo:\n{err_msg}")
+                except Exception:
+                    err_msg = "\n".join(errors[:5]) if errors else "Estructura de archivo inválida."
+                    messagebox.showerror("Error al Cargar", f"No se pudo cargar el archivo:\n{err_msg}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Fallo al abrir archivo: {e}")
+
     def _on_save_json(self):
         if not self.observatory:
             return
@@ -240,6 +445,9 @@ class Topbar(ctk.CTkFrame):
         if filepath:
             try:
                 self.observatory.save_scenario(filepath)
+                self.current_scenario_filepath = os.path.abspath(filepath)
+                name = os.path.splitext(os.path.basename(filepath))[0]
+                self.set_scenario_name(name)
                 messagebox.showinfo("Éxito", f"Escenario exportado con éxito a:\n{filepath}")
             except Exception as e:
                 messagebox.showerror("Error", f"Fallo al guardar: {e}")
@@ -258,30 +466,4 @@ class Topbar(ctk.CTkFrame):
             filetypes=[("Archivos JSON", "*.json"), ("Todos los archivos", "*.*")]
         )
         if filepath:
-            try:
-                # 1. Intentar carga atómica canónica por topología
-                ok, errors = self.observatory.load_scenario_by_topology(filepath)
-                if ok:
-                    messagebox.showinfo(
-                        "Éxito",
-                        f"Escenario cargado exitosamente desde:\n{os.path.basename(filepath)}"
-                    )
-                    self.app.refresh_all()
-                else:
-                    # 2. Fallback a inserciones si el JSON contiene lista plana de eventos
-                    try:
-                        res = self.observatory.load_scenario_by_insertions(filepath, adopt_avl=True)
-                        if res and "avl" in res:
-                            messagebox.showinfo(
-                                "Éxito",
-                                f"Escenario de eventos cargado exitosamente desde:\n{os.path.basename(filepath)}"
-                            )
-                            self.app.refresh_all()
-                        else:
-                            err_msg = "\n".join(errors[:5]) if errors else "Estructura de archivo inválida."
-                            messagebox.showerror("Error al Cargar", f"No se pudo cargar el archivo:\n{err_msg}")
-                    except Exception:
-                        err_msg = "\n".join(errors[:5]) if errors else "Estructura de archivo inválida."
-                        messagebox.showerror("Error al Cargar", f"No se pudo cargar el archivo:\n{err_msg}")
-            except Exception as e:
-                messagebox.showerror("Error", f"Fallo al abrir archivo: {e}")
+            self._load_specific_scenario(filepath)

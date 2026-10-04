@@ -22,7 +22,7 @@ class EventsView(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 20))
         
         ctk.CTkLabel(
-            header, text="PRESENTATION / VIEWS / EVENTS_VIEW.PY",
+            header, text="SISMOLAB · GESTIÓN DE EVENTOS",
             font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#22d3ee"
         ).pack(anchor="w")
         

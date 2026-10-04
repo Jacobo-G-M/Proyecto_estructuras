@@ -29,7 +29,7 @@ class KeyValueRow(ctk.CTkFrame):
         is_highlighted: bool = False,
         **kwargs
     ):
-        super().__init__(master, fg_color="transparent", **kwargs)
+        super().__init__(master, fg_color="transparent", height=0, **kwargs)
 
         self.lbl_key = StyledLabel(self, text=key, variant="body")
         self.lbl_key.pack(side="left")

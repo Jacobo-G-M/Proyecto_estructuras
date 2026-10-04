@@ -22,7 +22,7 @@ class MapView(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 20))
         
         ctk.CTkLabel(
-            header, text="PRESENTATION / VIEWS / MAP_VIEW.PY",
+            header, text="SISMOLAB · CARTOGRAFÍA REGIONAL",
             font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#22d3ee"
         ).pack(anchor="w")
         

@@ -1,3 +1,5 @@
+import os
+from PIL import Image
 import customtkinter as ctk
 
 FONT_MAIN = "Segoe UI"
@@ -12,88 +14,68 @@ class Sidebar(ctk.CTkFrame):
 
         self.grid_rowconfigure(2, weight=1)
 
-        # 1. Título y Logo
+        # 1. Título y Logotipo Oficial
         self.logo_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.logo_frame.grid(row=0, column=0, padx=20, pady=25, sticky="ew")
+        self.logo_frame.grid(row=0, column=0, padx=14, pady=20, sticky="ew")
         
-        self.icon_frame = ctk.CTkFrame(self.logo_frame, fg_color="#22d3ee", width=36, height=36, corner_radius=18)
-        self.icon_frame.pack(side="left")
-        self.icon_frame.pack_propagate(False)
-        self.icon_label = ctk.CTkLabel(self.icon_frame, text="S", text_color="#06202a", font=ctk.CTkFont(family=FONT_MAIN, size=18, weight="bold"))
-        self.icon_label.place(relx=0.5, rely=0.5, anchor="center")
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Assets", "logo.png")
+        if os.path.exists(logo_path):
+            try:
+                pil_logo = Image.open(logo_path)
+                self.logo_img = ctk.CTkImage(light_image=pil_logo, dark_image=pil_logo, size=(38, 38))
+                self.icon_label = ctk.CTkLabel(self.logo_frame, image=self.logo_img, text="")
+                self.icon_label.pack(side="left")
+            except Exception:
+                self._create_fallback_logo()
+        else:
+            self._create_fallback_logo()
         
         self.title_frame = ctk.CTkFrame(self.logo_frame, fg_color="transparent")
-        self.title_frame.pack(side="left", padx=12)
+        self.title_frame.pack(side="left", padx=10)
         
-        self.title_lbl = ctk.CTkLabel(self.title_frame, text="SismoLab AVL", font=ctk.CTkFont(family=FONT_MAIN, size=15, weight="bold"), text_color="#e8eef3")
+        self.title_lbl = ctk.CTkLabel(self.title_frame, text="SismoLab AVL", font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"), text_color="#e8eef3")
         self.title_lbl.pack(anchor="w", pady=0)
         self.subtitle_lbl = ctk.CTkLabel(self.title_frame, text="OBS-UNI · v2.4.1", font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0")
         self.subtitle_lbl.pack(anchor="w", pady=0)
 
         # 2. Menú de Navegación Interactivo
         self.menu_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.menu_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        self.menu_frame.grid(row=1, column=0, padx=8, pady=8, sticky="ew")
         self.menu_frame.grid_columnconfigure(0, weight=1)
         
-        self._create_nav_item("dashboard", "Dashboard", row=0)
+        self._create_nav_item("dashboard", "Panel de Control", row=0)
         self._create_nav_item("arboles", "Árboles", row=1)
         self._create_nav_item("mapa", "Mapa", row=2)
         self._create_nav_item("eventos", "Eventos", row=3)
         self._create_nav_item("consultas", "Consultas", row=4)
 
         # 3. Balance Global
-        self.balance_frame = ctk.CTkFrame(self, fg_color="#0e1620", border_color="#1e2d3d", border_width=1, corner_radius=12)
-        self.balance_frame.grid(row=3, column=0, padx=15, pady=25, sticky="ew")
+        self.balance_frame = ctk.CTkFrame(self, fg_color="#0e1620", border_color="#1e2d3d", border_width=1, corner_radius=10)
+        self.balance_frame.grid(row=3, column=0, padx=12, pady=18, sticky="ew")
         
-        self.lbl_balance_title = ctk.CTkLabel(self.balance_frame, text="BALANCE GLOBAL", font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#8a9bb0")
-        self.lbl_balance_title.pack(anchor="w", padx=15, pady=(15, 0))
+        self.lbl_balance_title = ctk.CTkLabel(self.balance_frame, text="BALANCE GLOBAL", font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#8a9bb0")
+        self.lbl_balance_title.pack(anchor="w", padx=12, pady=(12, 0))
         
         val_frame = ctk.CTkFrame(self.balance_frame, fg_color="transparent")
-        val_frame.pack(anchor="w", padx=15, fill="x")
-        self.lbl_balance_val = ctk.CTkLabel(val_frame, text="1.00", font=ctk.CTkFont(family=FONT_MAIN, size=24, weight="bold"), text_color="#2ecc71")
+        val_frame.pack(anchor="w", padx=12, fill="x")
+        self.lbl_balance_val = ctk.CTkLabel(val_frame, text="100%", font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"), text_color="#2ecc71")
         self.lbl_balance_val.pack(side="left")
         self.lbl_balance_status = ctk.CTkLabel(val_frame, text="AVL OK", font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#2ecc71")
-        self.lbl_balance_status.pack(side="left", padx=5, pady=(8, 0))
+        self.lbl_balance_status.pack(side="left", padx=5, pady=(6, 0))
         
-        self.prog_bg = ctk.CTkFrame(self.balance_frame, height=4, fg_color="#1e2d3d", corner_radius=2)
-        self.prog_bg.pack(fill="x", padx=15, pady=(5, 5))
-        self.prog_fg = ctk.CTkFrame(self.prog_bg, width=150, height=4, fg_color="#2ecc71", corner_radius=2)
-        self.prog_fg.pack(side="left", fill="y")
-        self.prog_bg.pack_propagate(False)
-        
-        self.lbl_balance_sub = ctk.CTkLabel(self.balance_frame, text="n=0 · h=0 · BF∈[-1,1]", font=ctk.CTkFont(family=FONT_MAIN, size=11), text_color="#8a9bb0")
-        self.lbl_balance_sub.pack(anchor="w", padx=15, pady=(0, 15))
-
-        # 4. Selector de Tema Claro / Oscuro
-        self.theme_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.theme_frame.grid(row=4, column=0, padx=15, pady=(5, 20), sticky="ew")
-
-        self.theme_switch = ctk.CTkSwitch(
-            self.theme_frame,
-            text="Tema: Oscuro",
-            font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"),
-            text_color="#8a9bb0",
-            progress_color="#22d3ee",
-            button_color="#ffffff",
-            button_hover_color="#f0f0f0",
-            fg_color="#1a2736",
-            switch_width=38,
-            switch_height=20,
-            command=self._on_theme_toggle
-        )
-        self.theme_switch.select()
-        self.theme_switch.pack(side="left", padx=5)
+        self.progress_bar = ctk.CTkProgressBar(self.balance_frame, height=5, corner_radius=2, fg_color="#1e2d3d", progress_color="#2ecc71")
+        self.progress_bar.pack(fill="x", padx=12, pady=(6, 12))
+        self.progress_bar.set(1.0)
 
         self.set_active("dashboard")
         self.refresh()
 
-    def _on_theme_toggle(self):
-        if self.theme_switch.get() == 1:
-            ctk.set_appearance_mode("Dark")
-            self.theme_switch.configure(text="Tema: Oscuro")
-        else:
-            ctk.set_appearance_mode("Light")
-            self.theme_switch.configure(text="Tema: Claro")
+    def _create_fallback_logo(self):
+        icon_frame = ctk.CTkFrame(self.logo_frame, fg_color="#22d3ee", width=34, height=34, corner_radius=17)
+        icon_frame.pack(side="left")
+        icon_frame.pack_propagate(False)
+        self.icon_label = ctk.CTkLabel(icon_frame, text="S", text_color="#06202a", font=ctk.CTkFont(family=FONT_MAIN, size=16, weight="bold"))
+        self.icon_label.place(relx=0.5, rely=0.5, anchor="center")
 
     def _create_nav_item(self, key: str, title: str, row: int):
         container = ctk.CTkFrame(self.menu_frame, fg_color="transparent", corner_radius=8, border_width=0, border_color="#0b131c")
@@ -171,8 +153,9 @@ class Sidebar(ctk.CTkFrame):
 
         color = "#2ecc71" if ratio >= 0.8 else ("#ff7a1a" if ratio >= 0.5 else "#ff3b5c")
         status_text = "AVL OK" if ratio >= 0.8 else "DESBALANCE"
+        pct = int(ratio * 100)
 
-        self.lbl_balance_val.configure(text=f"{ratio:.2f}", text_color=color)
+        self.lbl_balance_val.configure(text=f"{pct}%", text_color=color)
         self.lbl_balance_status.configure(text=status_text, text_color=color)
-        self.prog_fg.configure(fg_color=color, width=int(200 * ratio))
-        self.lbl_balance_sub.configure(text=f"n={total} · h={height_val} · BF∈[-1,1]")
+        self.progress_bar.configure(progress_color=color)
+        self.progress_bar.set(ratio)

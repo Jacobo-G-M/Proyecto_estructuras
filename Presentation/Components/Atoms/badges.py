@@ -63,11 +63,11 @@ class StatusBadge(ctk.CTkFrame):
     Used for statuses: 'Activo', 'Archivado', 'Eliminado', 'AVL Balanceado', 'Prioridad P1'.
     """
     THEMES = {
-        "success": {"bg": SUCCESS_BG, "border": SUCCESS, "text": SUCCESS},
-        "warning": {"bg": WARNING_BG, "border": WARNING, "text": WARNING},
-        "danger": {"bg": DANGER_BG, "border": DANGER, "text": DANGER},
-        "info": {"bg": INFO_BG, "border": INFO, "text": INFO},
-        "neutral": {"bg": BG_SURFACE, "border": BORDER_SUBTLE, "text": TEXT_SECONDARY},
+        "success": {"bg": "#0f2e1e", "border": "#0f2e1e", "text": "#34d399"},
+        "warning": {"bg": "#38200d", "border": "#38200d", "text": "#fb923c"},
+        "danger": {"bg": "#381418", "border": "#381418", "text": "#f87171"},
+        "info": {"bg": "#0e243d", "border": "#0e243d", "text": "#38bdf8"},
+        "neutral": {"bg": "#182230", "border": "#182230", "text": "#94a3b8"},
     }
 
     def __init__(
@@ -82,9 +82,8 @@ class StatusBadge(ctk.CTkFrame):
         super().__init__(
             master=master,
             fg_color=theme["bg"],
-            border_color=theme["border"],
-            border_width=1,
-            corner_radius=RADIUS_FULL,
+            border_width=0,
+            corner_radius=8,
             **kwargs
         )
 
@@ -98,13 +97,13 @@ class StatusBadge(ctk.CTkFrame):
             text_color=theme["text"],
             font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold")
         )
-        pad_left = 4 if show_dot else 10
-        self.label.pack(side="left", padx=(pad_left, 10), pady=2)
+        pad_left = 6 if show_dot else 8
+        self.label.pack(side="left", padx=(pad_left, 8), pady=2)
 
     def update_badge(self, text: str, variant: BadgeVariant):
         """Update text and visual palette dynamically."""
         theme = self.THEMES.get(variant, self.THEMES["neutral"])
-        self.configure(fg_color=theme["bg"], border_color=theme["border"])
+        self.configure(fg_color=theme["bg"])
         self.label.configure(text=text, text_color=theme["text"])
         if hasattr(self, "dot"):
             self.dot.set_variant(variant)

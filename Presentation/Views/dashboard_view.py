@@ -1,5 +1,5 @@
 """
-Vista de Dashboard · Consola Maestra
+Vista de Panel de Control · Consola Maestra
 Demuestra el uso de los componentes atómicos (Card, MetricCard, SectionHeader,
 StatusBadge, PrimaryButton, SecondaryButton, etc.) conectados en vivo al Observatorio.
 """
@@ -14,7 +14,7 @@ from Presentation.Components import (
 
 class DashboardView(ctk.CTkFrame):
     """
-    Vista de Dashboard / Consola Ejecutiva.
+    Vista de Panel de Control / Consola Ejecutiva.
     Muestra métricas clave en vivo usando la librería de componentes atómicos.
     """
     def __init__(self, master, app=None, observatory=None, **kwargs):
@@ -25,29 +25,30 @@ class DashboardView(ctk.CTkFrame):
 
     def _build_ui(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=25, pady=20)
+        container.pack(fill="both", expand=True, padx=16, pady=12)
 
         # 1. Encabezado Molecular (SectionHeader)
         self.header = SectionHeader(
             container,
             category="SismoLab · Observatorio",
-            title="Dashboard · Consola Maestra",
+            title="Panel de Control · Consola Maestra",
             description="Métricas operativas del árbol AVL, catálogos históricos y colas en tiempo real."
         )
-        self.header.pack(fill="x", pady=(0, 20))
+        self.header.pack(fill="x", pady=(0, 10))
 
         # Botón de acción en el encabezado
         btn_refresh = SecondaryButton(
             self.header,
             text="🔄 Refrescar",
-            width=100,
+            width=90,
+            height=28,
             command=self.refresh
         )
         self.header.add_action(btn_refresh)
 
         # 2. Fila de Tarjetas de Métricas (MetricCards)
         metrics_grid = ctk.CTkFrame(container, fg_color="transparent")
-        metrics_grid.pack(fill="x", pady=(0, 20))
+        metrics_grid.pack(fill="x", pady=(0, 12))
         metrics_grid.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="metric_cols")
 
         # Card 1: Eventos Activos
@@ -57,10 +58,10 @@ class DashboardView(ctk.CTkFrame):
             value="0",
             subtitle="Indexados en Árbol AVL",
             icon="🌳",
-            badge_text="En Topología",
+            badge_text="Activo",
             badge_variant="success"
         )
-        self.card_active.grid(row=0, column=0, padx=(0, 8), sticky="ew")
+        self.card_active.grid(row=0, column=0, padx=(0, 6), sticky="ew")
 
         # Card 2: Histórico
         self.card_archived = MetricCard(
@@ -72,19 +73,19 @@ class DashboardView(ctk.CTkFrame):
             badge_text="Histórico",
             badge_variant="info"
         )
-        self.card_archived.grid(row=0, column=1, padx=4, sticky="ew")
+        self.card_archived.grid(row=0, column=1, padx=3, sticky="ew")
 
         # Card 3: Cola de Prioridad
         self.card_queue = MetricCard(
             metrics_grid,
-            title="Cola de Reportes",
+            title="Cola Reportes",
             value="0",
             subtitle="Pendientes de procesar",
             icon="⏳",
-            badge_text="Prioridad P1-P3",
+            badge_text="P1-P3",
             badge_variant="warning"
         )
-        self.card_queue.grid(row=0, column=2, padx=4, sticky="ew")
+        self.card_queue.grid(row=0, column=2, padx=3, sticky="ew")
 
         # Card 4: Estado del Sistema
         self.card_status = MetricCard(
@@ -93,36 +94,36 @@ class DashboardView(ctk.CTkFrame):
             value="Normal",
             subtitle="Modo Estrés Inactivo",
             icon="⚡",
-            badge_text="Equilibrado",
+            badge_text="OK",
             badge_variant="success"
         )
-        self.card_status.grid(row=0, column=3, padx=(8, 0), sticky="ew")
+        self.card_status.grid(row=0, column=3, padx=(6, 0), sticky="ew")
 
         # 3. Fila de Paneles Inferiores (Dos Columnas)
         panels_row = ctk.CTkFrame(container, fg_color="transparent")
         panels_row.pack(fill="both", expand=True)
-        panels_row.grid_columnconfigure(0, weight=2, uniform="bottom_cols")
-        panels_row.grid_columnconfigure(1, weight=1, uniform="bottom_cols")
+        panels_row.grid_columnconfigure(0, weight=3, uniform="bottom_cols")
+        panels_row.grid_columnconfigure(1, weight=2, uniform="bottom_cols")
 
         # Panel Izquierdo: Ficha del Observatorio y Estado
         self.left_card = Card(panels_row)
-        self.left_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        self.left_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
-        StyledLabel(self.left_card, text="ESTADO OPERACIONAL", variant="tag").pack(anchor="w", padx=20, pady=(16, 4))
-        StyledLabel(self.left_card, text="Detalles del Sistema Sismológico", variant="h2").pack(anchor="w", padx=20, pady=(0, 12))
+        StyledLabel(self.left_card, text="ESTADO OPERACIONAL", variant="tag").pack(anchor="w", padx=16, pady=(12, 2))
+        StyledLabel(self.left_card, text="Detalles del Sistema Sismológico", variant="h2").pack(anchor="w", padx=16, pady=(0, 8))
 
         # Filas clave-valor
         self.kv_clock = KeyValueRow(self.left_card, key="Reloj de Simulación (UTC):", value="--", is_highlighted=True)
-        self.kv_clock.pack(fill="x", padx=20, pady=4)
+        self.kv_clock.pack(fill="x", padx=16, pady=2)
 
         self.kv_deleted = KeyValueRow(self.left_card, key="Eventos Eliminados:", value="0")
-        self.kv_deleted.pack(fill="x", padx=20, pady=4)
+        self.kv_deleted.pack(fill="x", padx=16, pady=2)
 
         self.kv_stations = KeyValueRow(self.left_card, key="Estaciones Sísmicas Activas:", value="0")
-        self.kv_stations.pack(fill="x", padx=20, pady=4)
+        self.kv_stations.pack(fill="x", padx=16, pady=2)
 
         self.kv_zones = KeyValueRow(self.left_card, key="Zonas Geográficas Configuradas:", value="0")
-        self.kv_zones.pack(fill="x", padx=20, pady=4)
+        self.kv_zones.pack(fill="x", padx=16, pady=2)
 
         # Banner informativo atómico dentro del panel
         self.banner = InfoBanner(
@@ -131,39 +132,43 @@ class DashboardView(ctk.CTkFrame):
             message="El observatorio mantiene la propiedad AVL balanceada (|FB| <= 1).",
             variant="success"
         )
-        self.banner.pack(fill="x", padx=20, pady=(16, 20))
+        self.banner.pack(fill="x", padx=16, pady=(8, 10))
 
         # Panel Derecho: Accesos Rápidos
         self.right_card = Card(panels_row)
-        self.right_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        self.right_card.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
-        StyledLabel(self.right_card, text="ACCIONES RÁPIDAS", variant="tag").pack(anchor="w", padx=20, pady=(16, 4))
-        StyledLabel(self.right_card, text="Navegación Modular", variant="h2").pack(anchor="w", padx=20, pady=(0, 12))
+        StyledLabel(self.right_card, text="ACCIONES RÁPIDAS", variant="tag").pack(anchor="w", padx=16, pady=(12, 2))
+        StyledLabel(self.right_card, text="Navegación Modular", variant="h2").pack(anchor="w", padx=16, pady=(0, 8))
 
         # Botones de navegación usando los botones atómicos
         PrimaryButton(
             self.right_card,
             text="🌳 Ver Árbol AVL",
+            height=32,
             command=lambda: self.app.switch_view("arboles") if self.app else None
-        ).pack(fill="x", padx=20, pady=6)
+        ).pack(fill="x", padx=16, pady=3)
 
         SecondaryButton(
             self.right_card,
             text="🗺️ Ver Mapa Sísmico",
+            height=32,
             command=lambda: self.app.switch_view("mapa") if self.app else None
-        ).pack(fill="x", padx=20, pady=6)
+        ).pack(fill="x", padx=16, pady=3)
 
         SecondaryButton(
             self.right_card,
             text="📋 Administrar Eventos",
+            height=32,
             command=lambda: self.app.switch_view("eventos") if self.app else None
-        ).pack(fill="x", padx=20, pady=6)
+        ).pack(fill="x", padx=16, pady=3)
 
         SecondaryButton(
             self.right_card,
             text="🔎 Ejecutar Consultas",
+            height=32,
             command=lambda: self.app.switch_view("consultas") if self.app else None
-        ).pack(fill="x", padx=20, pady=6)
+        ).pack(fill="x", padx=16, pady=3)
 
         self.refresh()
 
@@ -203,7 +208,7 @@ class DashboardView(ctk.CTkFrame):
         else:
             self.card_status.set_value("Normal")
             self.card_status.set_subtitle("AVL balanceado")
-            self.card_status.set_badge("Equilibrado", "success")
+            self.card_status.set_badge("OK", "success")
 
         # 5. Reloj de simulación
         clock = getattr(self.observatory, "clock_simulation", None)

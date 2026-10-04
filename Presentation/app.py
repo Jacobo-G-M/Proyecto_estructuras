@@ -1,3 +1,4 @@
+import os
 import customtkinter as ctk
 from Presentation.Components.sidebar import Sidebar
 from Presentation.Components.topbar import Topbar
@@ -10,28 +11,37 @@ from Presentation.Utils.demo_data import load_demo_data
 
 class SismoLabApp(ctk.CTk):
     def __init__(self, observatory):
-        # Escala visual global para mejorar la legibilidad y soporte de alta resolución
-        ctk.set_widget_scaling(1.15)
+        # Escala visual normalizada para adaptabilidad fluida
+        ctk.set_appearance_mode("Dark")
+        ctk.set_widget_scaling(1.0)
         ctk.set_window_scaling(1.0)
 
         super().__init__()
         self.observatory = observatory
 
+        # Configurar icono oficial de la aplicación (barra de tareas y título)
+        ico_path = os.path.join(os.path.dirname(__file__), "Assets", "logo.ico")
+        if os.path.exists(ico_path):
+            try:
+                self.iconbitmap(ico_path)
+            except Exception:
+                pass
+
         # Cargar datos operativos de demostración si el catálogo está vacío
         load_demo_data(self.observatory)
 
-        # Configuración principal de la ventana
+        # Configuración principal de la ventana (adaptable a laptops y pantallas estándar)
         self.title("SismoLab AVL - Observatorio Sismológico")
-        self.geometry("1440x812")
-        self.minsize(1100, 720)
+        self.geometry("1366x768")
+        self.minsize(1024, 660)
         self.configure(fg_color="#070c12")
 
         # Grid principal de la ventana
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # 1. Sidebar (Panel Izquierdo Interactivo)
-        self.sidebar = Sidebar(self, app=self, observatory=self.observatory, width=280)
+        # 1. Sidebar (Panel Izquierdo Interactivo y compacto)
+        self.sidebar = Sidebar(self, app=self, observatory=self.observatory, width=220)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         
         # 2. Contenedor Derecho (Topbar + Vistas)
