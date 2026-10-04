@@ -544,6 +544,9 @@ class Observatory:
 				return "Correction Failed"
 			# Update to the report's revision
 			event.review = report.review
+			if report.origin_station:
+				for st in report.origin_station:
+					event.add_origin_station(st)
 			if self.metrics is not None:
 				self.metrics.corrections_accepted += 1
 			print(f"Correction accepted for Event {event.id}. Updated to review {event.review}.")
@@ -606,7 +609,8 @@ class Observatory:
 		new_magnitude: float,
 		new_depth: float,
 		new_epicenter: tuple[float, float],
-		new_date_time: datetime
+		new_date_time: datetime,
+		station: Station | None = None
 	) -> Event | None:
 		if event_id not in self.events_dict:
 			raise ValueError(f"Event ID {event_id} no se encuentra en el catálogo activo.")
@@ -649,6 +653,8 @@ class Observatory:
 		event_to_edit.priority = new_priority
 		event_to_edit.attention_state = "Pending"
 		event_to_edit.review += 1
+		if station is not None:
+			event_to_edit.add_origin_station(station)
 
 		# Reinsert into the tree if the key has changed
 		if key_changed and self.tree is not None:

@@ -436,6 +436,8 @@ class TreeView(ctk.CTkFrame):
             val_lbl = ctk.CTkLabel(
                 row_f, text="--", text_color=def_color, font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold")
             )
+            if key == "stations":
+                val_lbl.configure(wraplength=140, justify="right")
             val_lbl.pack(side="right")
             self.prop_labels[key] = val_lbl
 
@@ -722,13 +724,37 @@ class TreeView(ctk.CTkFrame):
         self.prop_labels["depth"].configure(text=f"{depth_phys:.1f} km")
         self.prop_labels["coords"].configure(text=f"{x:.1f} · {y:.1f} km")
         self.prop_labels["datetime"].configure(text=dt.strftime("%d/%m/%Y · %H:%M"))
-        self.prop_labels["review"].configure(text=f"v{rev} · {rev}/3 estaciones")
+        self.prop_labels["review"].configure(text=f"v{rev}")
 
         state_color = "#ff7a1a" if att_state.lower() == "pending" else "#2ecc71"
         self.prop_labels["status"].configure(text=att_state.upper(), text_color=state_color)
 
-        st_names = [getattr(s, "name", str(s)) for s in stations] if stations else ["S-N1 ✓", "S-N2 ✓"]
-        self.prop_labels["stations"].configure(text=" · ".join(st_names[:2]))
+        # Resolver todas las estaciones de origen en el orden en que se agregaron
+        st_names = []
+        stations_map = {}
+        if self.observatory and hasattr(self.observatory, 'stations'):
+            raw_stations = self.observatory.stations
+            if isinstance(raw_stations, dict):
+                stations_map = {s_id: getattr(s_obj, 'name', str(s_id)) for s_id, s_obj in raw_stations.items()}
+            elif isinstance(raw_stations, list):
+                for s_obj in raw_stations:
+                    s_id = getattr(s_obj, 'id', None)
+                    if s_id is not None:
+                        stations_map[s_id] = getattr(s_obj, 'name', str(s_id))
+
+        if stations:
+            for s in stations:
+                if hasattr(s, "name"):
+                    st_names.append(s.name)
+                elif isinstance(s, int) and s in stations_map:
+                    st_names.append(stations_map[s])
+                elif isinstance(s, dict):
+                    st_names.append(s.get("name", str(s.get("id", s))))
+                else:
+                    st_names.append(str(s))
+
+        stations_text = " · ".join(st_names) if st_names else "--"
+        self.prop_labels["stations"].configure(text=stations_text)
 
         self.prop_labels["height"].configure(text=str(h))
         bf_sign = "+" if bf > 0 else ""

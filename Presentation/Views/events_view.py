@@ -900,12 +900,21 @@ class EventsView(ctk.CTkFrame):
             except ValueError:
                 raise ValueError("Formato de fecha u hora inválido. Usa YYYY-MM-DD y HH:MM:SS")
 
+            st_name = self.option_station.get()
+            station_obj = None
+            if self.observatory and self.observatory.stations:
+                for s in self.observatory.stations:
+                    if s.name == st_name:
+                        station_obj = s
+                        break
+
             ev = self.observatory.edit_event(
                 event_id=eid,
                 new_magnitude=mag,
                 new_depth=depth,
                 new_epicenter=(x, y),
-                new_date_time=dt
+                new_date_time=dt,
+                station=station_obj
             )
 
             if ev is not None:

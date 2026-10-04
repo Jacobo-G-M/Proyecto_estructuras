@@ -113,8 +113,12 @@ class Event:
 
   def add_origin_station(self, station) -> None:
     """Adds an origin station to the event if not already present."""
-    if station not in self.__origin_stations:
-      self.__origin_stations.append(station)
+    st_id = getattr(station, 'id', station)
+    for existing in self.__origin_stations:
+      existing_id = getattr(existing, 'id', existing)
+      if existing_id == st_id:
+        return
+    self.__origin_stations.append(station)
 
   def get_key(self) -> tuple[int, float, int]:
     """Returns the sorting key K = (Priority, Magnitude, ID) according to domain rules."""
