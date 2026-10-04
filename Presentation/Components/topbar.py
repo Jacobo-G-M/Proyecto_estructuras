@@ -129,8 +129,8 @@ class Topbar(ctk.CTkFrame):
         self.btn_undo.pack(side="left", padx=3)
         
         # Pill interactivo de versión / Escenario Activo
-        self.current_scenario_name = "Demo Activo"
-        self.current_scenario_filepath = None
+        self.current_scenario_name = getattr(self.observatory, 'current_scenario_name', "Demo Activo") if self.observatory else "Demo Activo"
+        self.current_scenario_filepath = getattr(self.observatory, 'current_scenario_filepath', None) if self.observatory else None
         self.version_pill = ctk.CTkFrame(
             self.actions_frame, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=6,
             cursor="hand2"
@@ -201,6 +201,13 @@ class Topbar(ctk.CTkFrame):
                 border_color="#1a2736"
             )
 
+        # Sincronizar escenario activo con el observatorio
+        if self.observatory and hasattr(self.observatory, 'current_scenario_name'):
+            obs_name = self.observatory.current_scenario_name or "Demo Activo"
+            if self.current_scenario_name != obs_name:
+                self.set_scenario_name(obs_name)
+            self.current_scenario_filepath = getattr(self.observatory, 'current_scenario_filepath', None)
+
     def _on_add_hour(self):
         if self.observatory and self.app:
             self.observatory.update_clock(hours=1.0)
@@ -230,15 +237,41 @@ class Topbar(ctk.CTkFrame):
             return
         if self.switch_stress.get() == 1:
             self.observatory.stress_mode = True
+            self.app.refresh_all()
         else:
-            self.observatory.global_recovery()
-        self.app.refresh_all()
+            self._execute_recovery_flow()
 
     def _on_recover_click(self):
+        self._execute_recovery_flow()
+
+    def _execute_recovery_flow(self):
+        """
+        Ejecuta el protocolo de recuperación global del equilibrio AVL:
+        1. Pausa el procesamiento continuo de reportes si estuviera activo (requerimiento oficial).
+        2. Ejecuta rebalanceo global in-situ en el observatorio.
+        3. Refresca todas las vistas de la aplicación.
+        4. Despliega la ventana emergente informativa con el desglose de rotaciones y costos.
+        """
         if not self.observatory or not self.app:
             return
-        self.observatory.global_recovery()
+
+        # 1. Pausar procesamiento de reportes si la vista de eventos está corriendo en ráfaga
+        if hasattr(self.app, "views") and isinstance(self.app.views, dict):
+            events_view = self.app.views.get("eventos")
+            if events_view and getattr(events_view, "burst_running", False):
+                if hasattr(events_view, "_handle_pause_burst"):
+                    events_view._handle_pause_burst()
+
+        # 2. Rebalanceo global in-situ
+        result = self.observatory.global_recovery()
+
+        # 3. Refrescar todas las pantallas para reflejar el nuevo árbol y estado normal
         self.app.refresh_all()
+
+        # 4. Mostrar ventana emergente informativa con informe de cambios y costos
+        if result:
+            from Presentation.Components.Molecules.recovery_modal import RecoveryReportModal
+            RecoveryReportModal(self.app, result=result)
 
     def _on_toggle_stress_or_recover(self):
         self._on_recover_click()
@@ -246,18 +279,25 @@ class Topbar(ctk.CTkFrame):
     def _on_undo(self):
         if not self.observatory or not self.app:
             return
-        success = self.observatory.undo_action()
-        if not success:
-            messagebox.showinfo("Deshacer", "No hay más acciones en la pila de deshacer.")
+        try:
+            success = self.observatory.undo_action()
+            if not success:
+                messagebox.showinfo("Deshacer", "No hay más acciones en la pila de deshacer.")
+        except ValueError as e:
+            messagebox.showinfo("Deshacer", str(e))
         self.app.refresh_all()
 
     def set_scenario_name(self, name: str):
-        """Actualiza el nombre del escenario activo en el pill superior."""
+        """Actualiza el nombre del escenario activo en el pill superior y en el observatorio."""
         if not name:
             name = "Demo Activo"
         if name.endswith(".json"):
             name = name[:-5]
         self.current_scenario_name = name
+        if self.observatory and hasattr(self.observatory, 'current_scenario_name'):
+            self.observatory.current_scenario_name = name
+        if hasattr(self, 'current_scenario_filepath') and self.observatory and hasattr(self.observatory, 'current_scenario_filepath'):
+            self.observatory.current_scenario_filepath = self.current_scenario_filepath
         display = name if len(name) <= 16 else f"{name[:13]}..."
         if hasattr(self, "lbl_version"):
             self.lbl_version.configure(text=f"▾ {display}")

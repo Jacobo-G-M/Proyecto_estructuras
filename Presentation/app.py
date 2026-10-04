@@ -11,9 +11,9 @@ from Presentation.Utils.demo_data import load_demo_data
 
 class SismoLabApp(ctk.CTk):
     def __init__(self, observatory):
-        # Escala visual normalizada para adaptabilidad fluida
+        # Escala visual optimizada para mayor legibilidad y claridad de interfaz
         ctk.set_appearance_mode("Dark")
-        ctk.set_widget_scaling(1.0)
+        ctk.set_widget_scaling(1.15)
         ctk.set_window_scaling(1.0)
 
         super().__init__()

@@ -58,33 +58,21 @@ class MapView(ctk.CTkFrame):
 
     def _build_ui(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=25, pady=20)
+        container.pack(fill="both", expand=True, padx=16, pady=10)
 
         # ---------------------------------------------------------
         # 1. Main Header Section
         # ---------------------------------------------------------
         header = ctk.CTkFrame(container, fg_color="transparent")
-        header.pack(fill="x", pady=(0, 16))
+        header.pack(fill="x", pady=(0, 8))
 
-        ctk.CTkLabel(
-            header, text="SISMOLAB · CARTOGRAFÍA REGIONAL",
-            font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#22d3ee"
-        ).pack(anchor="w")
-        
         ctk.CTkLabel(
             header, text="Mapa Geográfico",
             font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"), text_color="#e8eef3"
-        ).pack(anchor="w", pady=(2, 0))
-
-        ctk.CTkLabel(
-            header,
-            text="Mapa que muestra sismos con retícula cada 100 km, filtros y medición.",
-            font=ctk.CTkFont(family=FONT_MAIN, size=11),
-            text_color=TEXT_SECONDARY
-        ).pack(anchor="w", pady=(2, 0))
+        ).pack(side="left", anchor="w")
 
         header_pills = ctk.CTkFrame(header, fg_color="transparent")
-        header_pills.pack(side="right", anchor="s")
+        header_pills.pack(side="right", anchor="e")
 
         pill_stations = Card(header_pills, corner_radius=6, border_color=BORDER_SUBTLE)
         pill_stations.pack(side="left", padx=(0, 8))
@@ -109,7 +97,7 @@ class MapView(ctk.CTkFrame):
 
         main_grid.grid_columnconfigure(0, weight=0)  # Column 1: Layers (260px)
         main_grid.grid_columnconfigure(1, weight=1)  # Column 2: Canvas (Flexible)
-        main_grid.grid_columnconfigure(2, weight=0)  # Column 3: Inspector (300px)
+        main_grid.grid_columnconfigure(2, weight=0)  # Column 3: Inspector (320px)
         main_grid.grid_rowconfigure(0, weight=1)
 
         self.left_panel = Card(main_grid, width=260)
@@ -118,7 +106,12 @@ class MapView(ctk.CTkFrame):
         self.center_panel = Card(main_grid)
         self.center_panel.grid(row=0, column=1, sticky="nsew", padx=5)
 
-        self.right_panel = ctk.CTkFrame(main_grid, fg_color="transparent", width=300)
+        self.right_panel = ctk.CTkScrollableFrame(
+            main_grid,
+            fg_color="transparent",
+            width=320,
+            corner_radius=0
+        )
         self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(10, 0))
 
         self._build_map_canvas()
@@ -129,7 +122,7 @@ class MapView(ctk.CTkFrame):
         # 3. Footer Status Bar
         # ---------------------------------------------------------
         footer = ctk.CTkFrame(container, fg_color="transparent")
-        footer.pack(fill="x", pady=(12, 0))
+        footer.pack(fill="x", pady=(6, 0))
 
         StyledLabel(
             footer,
@@ -315,10 +308,10 @@ class MapView(ctk.CTkFrame):
         # Card 1: Seismic Event Inspector
         # ---------------------------------------------------------
         card_inspector = Card(self.right_panel, corner_radius=12)
-        card_inspector.pack(fill="x", pady=(0, 14))
+        card_inspector.pack(fill="x", expand=True, pady=(0, 10))
 
         header_inspector = ctk.CTkFrame(card_inspector, fg_color="transparent")
-        header_inspector.pack(fill="x", padx=14, pady=(14, 0))
+        header_inspector.pack(fill="x", padx=12, pady=(10, 0))
 
         self.dot_inspector = StatusDot(header_inspector, size=10, fg_color=TEXT_MUTED)
         self.dot_inspector.pack(side="left", padx=(0, 8))
@@ -332,7 +325,7 @@ class MapView(ctk.CTkFrame):
 
         # Stat Callout Box (Magnitude, Priority, Coordinates, Depth)
         stat_box = Card(card_inspector, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE)
-        stat_box.pack(fill="x", padx=14, pady=(12, 8))
+        stat_box.pack(fill="x", padx=12, pady=(8, 4))
 
         self.lbl_stat_mag = ctk.CTkLabel(
             stat_box,
@@ -340,7 +333,7 @@ class MapView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_MONO, size=18, weight="bold"),
             text_color=TEXT_PRIMARY
         )
-        self.lbl_stat_mag.pack(pady=(10, 2))
+        self.lbl_stat_mag.pack(pady=(6, 2))
 
         self.lbl_stat_coords = StyledLabel(
             stat_box,
@@ -348,11 +341,11 @@ class MapView(ctk.CTkFrame):
             variant="caption",
             text_color=TEXT_MUTED
         )
-        self.lbl_stat_coords.pack(pady=(0, 10))
+        self.lbl_stat_coords.pack(pady=(0, 6))
 
         # Structured Key-Value inspection table
         table_box = Card(card_inspector, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE)
-        table_box.pack(fill="x", padx=14, pady=4)
+        table_box.pack(fill="x", padx=12, pady=4)
 
         self.lbl_row_radio = self._add_table_row(table_box, "Radio R", "--", ACCENT_CYAN)
         self.lbl_row_candidatos = self._add_table_row(table_box, "Candidatos en R", "--", ACCENT_AMBER)
@@ -364,7 +357,7 @@ class MapView(ctk.CTkFrame):
 
         # Radius R interactive slider
         slider_box = ctk.CTkFrame(card_inspector, fg_color="transparent")
-        slider_box.pack(fill="x", padx=14, pady=(10, 6))
+        slider_box.pack(fill="x", padx=12, pady=(6, 4))
 
         StyledLabel(slider_box, text="R", variant="mono", text_color=TEXT_MUTED).pack(side="left", padx=(0, 8))
 
@@ -405,12 +398,12 @@ class MapView(ctk.CTkFrame):
             fg_color=BG_MUTED,
             text_color=TEXT_MUTED
         )
-        self.btn_apply_r.pack(fill="x", padx=14, pady=(0, 14))
+        self.btn_apply_r.pack(fill="x", padx=12, pady=(4, 10))
 
     def _add_table_row(self, master, label: str, value: str, value_color: str, is_last: bool = False):
         """Creates a clean inspection table row with a subtle horizontal divider."""
         row = ctk.CTkFrame(master, fg_color="transparent")
-        row.pack(fill="x", padx=12, pady=(6, 6))
+        row.pack(fill="x", padx=10, pady=(3, 3))
 
         lbl_k = StyledLabel(row, text=label, variant="mono", text_color=TEXT_MUTED)
         lbl_k.pack(side="left")

@@ -38,9 +38,9 @@ class DashboardView(ctk.CTkFrame):
         # 1. Encabezado Molecular (SectionHeader)
         self.header = SectionHeader(
             container,
-            category="SismoLab · Observatorio",
+            category="",
             title="Panel de Control · Consola Maestra",
-            description="Métricas operativas del árbol AVL, catálogos históricos y colas en tiempo real."
+            description=""
         )
         self.header.pack(fill="x", pady=(0, 10))
 

@@ -46,6 +46,8 @@ class Observatory:
 		self.events_dict: dict[int, Event] = {}
 		self.versions: list[Version] = []
 		self._suppress_undo_recording: bool = False
+		self.current_scenario_name: str = "Demo Activo"
+		self.current_scenario_filepath: str | None = None
 
 	# Getter of clock_simulation attribute
 	@property
@@ -544,6 +546,9 @@ class Observatory:
 				return "Correction Failed"
 			# Update to the report's revision
 			event.review = report.review
+			if report.origin_station:
+				for st in report.origin_station:
+					event.add_origin_station(st)
 			if self.metrics is not None:
 				self.metrics.corrections_accepted += 1
 			print(f"Correction accepted for Event {event.id}. Updated to review {event.review}.")
@@ -606,7 +611,8 @@ class Observatory:
 		new_magnitude: float,
 		new_depth: float,
 		new_epicenter: tuple[float, float],
-		new_date_time: datetime
+		new_date_time: datetime,
+		station: Station | None = None
 	) -> Event | None:
 		if event_id not in self.events_dict:
 			raise ValueError(f"Event ID {event_id} no se encuentra en el catálogo activo.")
@@ -649,6 +655,8 @@ class Observatory:
 		event_to_edit.priority = new_priority
 		event_to_edit.attention_state = "Pending"
 		event_to_edit.review += 1
+		if station is not None:
+			event_to_edit.add_origin_station(station)
 
 		# Reinsert into the tree if the key has changed
 		if key_changed and self.tree is not None:
@@ -684,12 +692,12 @@ class Observatory:
 
 		return event_to_remove
 
-	def archive_subtree(self, execute: bool = False) -> dict | None:
+	def archive_subtree(self, execute: bool = False, max_age_hours: float | None = None) -> dict | None:
 		if self.tree is None or self.tree.root is None:
 			raise ValueError("El catálogo activo está vacío. No hay nada que archivar.")
 
 		# Search for the best branch to archive based on the defined rules
-		best_root_node, nodes_to_archive = self._find_best_branch()
+		best_root_node, nodes_to_archive = self._find_best_branch(max_age_hours=max_age_hours)
 
 		if not nodes_to_archive:
 			raise ValueError("No existe ninguna rama que cumpla los criterios para ser archivada.")
@@ -743,14 +751,15 @@ class Observatory:
 
 	# --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
 
-	def _find_best_branch(self) -> tuple:
+	def _find_best_branch(self, max_age_hours: float | None = None) -> tuple:
 		"""
 		Traverse the tree to find the branch that meets the strict rules.
 		Delegates evaluation and tie-breaking to SubtreeArchiver.
 		"""
+		target_age = max_age_hours if max_age_hours is not None else self.max_tree_age
 		return SubtreeArchiver.find_best_branch(
 			tree=self.tree,
-			max_age_hours=self.max_tree_age,
+			max_age_hours=target_age,
 			simulation_clock=self.clock_simulation
 		)
 
@@ -806,6 +815,11 @@ class Observatory:
 		
 		# Identify expired events before deleting to avoid modifying dict during iteration
 		for event in self.events_dict.values():
+			# Regla 6: Solo los eventos NO gestionados ('Pending') expiran y se auto-archivan al superar W
+			state = str(getattr(event, 'attention_state', 'Pending')).strip().lower()
+			if state in ('reviewed', 'revisado'):
+				continue
+
 			age_hours = (self.clock_simulation - event.date_time).total_seconds() / 3600.0
 			if age_hours > self.max_time:
 				expired_ids.append(event.id)
@@ -907,7 +921,9 @@ class Observatory:
 			'metrics': copied_state['metrics'],
 			'associations': copied_state['associations'],
 			'stations': copied_state['stations'],
-			'geographical_map': copied_state['geographical_map']
+			'geographical_map': copied_state['geographical_map'],
+			'current_scenario_name': getattr(self, 'current_scenario_name', "Demo Activo"),
+			'current_scenario_filepath': getattr(self, 'current_scenario_filepath', None)
 		}
 		
 		# Crear la acción y apilarla en la estructura Undo_stack
@@ -978,6 +994,8 @@ class Observatory:
 		# Restaurar métricas acumuladas y asociaciones
 		self.metrics = s.get('metrics')
 		self.associations = s.get('associations', [])
+		self.current_scenario_name = s.get('current_scenario_name', "Demo Activo")
+		self.current_scenario_filepath = s.get('current_scenario_filepath', None)
 
 		return True
 	
@@ -1127,6 +1145,8 @@ class Observatory:
 				)
 				self.versions.append(version_obj)
 
+			self.current_scenario_name = clean_name
+			self.current_scenario_filepath = file_path
 			print(f"Version '{clean_name}' saved successfully to {file_path}.")
 			return True
 		except Exception as e:
@@ -1210,6 +1230,8 @@ class Observatory:
 
 			# Aplicar la reconstrucción completa del estado (atómica, ya validada)
 			self._deserialize_scenario(data)
+			self.current_scenario_name = clean_name
+			self.current_scenario_filepath = file_path
 			print(f"Version '{clean_name}' successfully restored into the observatory.")
 			return True
 		except Exception as e:
@@ -1311,6 +1333,9 @@ class Observatory:
 			filepath: Destination file path for the scenario JSON file.
 		"""
 		ScenarioPersistence.export_to_json(self, filepath)
+		base_name = os.path.splitext(os.path.basename(filepath))[0]
+		self.current_scenario_name = base_name
+		self.current_scenario_filepath = os.path.abspath(filepath)
 
 	def load_scenario_by_topology(self, filepath: str, stress_mode_override: bool | None = None) -> tuple[bool, list[str]]:
 		"""
@@ -1345,7 +1370,12 @@ class Observatory:
 		# Aplicamos la reconstrucción atómica delegando a ScenarioPersistence
 		self._suppress_undo_recording = True
 		try:
-			return ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+			res = ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
+			if res[0]:
+				base_name = os.path.splitext(os.path.basename(filepath))[0]
+				self.current_scenario_name = base_name
+				self.current_scenario_filepath = os.path.abspath(filepath)
+			return res
 		finally:
 			self._suppress_undo_recording = False
 
@@ -1393,6 +1423,10 @@ class Observatory:
 			# Synchronize active event metric count
 			if self.metrics is not None:
 				self.metrics.active_events = len(self.events_dict)
+				
+			base_name = os.path.splitext(os.path.basename(filepath))[0]
+			self.current_scenario_name = base_name
+			self.current_scenario_filepath = os.path.abspath(filepath)
 				
 		return result
 
@@ -1577,37 +1611,93 @@ class Observatory:
 	def global_recovery(self) -> dict:
 		"""
 		Fuerza un rebalanceo global del árbol y desactiva el modo de estrés (Sección 13).
-		Registra la acción en la pila para poder deshacerse.
+		Registra la acción en la pila para poder deshacerse y recopila el informe completo
+		de cambios topológicos, rotaciones y costo computacional para informar al usuario.
 		"""
+		import time
+		start_time = time.perf_counter()
+
 		if hasattr(self, '_record_action'):
 			self._record_action("GLOBAL_RECOVERY", "Restauración global post-estrés")
 			
+		# 1. Métricas previas del árbol
+		pre_height = self.tree.root.height if (self.tree and self.tree.root) else 0
+		pre_root_id = self.tree.root.id if (self.tree and self.tree.root) else None
+		pre_root_key = self.tree.root.get_key() if (self.tree and self.tree.root) else None
+
+		imbalanced_nodes_before = []
+		total_nodes_count = 0
+		if self.tree and self.tree.root:
+			for node in self.tree.inorder():
+				total_nodes_count += 1
+				bf = node.balance_factor()
+				if abs(bf) > 1:
+					imbalanced_nodes_before.append({"id": node.id, "bf": bf, "key": node.get_key()})
+
 		cases_before = self.metrics.cases.copy() if self.metrics is not None else {}
 		turns_before = self.metrics.turns.copy() if self.metrics is not None else {}
 
-		# El árbol rebalancea su topología de abajo hacia arriba y apaga su flag interno
+		# 2. El árbol rebalancea su topología de abajo hacia arriba in-situ y apaga su flag interno
 		if self.tree is not None:
 			self.tree.restore_balance()
 			
-		# Ejecutar auditoría para garantizar el equilibrio antes de retornar al modo normal
+		# 3. Métricas posteriores
+		post_height = self.tree.root.height if (self.tree and self.tree.root) else 0
+		post_root_id = self.tree.root.id if (self.tree and self.tree.root) else None
+		post_root_key = self.tree.root.get_key() if (self.tree and self.tree.root) else None
+
+		imbalanced_nodes_after = []
+		if self.tree and self.tree.root:
+			for node in self.tree.inorder():
+				bf = node.balance_factor()
+				if abs(bf) > 1:
+					imbalanced_nodes_after.append({"id": node.id, "bf": bf, "key": node.get_key()})
+
+		# 4. Sincronizamos el flag del Observatorio al modo normal
+		self.stress_mode = False
+
+		# 5. Ejecutar auditoría para garantizar el equilibrio restablecido
 		audit_report = self.verify_structure()
 		if any(e.startswith("Error") for e in audit_report):
 			print("Error: Global recovery failed audit. Stress mode remains ON.")
+			self.stress_mode = True
 			if self.tree is not None:
 				self.tree.stress_mode = True # Revert inner flag
 			return {"success": False, "audit": audit_report}
 
-		# Sincronizamos el flag del Observatorio
-		self.stress_mode = False
-
-		rotations_produced = {}
+		# 6. Rotaciones producidas y costo
+		cases_diff = {}
+		turns_diff = {}
 		if self.metrics is not None:
 			cases_diff = {k: self.metrics.cases[k] - cases_before.get(k, 0) for k in self.metrics.cases if self.metrics.cases[k] > cases_before.get(k, 0)}
 			turns_diff = {k: self.metrics.turns[k] - turns_before.get(k, 0) for k in self.metrics.turns if self.metrics.turns[k] > turns_before.get(k, 0)}
-			rotations_produced = {'cases': cases_diff, 'turns': turns_diff}
+
+		elapsed_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
+		rotations_produced = {'cases': cases_diff, 'turns': turns_diff}
 
 		print("Global recovery completed. Stress mode disabled and tree rebalanced.")
-		return {"success": True, "rotations": rotations_produced, "audit": audit_report}
+		return {
+			"success": True,
+			"rotations": rotations_produced,
+			"cases": cases_diff,
+			"turns": turns_diff,
+			"total_rotations": sum(cases_diff.values()),
+			"total_turns": sum(turns_diff.values()),
+			"total_nodes": total_nodes_count,
+			"imbalanced_count": len(imbalanced_nodes_before),
+			"imbalanced_nodes": imbalanced_nodes_before,
+			"imbalanced_after": len(imbalanced_nodes_after),
+			"pre_height": pre_height,
+			"post_height": post_height,
+			"pre_root_id": pre_root_id,
+			"post_root_id": post_root_id,
+			"pre_root_key": pre_root_key,
+			"post_root_key": post_root_key,
+			"elapsed_ms": elapsed_ms,
+			"audit": audit_report,
+			"in_place": True,
+			"paused_queue": True
+		}
 	# ---------------------------------------------------------
 	# ASSOCIATION LOGIC (REPLICAS AND REFERENCES)
 	# ---------------------------------------------------------

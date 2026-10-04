@@ -293,7 +293,7 @@ class TreeView(ctk.CTkFrame):
         ).pack(side="left")
         
         self.lbl_bst_subtitle = ctk.CTkLabel(
-            bst_head, text="h = --",
+            bst_head, text="Altura = -- · Hojas = --",
             font=ctk.CTkFont(family=FONT_MAIN, size=11, weight="bold"), text_color="#8a9bb0"
         )
         self.lbl_bst_subtitle.pack(side="left", padx=6)
@@ -436,6 +436,8 @@ class TreeView(ctk.CTkFrame):
             val_lbl = ctk.CTkLabel(
                 row_f, text="--", text_color=def_color, font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold")
             )
+            if key == "stations":
+                val_lbl.configure(wraplength=140, justify="right")
             val_lbl.pack(side="right")
             self.prop_labels[key] = val_lbl
 
@@ -553,8 +555,12 @@ class TreeView(ctk.CTkFrame):
             shadow_bst = BST(id=99)
             for ev in self.observatory.events_dict.values():
                 shadow_bst.insert(Node(id=ev.id, event=ev))
-            bst_h = shadow_bst.height()
-            self.lbl_bst_subtitle.configure(text=f"h = {bst_h}")
+            if shadow_bst.root is None:
+                self.lbl_bst_subtitle.configure(text="Altura = -- · Hojas = --")
+            else:
+                bst_h = shadow_bst.height()
+                bst_leaves = sum(1 for n in shadow_bst.inorder() if n.is_leaf())
+                self.lbl_bst_subtitle.configure(text=f"Altura = {bst_h} · Hojas = {bst_leaves}")
 
         # Formateador para recorrido completo (sin truncar)
         def fmt_full(nodes_list):
@@ -591,7 +597,7 @@ class TreeView(ctk.CTkFrame):
 
         costly_ids = self.observatory.get_costly_access()
 
-        # Actualizar título dinámico de altura AVL
+        # Actualizar título dinámico de AVL
         if hasattr(self, "lbl_avl_title"):
             self.lbl_avl_title.configure(text="AVL · balanceado")
 
@@ -640,10 +646,14 @@ class TreeView(ctk.CTkFrame):
                     shadow_bst.insert(Node(id=ev.id, event=ev))
 
                 if hasattr(self, "lbl_bst_subtitle"):
-                    h_bst_val = shadow_bst.height()
-                    self.lbl_bst_subtitle.configure(
-                        text=f"h = {h_bst_val}"
-                    )
+                    if shadow_bst.root is None:
+                        self.lbl_bst_subtitle.configure(text="Altura = -- · Hojas = --")
+                    else:
+                        h_bst_val = shadow_bst.height()
+                        leaves_bst_val = sum(1 for n in shadow_bst.inorder() if n.is_leaf())
+                        self.lbl_bst_subtitle.configure(
+                            text=f"Altura = {h_bst_val} · Hojas = {leaves_bst_val}"
+                        )
 
                 TreeRenderer.render_tree(
                     canvas=self.bst_canvas,
@@ -722,13 +732,37 @@ class TreeView(ctk.CTkFrame):
         self.prop_labels["depth"].configure(text=f"{depth_phys:.1f} km")
         self.prop_labels["coords"].configure(text=f"{x:.1f} · {y:.1f} km")
         self.prop_labels["datetime"].configure(text=dt.strftime("%d/%m/%Y · %H:%M"))
-        self.prop_labels["review"].configure(text=f"v{rev} · {rev}/3 estaciones")
+        self.prop_labels["review"].configure(text=f"v{rev}")
 
         state_color = "#ff7a1a" if att_state.lower() == "pending" else "#2ecc71"
         self.prop_labels["status"].configure(text=att_state.upper(), text_color=state_color)
 
-        st_names = [getattr(s, "name", str(s)) for s in stations] if stations else ["S-N1 ✓", "S-N2 ✓"]
-        self.prop_labels["stations"].configure(text=" · ".join(st_names[:2]))
+        # Resolver todas las estaciones de origen en el orden en que se agregaron
+        st_names = []
+        stations_map = {}
+        if self.observatory and hasattr(self.observatory, 'stations'):
+            raw_stations = self.observatory.stations
+            if isinstance(raw_stations, dict):
+                stations_map = {s_id: getattr(s_obj, 'name', str(s_id)) for s_id, s_obj in raw_stations.items()}
+            elif isinstance(raw_stations, list):
+                for s_obj in raw_stations:
+                    s_id = getattr(s_obj, 'id', None)
+                    if s_id is not None:
+                        stations_map[s_id] = getattr(s_obj, 'name', str(s_id))
+
+        if stations:
+            for s in stations:
+                if hasattr(s, "name"):
+                    st_names.append(s.name)
+                elif isinstance(s, int) and s in stations_map:
+                    st_names.append(stations_map[s])
+                elif isinstance(s, dict):
+                    st_names.append(s.get("name", str(s.get("id", s))))
+                else:
+                    st_names.append(str(s))
+
+        stations_text = " · ".join(st_names) if st_names else "--"
+        self.prop_labels["stations"].configure(text=stations_text)
 
         self.prop_labels["height"].configure(text=str(h))
         bf_sign = "+" if bf > 0 else ""

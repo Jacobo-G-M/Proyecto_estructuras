@@ -438,8 +438,8 @@ class EventsView(ctk.CTkFrame):
         ctk.CTkLabel(slider_t_box, text="Umbral T", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_SECONDARY).pack(side="left", padx=10, pady=8)
         self.slider_t = ctk.CTkSlider(
             slider_t_box,
-            from_=12, to=168,
-            number_of_steps=26,
+            from_=1, to=168,
+            number_of_steps=167,
             progress_color=WARNING,
             button_color="#ffffff",
             button_hover_color=WARNING,
@@ -476,7 +476,9 @@ class EventsView(ctk.CTkFrame):
             self.frame_eligibility_result,
             text="Haz clic en 'Analizar Elegibilidad' para evaluar.",
             font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_SECONDARY
+            text_color=TEXT_SECONDARY,
+            justify="left",
+            wraplength=300
         )
         self.lbl_elig_detail.pack(anchor="w", padx=10, pady=(1, 8))
 
@@ -579,8 +581,9 @@ class EventsView(ctk.CTkFrame):
         self.btn_tab_archiv.configure(text=f"Archiv. {n_arc}")
         self.btn_tab_elim.configure(text=f"Elim. {n_del}")
 
-        # 5. Actualizar badge de elegibilidad en encabezado
+        # 5. Evaluar elegibilidad según el umbral de prueba actual del previsualizador
         self._check_eligible_badge()
+        self._handle_analyze_archive()
 
     def _render_queue_items(self):
         """Dibuja las tarjetas de los reportes en espera en la cola FIFO."""
@@ -775,22 +778,18 @@ class EventsView(ctk.CTkFrame):
         self._render_catalog_items()
 
     def _check_eligible_badge(self):
-        """Actualiza el badge T=X en el encabezado."""
+        """Actualiza el badge T=X en el encabezado con el umbral de prueba."""
         if not self.observatory:
             return
             
-        original_t = self.observatory.max_tree_age
-        self.observatory.max_tree_age = getattr(self, 'archive_threshold_hours', original_t)
-        
+        t_val = getattr(self, 'archive_threshold_hours', getattr(self.observatory, 'max_tree_age', 72))
         try:
-            res = self.observatory.archive_subtree(execute=False)
+            res = self.observatory.archive_subtree(execute=False, max_age_hours=t_val)
             cnt = res["count"] if res else 0
         except Exception:
             cnt = 0
-        finally:
-            self.observatory.max_tree_age = original_t
             
-        self.lbl_eligible_badge.configure(text=f"T={getattr(self, 'archive_threshold_hours', original_t)}h · {cnt} elegibles")
+        self.lbl_eligible_badge.configure(text=f"T={t_val}h · {cnt} elegibles")
 
     # =========================================================================
     # ACCIONES DEL FORMULARIO CRUD
@@ -901,12 +900,21 @@ class EventsView(ctk.CTkFrame):
             except ValueError:
                 raise ValueError("Formato de fecha u hora inválido. Usa YYYY-MM-DD y HH:MM:SS")
 
+            st_name = self.option_station.get()
+            station_obj = None
+            if self.observatory and self.observatory.stations:
+                for s in self.observatory.stations:
+                    if s.name == st_name:
+                        station_obj = s
+                        break
+
             ev = self.observatory.edit_event(
                 event_id=eid,
                 new_magnitude=mag,
                 new_depth=depth,
                 new_epicenter=(x, y),
-                new_date_time=dt
+                new_date_time=dt,
+                station=station_obj
             )
 
             if ev is not None:
@@ -1127,48 +1135,43 @@ class EventsView(ctk.CTkFrame):
         self._handle_analyze_archive()
 
     def _handle_analyze_archive(self):
-        """Ejecuta la vista previa de búsqueda de ramas elegibles."""
+        """Ejecuta la vista previa de búsqueda de ramas elegibles usando el umbral del slider."""
         if not self.observatory:
             return
 
-        original_t = self.observatory.max_tree_age
-        # Modificar temporalmente para ver qué pasaría con este T
-        self.observatory.max_tree_age = self.archive_threshold_hours
-        
+        t_val = getattr(self, 'archive_threshold_hours', getattr(self.observatory, 'max_tree_age', 72))
         try:
-            res = self.observatory.archive_subtree(execute=False)
+            res = self.observatory.archive_subtree(execute=False, max_age_hours=t_val)
             if res:
                 root_id = res["best_root_id"]
                 count = res["count"]
                 affected = res["affected_ids"]
                 self.lbl_elig_root.configure(text=f"Raíz candidata: EV-{root_id}")
-                self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > T")
+                self.lbl_elig_detail.configure(text=f"{count} nodos · IDs {affected[:6]}... · todos > {t_val}h")
                 self.btn_exec_archive.configure(text=f"Ejecutar Archivo · {count} nodos", state="normal")
             else:
                 self.lbl_elig_root.configure(text="Sin ramas elegibles")
-                self.lbl_elig_detail.configure(text="No hay subárboles con todos los nodos P=1 y edad > T.")
+                self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {t_val}h.")
                 self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
-        except Exception as ex:
+        except Exception:
             self.lbl_elig_root.configure(text="Sin ramas elegibles")
-            self.lbl_elig_detail.configure(text=str(ex))
+            self.lbl_elig_detail.configure(text=f"No existe ninguna rama con todos sus nodos de Prioridad 1 y edad > {t_val}h.")
             self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
-        finally:
-            # Restaurar el valor global
-            self.observatory.max_tree_age = original_t
 
     def _handle_execute_archive(self):
-        """Ejecuta el archivo masivo de la rama elegible seleccionada."""
+        """Ejecuta el archivo masivo de la rama elegible seleccionada y fija el nuevo valor global de T."""
         if not self.observatory:
             return
 
+        # El usuario confirmó la acción: ahora sí fijamos el nuevo valor global de T en el observatorio
         self.observatory.max_tree_age = self.archive_threshold_hours
         try:
             res = self.observatory.archive_subtree(execute=True)
             if res:
                 root_id = res["best_root_id"]
                 count = res["count"]
-                self._show_msg(f"Rama con raíz {root_id} ({count} eventos) archivada con éxito.", SUCCESS)
-                self._log(f"[ARCHIVO MASIVO] {count} eventos trasladados al Histórico.", SUCCESS)
+                self._show_msg(f"Rama con raíz {root_id} ({count} eventos) archivada con éxito. T global fijado en {self.archive_threshold_hours}h.", SUCCESS)
+                self._log(f"[ARCHIVO MASIVO] {count} eventos trasladados al Histórico (T global = {self.archive_threshold_hours}h).", SUCCESS)
                 self.lbl_elig_root.configure(text="Archivo ejecutado con éxito")
                 self.btn_exec_archive.configure(text="Ejecutar Archivo de Rama", state="disabled")
                 self.refresh()
