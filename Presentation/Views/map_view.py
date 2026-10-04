@@ -1,6 +1,8 @@
 """
+Presentation / Views / map_view.py
 Geographic Map View (1000x1000 km) featuring layer toggles, interactive canvas, and inspector panel.
 Faithful to the Figma/HTML design using standardized atomic tokens.
+Connects with MapRenderer for live Cartesian projection, Pan & Zoom camera, and earthquake inspection.
 """
 
 import tkinter as tk
@@ -18,13 +20,14 @@ from Presentation.Components.theme import (
     WARNING, DANGER, SUCCESS,
     FONT_MAIN, FONT_MONO
 )
+from Presentation.Utils.map_renderer import MapRenderer
 
 
 class MapView(ctk.CTkFrame):
     """
     Geographic Map View · 1000x1000 km.
     Provides 2D spatial visualization for seismic events, monitoring stations, zones,
-    configurable coordinate reticle, and seismic event inspector.
+    configurable coordinate reticle, Pan & Zoom navigation, and dynamic seismic event inspector.
     """
     def __init__(self, master, app=None, observatory=None, **kwargs):
         super().__init__(master, fg_color=BG_ROOT, corner_radius=0, **kwargs)
@@ -41,9 +44,19 @@ class MapView(ctk.CTkFrame):
         # Reticle density and radius control variables
         self.grid_density = ctk.StringVar(value="100 km")
         self.radius_var = ctk.IntVar(value=60)
+        self.selected_event = None
         self.selected_event_id = "EV-1042"
 
+        # Camera Pan & Zoom state (x_min, x_max, y_min, y_max in km)
+        self.view_bounds = (0.0, 1000.0, 0.0, 1000.0)
+        self.zoom_level = 1.0
+
         self._build_ui()
+
+        # Set default inspected event if available in observatory
+        if self.observatory and self.observatory.events_dict:
+            first_event = self.observatory.events_dict.get(1042) or next(iter(self.observatory.events_dict.values()))
+            self.inspect_event(first_event)
 
     def _build_ui(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
@@ -84,7 +97,8 @@ class MapView(ctk.CTkFrame):
 
         pill_stations = Card(header_pills, corner_radius=6, border_color=BORDER_SUBTLE)
         pill_stations.pack(side="left", padx=(0, 8))
-        StyledLabel(pill_stations, text="5 estaciones · link OK", variant="mono", text_color=SUCCESS).pack(padx=10, pady=4)
+        self.lbl_station_count = StyledLabel(pill_stations, text="5 estaciones · link OK", variant="mono", text_color=SUCCESS)
+        self.lbl_station_count.pack(padx=10, pady=4)
 
         pill_counts = Card(header_pills, corner_radius=6, border_color=BORDER_SUBTLE)
         pill_counts.pack(side="left")
@@ -116,8 +130,8 @@ class MapView(ctk.CTkFrame):
         self.right_panel = ctk.CTkFrame(main_grid, fg_color="transparent", width=300)
         self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(10, 0))
 
-        self._build_layers_panel()
         self._build_map_canvas()
+        self._build_layers_panel()
         self._build_inspector_panel()
 
         # ---------------------------------------------------------
@@ -128,18 +142,11 @@ class MapView(ctk.CTkFrame):
 
         StyledLabel(
             footer,
-            text="map_view.py consume Observatory.get_map_snapshot() · toggle_layer() · inspect_quake(id, R) → candidatos",
+            text="Rueda: Zoom · Clic Der / Rueda: Arrastrar · Clic Izq: Inspeccionar sismo",
             variant="mono",
-            text_color=TEXT_MUTED
+            text_color=ACCENT_CYAN
         ).pack(side="left")
-
-        StyledLabel(
-            footer,
-            text="tooltip (x,y) en vivo · R dibujado · candidatos en amarillo",
-            variant="mono",
-            text_color=TEXT_MUTED
-        ).pack(side="right")
-
+        
     # =============================================================
     # COLUMN 1: Layers & Reticle Panel
     # =============================================================
@@ -147,14 +154,13 @@ class MapView(ctk.CTkFrame):
         header_box = ctk.CTkFrame(self.left_panel, fg_color="transparent")
         header_box.pack(fill="x", padx=14, pady=(14, 8))
 
-        StyledLabel(header_box, text="Capas · Layer Toggles", variant="h3").pack(side="left")
-        StyledLabel(header_box, text="map_renderer.py", variant="mono", text_color=TEXT_MUTED).pack(side="right")
+        StyledLabel(header_box, text="Mostrar elementos", variant="h3").pack(side="left")
 
         self._create_layer_row(self.left_panel, WARNING, "Zonas", "4 rect · pob/no-pob", self.layer_zones)
         self._create_layer_row(self.left_panel, ACCENT_CYAN, "Estaciones", "5 fijas · S-N/S-C", self.layer_stations)
-        self._create_layer_row(self.left_panel, DANGER, "Sismos activos", "radio ∝ M · P1/P2/P3", self.layer_active)
+        self.toggle_active = self._create_layer_row(self.left_panel, DANGER, "Sismos activos", "radio ∝ M · P1/P2/P3", self.layer_active)
         self._create_layer_row(self.left_panel, TEXT_MUTED, "Archivados", "huecos grises", self.layer_archived)
-        self._create_layer_row(self.left_panel, ACCENT_AMBER, "Réplicas / R", "vectores → ref", self.layer_replicas)
+        self.toggle_replicas = self._create_layer_row(self.left_panel, ACCENT_AMBER, "Réplicas / R", "vectores → ref", self.layer_replicas)
 
         # Reticle density selection
         reticle_box = Card(self.left_panel, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE)
@@ -200,6 +206,7 @@ class MapView(ctk.CTkFrame):
             command=self._on_layer_toggle
         )
         switch.pack(side="right", padx=(0, 10))
+        return switch
 
     def _set_grid_density(self, density: str):
         """Updates the active reticle density state and highlights the corresponding button."""
@@ -223,7 +230,7 @@ class MapView(ctk.CTkFrame):
         self._on_grid_toggle(density)
 
     # =============================================================
-    # COLUMN 2: Map Canvas & Legend
+    # COLUMN 2: Map Canvas, Zoom Toolbar & Legend
     # =============================================================
     def _build_map_canvas(self):
         top_bar = ctk.CTkFrame(self.center_panel, fg_color="transparent")
@@ -232,17 +239,43 @@ class MapView(ctk.CTkFrame):
         title_box = ctk.CTkFrame(top_bar, fg_color="transparent")
         title_box.pack(side="left")
 
-        StyledLabel(title_box, text="Plano 0-1000 km", variant="h3").pack(side="left")
+        StyledLabel(title_box, text="Plano 0–1000 km · Gran Escala", variant="h3").pack(side="left")
+
+        right_box = ctk.CTkFrame(top_bar, fg_color="transparent")
+        right_box.pack(side="right")
+
+        # Zoom Toolbar Controls
+        zoom_pill = Card(right_box, fg_color=BG_SURFACE, corner_radius=6, border_color=BORDER_SUBTLE)
+        zoom_pill.pack(side="left", padx=(0, 10))
+
+        self.lbl_zoom = StyledLabel(zoom_pill, text="1.0x", variant="mono", text_color=ACCENT_CYAN)
+        self.lbl_zoom.pack(side="left", padx=(8, 6))
+
+        btn_zoom_out = SecondaryButton(
+            zoom_pill, text="-", width=26, height=22, corner_radius=4,
+            command=self._zoom_out
+        )
+        btn_zoom_out.pack(side="left", padx=2, pady=2)
+
+        btn_zoom_in = SecondaryButton(
+            zoom_pill, text="+", width=26, height=22, corner_radius=4,
+            command=self._zoom_in
+        )
+        btn_zoom_in.pack(side="left", padx=2, pady=2)
+
+        btn_zoom_reset = SecondaryButton(
+            zoom_pill, text="⟲", width=26, height=22, corner_radius=4,
+            command=self._zoom_reset
+        )
+        btn_zoom_reset.pack(side="left", padx=(2, 4), pady=2)
 
         # Dual-pill cursor coordinate display (bg-input and cyan)
-        cursor_box = ctk.CTkFrame(top_bar, fg_color="transparent")
-        cursor_box.pack(side="right")
-      
-        coords_pill = Card(cursor_box, fg_color=ACCENT_CYAN, corner_radius=4, border_width=0)
+
+        coords_pill = Card(right_box, fg_color=ACCENT_CYAN, corner_radius=4, border_width=0)
         coords_pill.pack(side="left")
         self.lbl_cursor_coords = StyledLabel(
             coords_pill,
-            text="(512.4, 401.7) km",
+            text="(0.0, 0.0) km",
             variant="mono",
             text_color=TEXT_INVERSE
         )
@@ -256,9 +289,17 @@ class MapView(ctk.CTkFrame):
         )
         self.canvas.pack(fill="both", expand=True, padx=14, pady=(4, 6))
 
+        # Canvas event bindings for Zoom, Pan, Motion, Click
         self.canvas.bind("<Configure>", self._on_canvas_resize)
         self.canvas.bind("<Motion>", self._on_canvas_motion)
         self.canvas.bind("<Button-1>", self._on_canvas_click)
+        self.canvas.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.canvas.bind("<Button-4>", lambda e: self._zoom(1.25, center_km=MapRenderer.px_to_km(e.x, e.y, self.canvas_width, self.canvas_height, self.view_bounds)))
+        self.canvas.bind("<Button-5>", lambda e: self._zoom(1.0 / 1.25, center_km=MapRenderer.px_to_km(e.x, e.y, self.canvas_width, self.canvas_height, self.view_bounds)))
+        self.canvas.bind("<ButtonPress-3>", self._on_pan_start)
+        self.canvas.bind("<B3-Motion>", self._on_pan_move)
+        self.canvas.bind("<ButtonPress-2>", self._on_pan_start)
+        self.canvas.bind("<B2-Motion>", self._on_pan_move)
 
         # Bottom legend bar
         legend_card = Card(self.center_panel, fg_color=BG_ROOT, corner_radius=8, border_color=BORDER_SUBTLE)
@@ -278,6 +319,13 @@ class MapView(ctk.CTkFrame):
 
         for text, color in legend_items:
             StyledLabel(left_legend, text=text, text_color=color, variant="caption").pack(side="left", padx=5)
+
+        StyledLabel(
+            legend_card,
+            text="click sismo → dibuja R y resalta candidatos",
+            text_color=TEXT_MUTED,
+            variant="caption"
+        ).pack(side="right", padx=10, pady=4)
 
     # =============================================================
     # COLUMN 3: Map Inspector & Quick Measurement
@@ -335,7 +383,7 @@ class MapView(ctk.CTkFrame):
 
         # Radius R interactive slider
         slider_box = ctk.CTkFrame(card_inspector, fg_color="transparent")
-        slider_box.pack(fill="x", padx=14, pady=(12, 6))
+        slider_box.pack(fill="x", padx=14, pady=(12, 14))
 
         StyledLabel(slider_box, text="R", variant="mono", text_color=TEXT_MUTED).pack(side="left", padx=(0, 8))
 
@@ -363,14 +411,6 @@ class MapView(ctk.CTkFrame):
             text_color=TEXT_PRIMARY
         )
         self.lbl_radius_val.pack(side="right")
-
-        # "Set as Reference" action trigger button
-        self.btn_reference = PrimaryButton(
-            card_inspector,
-            text="Fijar como Referencia",
-            command=self._on_set_reference
-        )
-        self.btn_reference.pack(fill="x", padx=14, pady=(8, 14))
 
         # ---------------------------------------------------------
         # Card 2: Quick Measurement (Euclidean Distance & W Window)
@@ -424,6 +464,132 @@ class MapView(ctk.CTkFrame):
         return lbl_v
 
     # =============================================================
+    # Camera Pan & Zoom Handlers
+    # =============================================================
+    def _zoom_reset(self):
+        """Resets camera to full overview (0 to 1000 km)."""
+        self.view_bounds = (0.0, 1000.0, 0.0, 1000.0)
+        self.zoom_level = 1.0
+        self._update_zoom_label()
+        self._redraw_map()
+
+    def _zoom(self, factor: float, center_km: tuple = None):
+        """Zooms by factor (>1 zooms in, <1 zooms out), optionally keeping center_km fixed."""
+        x_min, x_max, y_min, y_max = self.view_bounds
+        curr_span_x = x_max - x_min
+        curr_span_y = y_max - y_min
+
+        new_span_x = curr_span_x / factor
+        new_span_y = curr_span_y / factor
+
+        # Clamp zoom limits: between 1x (span 1000 km) and 12x (span ~80 km)
+        if new_span_x >= 1000.0:
+            self._zoom_reset()
+            return
+        if new_span_x < 80.0:
+            new_span_x = 80.0
+            new_span_y = 80.0
+
+        if center_km is None:
+            cx = (x_min + x_max) / 2.0
+            cy = (y_min + y_max) / 2.0
+        else:
+            cx, cy = center_km
+
+        ratio_x = (cx - x_min) / curr_span_x
+        ratio_y = (cy - y_min) / curr_span_y
+
+        new_x_min = cx - ratio_x * new_span_x
+        new_x_max = new_x_min + new_span_x
+        new_y_min = cy - ratio_y * new_span_y
+        new_y_max = new_y_min + new_span_y
+
+        # Clamp viewport inside [0, 1000]
+        if new_x_min < 0:
+            new_x_max += (0 - new_x_min)
+            new_x_min = 0.0
+        if new_x_max > 1000:
+            new_x_min -= (new_x_max - 1000)
+            new_x_max = 1000.0
+
+        if new_y_min < 0:
+            new_y_max += (0 - new_y_min)
+            new_y_min = 0.0
+        if new_y_max > 1000:
+            new_y_min -= (new_y_max - 1000)
+            new_y_max = 1000.0
+
+        self.view_bounds = (max(0.0, new_x_min), min(1000.0, new_x_max), max(0.0, new_y_min), min(1000.0, new_y_max))
+        self.zoom_level = 1000.0 / (self.view_bounds[1] - self.view_bounds[0])
+        self._update_zoom_label()
+        self._redraw_map()
+
+    def _zoom_in(self):
+        self._zoom(1.35)
+
+    def _zoom_out(self):
+        self._zoom(1.0 / 1.35)
+
+    def _update_zoom_label(self):
+        self.lbl_zoom.configure(text=f"{self.zoom_level:.1f}x")
+
+    def _on_mouse_wheel(self, event):
+        """Zoom in/out with the mouse wheel centered on the current cursor position."""
+        w = getattr(self, "canvas_width", self.canvas.winfo_width())
+        h = getattr(self, "canvas_height", self.canvas.winfo_height())
+        km_x, km_y = MapRenderer.px_to_km(event.x, event.y, w, h, view_bounds=self.view_bounds)
+
+        factor = 1.25 if event.delta > 0 else (1.0 / 1.25)
+        self._zoom(factor, center_km=(km_x, km_y))
+
+    def _on_pan_start(self, event):
+        """Records initial drag position for panning."""
+        self._pan_start_x = event.x
+        self._pan_start_y = event.y
+        self._pan_start_bounds = self.view_bounds
+
+    def _on_pan_move(self, event):
+        """Smoothly pans camera across the map in kilometers based on mouse drag."""
+        if not hasattr(self, "_pan_start_bounds"):
+            return
+
+        w = getattr(self, "canvas_width", self.canvas.winfo_width())
+        h = getattr(self, "canvas_height", self.canvas.winfo_height())
+        usable_w = max(1, w - MapRenderer.MARGIN_LEFT - MapRenderer.MARGIN_RIGHT)
+        usable_h = max(1, h - MapRenderer.MARGIN_TOP - MapRenderer.MARGIN_BOTTOM)
+
+        dx_px = event.x - self._pan_start_x
+        dy_px = event.y - self._pan_start_y
+
+        span_x = self._pan_start_bounds[1] - self._pan_start_bounds[0]
+        span_y = self._pan_start_bounds[3] - self._pan_start_bounds[2]
+
+        d_km_x = (dx_px / usable_w) * span_x
+        d_km_y = -(dy_px / usable_h) * span_y
+
+        new_x_min = self._pan_start_bounds[0] - d_km_x
+        new_x_max = self._pan_start_bounds[1] - d_km_x
+        new_y_min = self._pan_start_bounds[2] - d_km_y
+        new_y_max = self._pan_start_bounds[3] - d_km_y
+
+        if new_x_min < 0:
+            new_x_max += (0 - new_x_min)
+            new_x_min = 0.0
+        if new_x_max > 1000:
+            new_x_min -= (new_x_max - 1000)
+            new_x_max = 1000.0
+
+        if new_y_min < 0:
+            new_y_max += (0 - new_y_min)
+            new_y_min = 0.0
+        if new_y_max > 1000:
+            new_y_min -= (new_y_max - 1000)
+            new_y_max = 1000.0
+
+        self.view_bounds = (max(0.0, new_x_min), min(1000.0, new_x_max), max(0.0, new_y_min), min(1000.0, new_y_max))
+        self._redraw_map()
+
+    # =============================================================
     # Event Handlers & Controllers
     # =============================================================
     def _on_radius_slider_change(self, value):
@@ -431,33 +597,88 @@ class MapView(ctk.CTkFrame):
         r_km = int(value)
         self.lbl_radius_val.configure(text=f"{r_km}km")
         self.lbl_row_radio.configure(text=f"{r_km} km dibujado")
+        if self.selected_event:
+            self._update_candidate_counts()
         self._redraw_map()
 
-    def _on_set_reference(self):
-        """Sets the currently inspected event as the replica reference origin."""
-        print(f"[MapView] Reference set: {self.selected_event_id}")
+    def inspect_event(self, event):
+        """
+        Dynamically updates the inspector panel with event details and triggers a map re-render.
+        Accepts either an Event domain object or an event-like dictionary.
+        """
+        if event is None:
+            return
 
-    def inspect_event(self, event_data: dict):
-        """
-        Dynamically updates the inspector panel with event details.
-        event_data: {
-            'id': 'EV-1042', 'mag': 6.1, 'p': 3, 'x': 412.0, 'y': 388.0, 'depth': 22.4,
-            'candidatos': '3 → 1 en amarillo', 'referencia': 'EV-1039 · 42km · 6h',
-            'zona': 'Z-01 VALLE · POB', 'estacion': 'S-N1 · Δ 18.2 km', 'estado': 'PENDIENTE'
-        }
-        """
-        self.selected_event_id = event_data.get("id", "--")
-        self.lbl_inspector_title.configure(text=f"Inspección · {self.selected_event_id}")
-        self.lbl_stat_mag.configure(text=f"M {event_data.get('mag', 0.0)} · P{event_data.get('p', 1)}")
-        self.lbl_stat_coords.configure(
-            text=f"({event_data.get('x', 0.0):.1f}, {event_data.get('y', 0.0):.1f}) km · {event_data.get('depth', 0.0)} km prof"
-        )
-        self.lbl_row_candidatos.configure(text=event_data.get("candidatos", "--"))
-        self.lbl_row_referencia.configure(text=event_data.get("referencia", "--"))
-        self.lbl_row_zona.configure(text=event_data.get("zona", "--"))
-        self.lbl_row_estacion.configure(text=event_data.get("estacion", "--"))
-        self.lbl_row_estado.configure(text=event_data.get("estado", "--"))
+        self.selected_event = event
+        eid = getattr(event, "id", None) or event.get("id", "--")
+        mag = float(getattr(event, "magnitude", None) or event.get("magnitude", 0.0))
+        priority = int(getattr(event, "priority", None) or event.get("priority", 1))
+        depth = float(getattr(event, "depth", None) or event.get("depth", 0.0))
+        epicenter = getattr(event, "epicenter", None) or event.get("epicenter", (0.0, 0.0))
+        state = getattr(event, "attention_state", None) or event.get("attention_state", "Pending")
+        status = getattr(event, "status", None) or event.get("status", "Active")
+
+        self.selected_event_id = str(eid)
+        self.lbl_inspector_title.configure(text=f"Inspección · EV-{eid}")
+
+        # Update status dot color
+        if priority >= 3:
+            dot_color = DANGER
+        elif priority == 2:
+            dot_color = WARNING
+        else:
+            dot_color = SUCCESS
+        self.dot_inspector.configure(fg_color=dot_color)
+
+        self.lbl_stat_mag.configure(text=f"M {mag:.1f} · P{priority}")
+        self.lbl_stat_coords.configure(text=f"({epicenter[0]:.1f}, {epicenter[1]:.1f}) km · {depth:.1f} km prof")
+
+        # Closest station detection
+        stations = getattr(self.observatory, "stations", []) if self.observatory else []
+        closest_st, st_dist = MapRenderer.find_nearest_station(epicenter[0], epicenter[1], stations)
+
+        if closest_st:
+            st_text = f"{closest_st.name} · Δ {st_dist:.1f} km"
+            self.lbl_measure_pair.configure(text=f"EV-{eid} → {closest_st.name}")
+            self.lbl_measure_dist.configure(text=f"{st_dist:.1f} km")
+        else:
+            st_text = "S-N1 · Δ 18.2 km"
+            self.lbl_measure_pair.configure(text=f"EV-{eid} → S-N1")
+            self.lbl_measure_dist.configure(text="18.2 km")
+
+        self.lbl_row_estacion.configure(text=st_text)
+
+        # Zone detection
+        zone_name = "Z-01 VALLE · POB"
+        if self.observatory and self.observatory.geographical_map:
+            for z in self.observatory.geographical_map.zones:
+                if z.contains(epicenter[0], epicenter[1]):
+                    zone_name = f"{z.name} · {'POB' if z.is_populated else 'NO-POB'}"
+                    break
+        self.lbl_row_zona.configure(text=zone_name)
+
+        # Reference and status labels
+        self.lbl_row_referencia.configure(text=f"EV-{eid} (ORIGEN)")
+        self.lbl_row_estado.configure(text=f"{state.upper()} · arch: {'sí' if status == 'Archived' else 'no'}")
+
+        self._update_candidate_counts()
         self._redraw_map()
+
+    def _update_candidate_counts(self):
+        """Calculates and updates candidate earthquakes inside radius R."""
+        if not self.selected_event or not self.observatory:
+            return
+
+        cx, cy = self.selected_event.epicenter
+        r_km = self.radius_var.get()
+        cands = 0
+
+        for other in self.observatory.events_dict.values():
+            if other.id != self.selected_event.id and other.status == "Active":
+                if MapRenderer.distance_km((cx, cy), other.epicenter) <= r_km:
+                    cands += 1
+
+        self.lbl_row_candidatos.configure(text=f"{cands} en radio R")
 
     def _on_canvas_resize(self, event):
         """Handles responsive canvas dimensions and triggers re-render."""
@@ -466,15 +687,42 @@ class MapView(ctk.CTkFrame):
         self._redraw_map()
 
     def _on_canvas_motion(self, event):
-        """Tracks cursor motion over the canvas and updates coordinate readout in km."""
-        pass
+        """Tracks cursor motion over the canvas and updates real-time coordinate readout in km."""
+        w = getattr(self, "canvas_width", self.canvas.winfo_width())
+        h = getattr(self, "canvas_height", self.canvas.winfo_height())
+        km_x, km_y = MapRenderer.px_to_km(event.x, event.y, w, h, view_bounds=self.view_bounds)
+        self.lbl_cursor_coords.configure(text=f"({km_x:.1f}, {km_y:.1f}) km")
 
     def _on_canvas_click(self, event):
         """Handles canvas click events to inspect earthquake nodes or stations."""
-        pass
+        w = getattr(self, "canvas_width", self.canvas.winfo_width())
+        h = getattr(self, "canvas_height", self.canvas.winfo_height())
+        km_x, km_y = MapRenderer.px_to_km(event.x, event.y, w, h, view_bounds=self.view_bounds)
+
+        if not self.observatory:
+            return
+
+        active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"]
+        # Scale click hit-test tolerance by zoom level so zoomed-in clicks are more precise
+        tolerance_km = max(8.0, 35.0 / self.zoom_level)
+        closest = MapRenderer.find_nearest_event(km_x, km_y, active_events, max_dist_km=tolerance_km)
+
+        if closest:
+            self.inspect_event(closest)
 
     def _on_layer_toggle(self):
         """Handles visibility state changes for any of the layer toggles."""
+        # When active earthquakes are turned off, automatically turn off and lock replicas
+        if not self.layer_active.get():
+            self.layer_replicas.set(False)
+            if hasattr(self, "toggle_replicas"):
+                self.toggle_replicas.set(False)
+                self.toggle_replicas.set_enabled(False)
+        else:
+            # Re-enable the replicas toggle so user can interact with it again
+            if hasattr(self, "toggle_replicas"):
+                self.toggle_replicas.set_enabled(True)
+
         self._redraw_map()
 
     def _on_grid_toggle(self, value):
@@ -483,8 +731,53 @@ class MapView(ctk.CTkFrame):
 
     def _redraw_map(self):
         """Integration hook with MapRenderer to redraw all active layers."""
-        pass
+        if not hasattr(self, "canvas"):
+            return
+
+        w = getattr(self, "canvas_width", self.canvas.winfo_width())
+        h = getattr(self, "canvas_height", self.canvas.winfo_height())
+
+        zones = []
+        stations = []
+        active_events = []
+        archived_events = []
+
+        if self.observatory:
+            if self.observatory.geographical_map:
+                zones = self.observatory.geographical_map.zones
+            stations = self.observatory.stations or []
+            active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"]
+            if self.observatory.historic:
+                archived_events = list(self.observatory.historic.archived.values())
+
+            # Update header counts
+            self.lbl_header_counts.configure(
+                text=f"{len(active_events)} activos · {len(archived_events)} archivados"
+            )
+            self.lbl_station_count.configure(text=f"{len(stations)} estaciones · link OK")
+
+        MapRenderer.render(
+            canvas=self.canvas,
+            canvas_w=w,
+            canvas_h=h,
+            zones=zones,
+            stations=stations,
+            active_events=active_events,
+            archived_events=archived_events,
+            grid_density=self.grid_density.get(),
+            show_zones=self.layer_zones.get(),
+            show_stations=self.layer_stations.get(),
+            show_active=self.layer_active.get(),
+            show_archived=self.layer_archived.get(),
+            show_replicas=self.layer_replicas.get(),
+            selected_event=self.selected_event,
+            radius_km=self.radius_var.get(),
+            view_bounds=self.view_bounds
+        )
 
     def refresh(self):
         """Refreshes header metrics and triggers a map re-render."""
-        pass
+        if self.selected_event and self.observatory and self.selected_event.id in self.observatory.events_dict:
+            self.inspect_event(self.observatory.events_dict[self.selected_event.id])
+        else:
+            self._redraw_map()
