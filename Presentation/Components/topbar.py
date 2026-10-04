@@ -351,7 +351,43 @@ class Topbar(ctk.CTkFrame):
                     label=f"{prefix}{stem}",
                     command=lambda p=full_path, s=stem: self._load_specific_scenario(p, s)
                 )
-        else:
+
+        # Listar subdirectorios como submenús organizados (ej. casos_de_prueba)
+        try:
+            subdirs = [
+                d for d in sorted(os.listdir(target_dir))
+                if os.path.isdir(os.path.join(target_dir, d)) and not d.startswith(".")
+            ]
+            for sname in subdirs:
+                subpath = os.path.join(target_dir, sname)
+                sub_files = [f for f in sorted(os.listdir(subpath)) if f.lower().endswith(".json")]
+                if sub_files:
+                    submenu = tk.Menu(
+                        menu,
+                        tearoff=0,
+                        bg="#0b131c",
+                        fg="#e8eef3",
+                        activebackground="#1e293b",
+                        activeforeground="#38bdf8",
+                        relief="solid",
+                        bd=1,
+                        font=(FONT_MAIN, 10)
+                    )
+                    for sfname in sub_files:
+                        s_stem = os.path.splitext(sfname)[0]
+                        s_active = (s_stem.lower() == self.current_scenario_name.lower())
+                        s_prefix = "● " if s_active else "   "
+                        s_full_path = os.path.join(subpath, sfname)
+                        submenu.add_command(
+                            label=f"{s_prefix}{s_stem}",
+                            command=lambda p=s_full_path, s=s_stem: self._load_specific_scenario(p, s)
+                        )
+                    label_display = f"🧪 {sname.replace('_', ' ').title()}"
+                    menu.add_cascade(label=label_display, menu=submenu)
+        except Exception:
+            pass
+
+        if not json_files and not subdirs:
             menu.add_command(label="  (Sin archivos en saved_versions/)", state="disabled")
 
         menu.add_separator()
