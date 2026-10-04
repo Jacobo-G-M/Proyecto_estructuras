@@ -110,6 +110,7 @@ class MapRenderer:
         show_archived: bool = True,
         show_replicas: bool = True,
         selected_event = None,
+        selected_station_id: Optional[int] = None,
         radius_km: int = 60,
         view_bounds: Tuple[float, float, float, float] = (0.0, 1000.0, 0.0, 1000.0)
     ) -> None:
@@ -167,7 +168,14 @@ class MapRenderer:
 
         # 6. Monitoring Stations Layer
         if show_stations and stations:
-            cls.draw_stations(canvas, stations, canvas_w, canvas_h, view_bounds=view_bounds)
+            cls.draw_stations(
+                canvas=canvas,
+                stations=stations,
+                canvas_w=canvas_w,
+                canvas_h=canvas_h,
+                selected_station_id=selected_station_id,
+                view_bounds=view_bounds
+            )
 
         # 7. Mask outside margins to keep clean boundaries
         cls.draw_margin_overlays(canvas, canvas_w, canvas_h, view_bounds=view_bounds, density=grid_density)
@@ -381,6 +389,7 @@ class MapRenderer:
         stations: list,
         canvas_w: int,
         canvas_h: int,
+        selected_station_id: Optional[int] = None,
         view_bounds: Tuple[float, float, float, float] = (0.0, 1000.0, 0.0, 1000.0)
     ) -> None:
         """Renders seismic monitoring stations as cyan triangles with code labels."""
@@ -389,6 +398,7 @@ class MapRenderer:
         for station in stations:
             try:
                 sx, sy = station.coords
+                sid = getattr(station, "id", None)
             except (AttributeError, TypeError, ValueError):
                 continue
 
@@ -396,6 +406,16 @@ class MapRenderer:
                 continue
 
             px, py = cls.km_to_px(sx, sy, canvas_w, canvas_h, view_bounds=view_bounds)
+
+            is_selected = (selected_station_id is not None and sid == selected_station_id)
+            if is_selected:
+                canvas.create_oval(
+                    px - 14, py - 14,
+                    px + 14, py + 14,
+                    outline=ACCENT_CYAN,
+                    width=1.5,
+                    dash=(3, 3)
+                )
 
             # Upward equilateral triangle
             points = [
@@ -407,14 +427,14 @@ class MapRenderer:
                 points,
                 fill=ACCENT_CYAN,
                 outline="#ffffff",
-                width=1
+                width=1.5 if is_selected else 1
             )
 
             # Station name
             canvas.create_text(
                 px, py + 14,
                 text=station.name,
-                fill=ACCENT_CYAN,
+                fill="#ffffff" if is_selected else ACCENT_CYAN,
                 font=("Consolas", 8, "bold")
             )
 

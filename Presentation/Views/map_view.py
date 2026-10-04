@@ -38,25 +38,22 @@ class MapView(ctk.CTkFrame):
         self.layer_zones = ctk.BooleanVar(value=True)
         self.layer_stations = ctk.BooleanVar(value=True)
         self.layer_active = ctk.BooleanVar(value=True)
-        self.layer_archived = ctk.BooleanVar(value=True)
+        self.layer_archived = ctk.BooleanVar(value=False)
         self.layer_replicas = ctk.BooleanVar(value=True)
 
         # Reticle density and radius control variables
         self.grid_density = ctk.StringVar(value="100 km")
         self.radius_var = ctk.IntVar(value=60)
         self.selected_event = None
-        self.selected_event_id = "EV-1042"
+        self.selected_station = None
+        self.selected_event_id = None
 
         # Camera Pan & Zoom state (x_min, x_max, y_min, y_max in km)
         self.view_bounds = (0.0, 1000.0, 0.0, 1000.0)
         self.zoom_level = 1.0
 
         self._build_ui()
-
-        # Set default inspected event if available in observatory
-        if self.observatory and self.observatory.events_dict:
-            first_event = self.observatory.events_dict.get(1042) or next(iter(self.observatory.events_dict.values()))
-            self.inspect_event(first_event)
+        self.refresh()
 
     def _build_ui(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
@@ -73,13 +70,6 @@ class MapView(ctk.CTkFrame):
 
         ctk.CTkLabel(
             title_section,
-            text="PRESENTATION / VIEWS / MAP_VIEW.PY · EXPANDIDO",
-            font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"),
-            text_color=ACCENT_CYAN
-        ).pack(anchor="w")
-
-        ctk.CTkLabel(
-            title_section,
             text="Mapa Geográfico · 1000 × 1000 km",
             font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"),
             text_color=TEXT_PRIMARY
@@ -87,7 +77,7 @@ class MapView(ctk.CTkFrame):
 
         ctk.CTkLabel(
             title_section,
-            text="Visor proyectado con retícula cada 100 km, capas conmutables y medición. Render: map_renderer.py.",
+            text="Mapa que muestra sismos con retícula cada 100 km, filtros y medición.",
             font=ctk.CTkFont(family=FONT_MAIN, size=11),
             text_color=TEXT_SECONDARY
         ).pack(anchor="w", pady=(2, 0))
@@ -97,14 +87,14 @@ class MapView(ctk.CTkFrame):
 
         pill_stations = Card(header_pills, corner_radius=6, border_color=BORDER_SUBTLE)
         pill_stations.pack(side="left", padx=(0, 8))
-        self.lbl_station_count = StyledLabel(pill_stations, text="5 estaciones · link OK", variant="mono", text_color=SUCCESS)
+        self.lbl_station_count = StyledLabel(pill_stations, text="0 estaciones · sin enlace", variant="mono", text_color=SUCCESS)
         self.lbl_station_count.pack(padx=10, pady=4)
 
         pill_counts = Card(header_pills, corner_radius=6, border_color=BORDER_SUBTLE)
         pill_counts.pack(side="left")
         self.lbl_header_counts = StyledLabel(
             pill_counts,
-            text="248 activos · 61 archivados",
+            text="0 activos · 0 archivados",
             variant="mono",
             text_color=TEXT_MUTED
         )
@@ -156,11 +146,11 @@ class MapView(ctk.CTkFrame):
 
         StyledLabel(header_box, text="Mostrar elementos", variant="h3").pack(side="left")
 
-        self._create_layer_row(self.left_panel, WARNING, "Zonas", "4 rect · pob/no-pob", self.layer_zones)
-        self._create_layer_row(self.left_panel, ACCENT_CYAN, "Estaciones", "5 fijas · S-N/S-C", self.layer_stations)
-        self.toggle_active = self._create_layer_row(self.left_panel, DANGER, "Sismos activos", "radio ∝ M · P1/P2/P3", self.layer_active)
-        self._create_layer_row(self.left_panel, TEXT_MUTED, "Archivados", "huecos grises", self.layer_archived)
-        self.toggle_replicas = self._create_layer_row(self.left_panel, ACCENT_AMBER, "Réplicas / R", "vectores → ref", self.layer_replicas)
+        self._create_layer_row(self.left_panel, WARNING, "Zonas", self.layer_zones)
+        self._create_layer_row(self.left_panel, ACCENT_CYAN, "Estaciones", self.layer_stations)
+        self.toggle_active = self._create_layer_row(self.left_panel, DANGER, "Sismos activos", self.layer_active)
+        self._create_layer_row(self.left_panel, TEXT_MUTED, "Archivados", self.layer_archived)
+        self.toggle_replicas = self._create_layer_row(self.left_panel, ACCENT_AMBER, "Réplicas / R", self.layer_replicas)
 
         # Reticle density selection
         reticle_box = Card(self.left_panel, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE)
@@ -185,20 +175,16 @@ class MapView(ctk.CTkFrame):
 
         self._set_grid_density("100 km")
 
-    def _create_layer_row(self, master, dot_color: str, title: str, subtitle: str, variable: ctk.BooleanVar):
-        """Constructs an individual layer toggle row with indicator dot, titles, and switch."""
-        row = Card(master, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE, height=54)
-        row.pack(fill="x", padx=12, pady=4)
+    def _create_layer_row(self, master, dot_color: str, title: str, variable: ctk.BooleanVar):
+        """Constructs an individual layer toggle row with indicator dot, title, and switch."""
+        row = Card(master, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE, height=44)
+        row.pack(fill="x", padx=12, pady=3)
         row.pack_propagate(False)
 
-        dot = StatusDot(row, width=10, height=10, corner_radius=5, fg_color=dot_color)
+        dot = StatusDot(row, width=8, height=8, corner_radius=4, fg_color=dot_color)
         dot.pack(side="left", padx=(12, 8))
 
-        text_box = ctk.CTkFrame(row, fg_color="transparent")
-        text_box.pack(side="left", fill="y", pady=5)
-
-        StyledLabel(text_box, text=title, variant="h3").pack(anchor="w")
-        StyledLabel(text_box, text=subtitle, variant="caption").pack(anchor="w")
+        StyledLabel(row, text=title, variant="h3").pack(side="left")
 
         switch = CapsuleToggle(
             row,
@@ -320,13 +306,6 @@ class MapView(ctk.CTkFrame):
         for text, color in legend_items:
             StyledLabel(left_legend, text=text, text_color=color, variant="caption").pack(side="left", padx=5)
 
-        StyledLabel(
-            legend_card,
-            text="click sismo → dibuja R y resalta candidatos",
-            text_color=TEXT_MUTED,
-            variant="caption"
-        ).pack(side="right", padx=10, pady=4)
-
     # =============================================================
     # COLUMN 3: Map Inspector & Quick Measurement
     # =============================================================
@@ -340,12 +319,12 @@ class MapView(ctk.CTkFrame):
         header_inspector = ctk.CTkFrame(card_inspector, fg_color="transparent")
         header_inspector.pack(fill="x", padx=14, pady=(14, 0))
 
-        self.dot_inspector = StatusDot(header_inspector, size=10, fg_color=DANGER)
+        self.dot_inspector = StatusDot(header_inspector, size=10, fg_color=TEXT_MUTED)
         self.dot_inspector.pack(side="left", padx=(0, 8))
 
         self.lbl_inspector_title = StyledLabel(
             header_inspector,
-            text=f"Inspección · {self.selected_event_id}",
+            text="Sin selección",
             variant="h3"
         )
         self.lbl_inspector_title.pack(side="left")
@@ -356,7 +335,7 @@ class MapView(ctk.CTkFrame):
 
         self.lbl_stat_mag = ctk.CTkLabel(
             stat_box,
-            text="M 6.1 · P3",
+            text="--",
             font=ctk.CTkFont(family=FONT_MONO, size=18, weight="bold"),
             text_color=TEXT_PRIMARY
         )
@@ -364,7 +343,7 @@ class MapView(ctk.CTkFrame):
 
         self.lbl_stat_coords = StyledLabel(
             stat_box,
-            text="(412.0, 388.0) km · 22.4 km prof",
+            text="Selecciona un sismo o estación en el mapa",
             variant="caption",
             text_color=TEXT_MUTED
         )
@@ -374,12 +353,12 @@ class MapView(ctk.CTkFrame):
         table_box = Card(card_inspector, fg_color=BG_SURFACE, corner_radius=8, border_color=BORDER_SUBTLE)
         table_box.pack(fill="x", padx=14, pady=4)
 
-        self.lbl_row_radio = self._add_table_row(table_box, "Radio R", "60 km dibujado", ACCENT_CYAN)
-        self.lbl_row_candidatos = self._add_table_row(table_box, "Candidatos en R", "3 → 1 en amarillo", ACCENT_AMBER)
-        self.lbl_row_referencia = self._add_table_row(table_box, "Referencia", "EV-1039 · 42km · 6h", TEXT_PRIMARY)
-        self.lbl_row_zona = self._add_table_row(table_box, "Zona", "Z-01 VALLE · POB", WARNING)
-        self.lbl_row_estacion = self._add_table_row(table_box, "Estación cerc.", "S-N1 · Δ 18.2 km", TEXT_PRIMARY)
-        self.lbl_row_estado = self._add_table_row(table_box, "Estado", "PENDIENTE · arch: no", ACCENT_AMBER, is_last=True)
+        self.lbl_row_radio = self._add_table_row(table_box, "Radio R", "--", ACCENT_CYAN)
+        self.lbl_row_candidatos = self._add_table_row(table_box, "Candidatos en R", "--", ACCENT_AMBER)
+        self.lbl_row_referencia = self._add_table_row(table_box, "Referencia", "--", TEXT_PRIMARY)
+        self.lbl_row_zona = self._add_table_row(table_box, "Zona", "--", WARNING)
+        self.lbl_row_estacion = self._add_table_row(table_box, "Estación cerc.", "--", TEXT_PRIMARY)
+        self.lbl_row_estado = self._add_table_row(table_box, "Estado", "--", ACCENT_AMBER, is_last=True)
 
         # Radius R interactive slider
         slider_box = ctk.CTkFrame(card_inspector, fg_color="transparent")
@@ -431,19 +410,19 @@ class MapView(ctk.CTkFrame):
         row1 = ctk.CTkFrame(measure_box, fg_color="transparent")
         row1.pack(fill="x", padx=12, pady=(8, 3))
         StyledLabel(row1, text="A → B", variant="mono", text_color=TEXT_MUTED).pack(side="left")
-        self.lbl_measure_pair = StyledLabel(row1, text="EV-1042 → S-N1", variant="mono", text_color=TEXT_PRIMARY)
+        self.lbl_measure_pair = StyledLabel(row1, text="--", variant="mono", text_color=TEXT_PRIMARY)
         self.lbl_measure_pair.pack(side="right")
 
         row2 = ctk.CTkFrame(measure_box, fg_color="transparent")
         row2.pack(fill="x", padx=12, pady=3)
         StyledLabel(row2, text="Distancia", variant="mono", text_color=TEXT_MUTED).pack(side="left")
-        self.lbl_measure_dist = StyledLabel(row2, text="18.2 km", variant="mono", text_color=ACCENT_CYAN)
+        self.lbl_measure_dist = StyledLabel(row2, text="--", variant="mono", text_color=ACCENT_CYAN)
         self.lbl_measure_dist.pack(side="right")
 
         row3 = ctk.CTkFrame(measure_box, fg_color="transparent")
         row3.pack(fill="x", padx=12, pady=(3, 8))
         StyledLabel(row3, text="Δt ventana W", variant="mono", text_color=TEXT_MUTED).pack(side="left")
-        self.lbl_measure_window = StyledLabel(row3, text="6 h · dentro ✓", variant="mono", text_color=TEXT_PRIMARY)
+        self.lbl_measure_window = StyledLabel(row3, text="--", variant="mono", text_color=TEXT_PRIMARY)
         self.lbl_measure_window.pack(side="right")
 
     def _add_table_row(self, master, label: str, value: str, value_color: str, is_last: bool = False):
@@ -603,13 +582,15 @@ class MapView(ctk.CTkFrame):
 
     def inspect_event(self, event):
         """
-        Dynamically updates the inspector panel with event details and triggers a map re-render.
+        Dynamically updates the inspector panel with earthquake details and triggers a map re-render.
         Accepts either an Event domain object or an event-like dictionary.
         """
         if event is None:
             return
 
         self.selected_event = event
+        self.selected_station = None
+
         eid = getattr(event, "id", None) or event.get("id", "--")
         mag = float(getattr(event, "magnitude", None) or event.get("magnitude", 0.0))
         priority = int(getattr(event, "priority", None) or event.get("priority", 1))
@@ -621,7 +602,7 @@ class MapView(ctk.CTkFrame):
         self.selected_event_id = str(eid)
         self.lbl_inspector_title.configure(text=f"Inspección · EV-{eid}")
 
-        # Update status dot color
+        # Priority indicator color
         if priority >= 3:
             dot_color = DANGER
         elif priority == 2:
@@ -642,14 +623,14 @@ class MapView(ctk.CTkFrame):
             self.lbl_measure_pair.configure(text=f"EV-{eid} → {closest_st.name}")
             self.lbl_measure_dist.configure(text=f"{st_dist:.1f} km")
         else:
-            st_text = "S-N1 · Δ 18.2 km"
-            self.lbl_measure_pair.configure(text=f"EV-{eid} → S-N1")
-            self.lbl_measure_dist.configure(text="18.2 km")
+            st_text = "Sin estaciones registradas"
+            self.lbl_measure_pair.configure(text=f"EV-{eid} → --")
+            self.lbl_measure_dist.configure(text="--")
 
         self.lbl_row_estacion.configure(text=st_text)
 
         # Zone detection
-        zone_name = "Z-01 VALLE · POB"
+        zone_name = "Fuera de zona delimitada"
         if self.observatory and self.observatory.geographical_map:
             for z in self.observatory.geographical_map.zones:
                 if z.contains(epicenter[0], epicenter[1]):
@@ -657,16 +638,131 @@ class MapView(ctk.CTkFrame):
                     break
         self.lbl_row_zona.configure(text=zone_name)
 
-        # Reference and status labels
-        self.lbl_row_referencia.configure(text=f"EV-{eid} (ORIGEN)")
+        # Dynamic association & replica lookup
+        ref_text = "Sin réplicas (origen)"
+        if self.observatory and hasattr(self.observatory, "associations") and self.observatory.associations:
+            for assoc in self.observatory.associations:
+                reps = getattr(assoc, "referenced_by", [])
+                if any(getattr(r, "id", None) == eid for r in reps):
+                    parent = assoc.chosen_reference
+                    if parent:
+                        p_dist = MapRenderer.distance_km(parent.epicenter, epicenter)
+                        dt_h = 0.0
+                        if hasattr(event, "date_time") and hasattr(parent, "date_time") and event.date_time and parent.date_time:
+                            dt_h = abs((event.date_time - parent.date_time).total_seconds()) / 3600.0
+                        ref_text = f"Réplica EV-{parent.id} · {p_dist:.1f}km"
+                    break
+                elif getattr(assoc.chosen_reference, "id", None) == eid:
+                    if reps:
+                        ref_text = f"Referencia ({len(reps)} réplicas)"
+                    break
+
+        self.lbl_row_referencia.configure(text=ref_text)
         self.lbl_row_estado.configure(text=f"{state.upper()} · arch: {'sí' if status == 'Archived' else 'no'}")
 
+        # Elapsed time window W against simulation clock
+        sim_clock = getattr(self.observatory, "clock_simulation", None) if self.observatory else None
+        ev_dt = getattr(event, "date_time", None)
+        max_w = getattr(self.observatory, "max_time", 48.0) if self.observatory else 48.0
+        if sim_clock and ev_dt:
+            delta_h = max(0.0, (sim_clock - ev_dt).total_seconds() / 3600.0)
+            in_w = "dentro ✓" if delta_h <= max_w else "fuera ✗"
+            self.lbl_measure_window.configure(text=f"{delta_h:.1f} h · {in_w}")
+        else:
+            self.lbl_measure_window.configure(text="--")
+
+        self.lbl_row_radio.configure(text=f"{self.radius_var.get()} km dibujado")
         self._update_candidate_counts()
         self._redraw_map()
+
+    def inspect_station(self, station):
+        """
+        Dynamically updates the inspector panel with monitoring station details.
+        """
+        if station is None:
+            return
+
+        self.selected_station = station
+        self.selected_event = None
+        self.selected_event_id = None
+
+        sid = getattr(station, "id", None)
+        sname = getattr(station, "name", f"S-{sid}")
+        coords = getattr(station, "coords", (0.0, 0.0))
+
+        self.lbl_inspector_title.configure(text=f"Estación · {sname}")
+        self.dot_inspector.configure(fg_color=ACCENT_CYAN)
+
+        self.lbl_stat_mag.configure(text=f"{sname} · ID {sid}")
+        self.lbl_stat_coords.configure(text=f"({coords[0]:.1f}, {coords[1]:.1f}) km · Monitoreo")
+
+        # Zone detection
+        zone_name = "Fuera de zona delimitada"
+        if self.observatory and self.observatory.geographical_map:
+            for z in self.observatory.geographical_map.zones:
+                if z.contains(coords[0], coords[1]):
+                    zone_name = f"{z.name} · {'POB' if z.is_populated else 'NO-POB'}"
+                    break
+        self.lbl_row_zona.configure(text=zone_name)
+
+        # Nearest active event to this station
+        active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"] if self.observatory else []
+        closest_ev = MapRenderer.find_nearest_event(coords[0], coords[1], active_events)
+        if closest_ev:
+            ev_dist = MapRenderer.distance_km(coords, closest_ev.epicenter)
+            self.lbl_row_estacion.configure(text=f"EV-{closest_ev.id} · Δ {ev_dist:.1f} km")
+            self.lbl_measure_pair.configure(text=f"{sname} → EV-{closest_ev.id}")
+            self.lbl_measure_dist.configure(text=f"{ev_dist:.1f} km")
+        else:
+            self.lbl_row_estacion.configure(text="Sin sismos cercanos")
+            self.lbl_measure_pair.configure(text=f"{sname} → --")
+            self.lbl_measure_dist.configure(text="--")
+
+        self.lbl_row_radio.configure(text="N/A (Estación)")
+        rep_count = len(getattr(station, "my_reports", []))
+        self.lbl_row_candidatos.configure(text=f"{rep_count} reportes emitidos")
+        self.lbl_row_referencia.configure(text=f"Coords ({coords[0]:.1f}, {coords[1]:.1f})")
+        self.lbl_row_estado.configure(text="OPERATIVA · link OK")
+        self.lbl_measure_window.configure(text="Enlace activo ✓")
+
+        self._redraw_map()
+
+    def _clear_inspector(self):
+        """Clears inspector panel to empty state when no event or station is selected."""
+        self.selected_event = None
+        self.selected_station = None
+        self.selected_event_id = None
+        self.lbl_inspector_title.configure(text="Sin selección")
+        self.dot_inspector.configure(fg_color=TEXT_MUTED)
+        self.lbl_stat_mag.configure(text="--")
+        self.lbl_stat_coords.configure(text="Selecciona un sismo o estación en el mapa")
+        self.lbl_row_radio.configure(text="--")
+        self.lbl_row_candidatos.configure(text="--")
+        self.lbl_row_referencia.configure(text="--")
+        self.lbl_row_zona.configure(text="--")
+        self.lbl_row_estacion.configure(text="--")
+        self.lbl_row_estado.configure(text="--")
+        self.lbl_measure_pair.configure(text="--")
+        self.lbl_measure_dist.configure(text="--")
+        self.lbl_measure_window.configure(text="--")
+
+    def _update_header_counts(self):
+        """Updates header metrics dynamically based on current observatory state."""
+        if not hasattr(self, "lbl_station_count") or not hasattr(self, "lbl_header_counts"):
+            return
+
+        stations = getattr(self.observatory, "stations", []) if self.observatory else []
+        active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"] if self.observatory else []
+        archived_count = len(self.observatory.historic.archived) if (self.observatory and self.observatory.historic and hasattr(self.observatory.historic, "archived")) else 0
+
+        st_status = "link OK" if len(stations) > 0 else "sin enlace"
+        self.lbl_station_count.configure(text=f"{len(stations)} estaciones · {st_status}")
+        self.lbl_header_counts.configure(text=f"{len(active_events)} activos · {archived_count} archivados")
 
     def _update_candidate_counts(self):
         """Calculates and updates candidate earthquakes inside radius R."""
         if not self.selected_event or not self.observatory:
+            self.lbl_row_candidatos.configure(text="0 en radio R")
             return
 
         cx, cy = self.selected_event.epicenter
@@ -702,13 +798,39 @@ class MapView(ctk.CTkFrame):
         if not self.observatory:
             return
 
-        active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"]
-        # Scale click hit-test tolerance by zoom level so zoomed-in clicks are more precise
-        tolerance_km = max(8.0, 35.0 / self.zoom_level)
-        closest = MapRenderer.find_nearest_event(km_x, km_y, active_events, max_dist_km=tolerance_km)
+        tolerance_km = max(10.0, 35.0 / self.zoom_level)
+        candidates = []
 
-        if closest:
-            self.inspect_event(closest)
+        # 1. Active earthquakes
+        if self.layer_active.get():
+            active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"]
+            closest_ev = MapRenderer.find_nearest_event(km_x, km_y, active_events, max_dist_km=tolerance_km)
+            if closest_ev:
+                dist = MapRenderer.distance_km((km_x, km_y), closest_ev.epicenter)
+                candidates.append((dist, "event", closest_ev))
+
+        # 2. Archived earthquakes
+        if self.layer_archived.get() and self.observatory.historic and hasattr(self.observatory.historic, "archived"):
+            arch_events = list(self.observatory.historic.archived.values())
+            closest_arch = MapRenderer.find_nearest_event(km_x, km_y, arch_events, max_dist_km=tolerance_km)
+            if closest_arch:
+                dist = MapRenderer.distance_km((km_x, km_y), closest_arch.epicenter)
+                candidates.append((dist, "event", closest_arch))
+
+        # 3. Monitoring stations
+        if self.layer_stations.get():
+            stations = getattr(self.observatory, "stations", []) or []
+            closest_st, st_dist = MapRenderer.find_nearest_station(km_x, km_y, stations, max_dist_km=tolerance_km)
+            if closest_st:
+                candidates.append((st_dist, "station", closest_st))
+
+        if candidates:
+            candidates.sort(key=lambda c: c[0])
+            best_type, best_item = candidates[0][1], candidates[0][2]
+            if best_type == "event":
+                self.inspect_event(best_item)
+            elif best_type == "station":
+                self.inspect_station(best_item)
 
     def _on_layer_toggle(self):
         """Handles visibility state changes for any of the layer toggles."""
@@ -747,14 +869,10 @@ class MapView(ctk.CTkFrame):
                 zones = self.observatory.geographical_map.zones
             stations = self.observatory.stations or []
             active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"]
-            if self.observatory.historic:
+            if self.observatory.historic and hasattr(self.observatory.historic, "archived"):
                 archived_events = list(self.observatory.historic.archived.values())
 
-            # Update header counts
-            self.lbl_header_counts.configure(
-                text=f"{len(active_events)} activos · {len(archived_events)} archivados"
-            )
-            self.lbl_station_count.configure(text=f"{len(stations)} estaciones · link OK")
+        self._update_header_counts()
 
         MapRenderer.render(
             canvas=self.canvas,
@@ -771,13 +889,43 @@ class MapView(ctk.CTkFrame):
             show_archived=self.layer_archived.get(),
             show_replicas=self.layer_replicas.get(),
             selected_event=self.selected_event,
+            selected_station_id=self.selected_station.id if self.selected_station else None,
             radius_km=self.radius_var.get(),
             view_bounds=self.view_bounds
         )
 
     def refresh(self):
         """Refreshes header metrics and triggers a map re-render."""
-        if self.selected_event and self.observatory and self.selected_event.id in self.observatory.events_dict:
-            self.inspect_event(self.observatory.events_dict[self.selected_event.id])
-        else:
-            self._redraw_map()
+        self._update_header_counts()
+
+        # If previous selected event still exists, re-inspect it
+        if self.selected_event and self.observatory:
+            all_events = dict(self.observatory.events_dict)
+            if self.observatory.historic and hasattr(self.observatory.historic, "archived"):
+                all_events.update(self.observatory.historic.archived)
+            if self.selected_event.id in all_events:
+                self.inspect_event(all_events[self.selected_event.id])
+                return
+
+        # If previous selected station still exists, re-inspect it
+        if self.selected_station and self.observatory:
+            stations = getattr(self.observatory, "stations", []) or []
+            for st in stations:
+                if st.id == self.selected_station.id:
+                    self.inspect_station(st)
+                    return
+
+        # Fallback to inspecting highest priority active event, or first station
+        if self.observatory and self.observatory.events_dict:
+            active_events = [ev for ev in self.observatory.events_dict.values() if ev.status == "Active"]
+            if active_events:
+                active_events.sort(key=lambda ev: (-getattr(ev, "priority", 1), -getattr(ev, "magnitude", 0.0)))
+                self.inspect_event(active_events[0])
+                return
+
+        if self.observatory and getattr(self.observatory, "stations", []):
+            self.inspect_station(self.observatory.stations[0])
+            return
+
+        self._clear_inspector()
+        self._redraw_map()
