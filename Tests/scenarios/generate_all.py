@@ -23,7 +23,7 @@ from Models.zone import Zone
 from Business.scenario_persistence import ScenarioPersistence
 
 
-OUTPUT_DIR = os.path.abspath(os.path.join(PROJECT_ROOT, "saved_versions", "casos_de_prueba"))
+OUTPUT_DIR = os.path.abspath(os.path.join(PROJECT_ROOT, "saved_versions", "test_cases"))
 
 
 def run_case_1():
