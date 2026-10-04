@@ -1454,10 +1454,22 @@ class Observatory:
 				"node_depth": node_metrics.get("depth", 0),
 				"height": node_metrics.get("height", 0),
 				"balance_factor": node_metrics.get("balance_factor", 0),
+				"node_metrics": node_metrics,
 				"associations": assoc_data
 			}
 
-		return {"id": event_id, "status": status, "event_data": event, "associations": assoc_data}
+		return {
+			"id": event_id,
+			"status": status,
+			"event_data": event,
+			"current_data": {
+				"magnitude": event.magnitude,
+				"depth": event.depth,
+				"epicenter": event.epicenter,
+				"date_time": event.date_time
+			},
+			"associations": assoc_data
+		}
 
 	def _get_node_metrics(self, event_id: int) -> dict:
 		"""
@@ -1468,7 +1480,10 @@ class Observatory:
 			
 		event = self.events_dict[event_id]
 		search_key = event.get_key()
-		return self.tree.get_node_metrics(search_key)
+		metrics = self.tree.get_node_metrics(search_key)
+		if not metrics:
+			return {"depth": 0, "height": 0, "balance_factor": 0}
+		return metrics
 
 	def verify_structure(self) -> list[str]:
 		"""

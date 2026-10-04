@@ -196,6 +196,68 @@ class Queries:
         return results, examined_nodes
 
     @staticmethod
+    def events_by_filters(
+        tree: Tree,
+        min_magnitude: float | None = None,
+        max_magnitude: float | None = None,
+        max_depth: float | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None
+    ) -> tuple[list[Event], int]:
+        """
+        Unified multi-criteria filtering by magnitude range, maximum depth, and date range.
+        Applies mathematical branch pruning based on key K = (Priority, Magnitude, ID)
+        when priority 3 or priority 1 boundary conditions are met.
+        """
+        examined_nodes = 0
+        results: list[Event] = []
+
+        if tree is None or tree.root is None:
+            return results, examined_nodes
+
+        if min_magnitude is not None and max_magnitude is not None and min_magnitude > max_magnitude:
+            return results, examined_nodes
+
+        def _traverse(current: Node | None) -> None:
+            nonlocal examined_nodes
+            if current is None:
+                return
+
+            examined_nodes += 1
+            ev = current.event
+
+            if ev is not None:
+                match = True
+                if min_magnitude is not None and ev.magnitude < min_magnitude:
+                    match = False
+                if max_magnitude is not None and ev.magnitude > max_magnitude:
+                    match = False
+                if max_depth is not None and ev.depth > max_depth:
+                    match = False
+                if start_date is not None and ev.date_time < start_date:
+                    match = False
+                if end_date is not None and ev.date_time > end_date:
+                    match = False
+
+                if match:
+                    results.append(ev)
+
+                # Pruning rules
+                prune_right = (max_magnitude is not None and ev.priority == 3 and ev.magnitude > max_magnitude)
+                prune_left = (min_magnitude is not None and ev.priority == 1 and ev.magnitude < min_magnitude)
+
+                if not prune_left:
+                    _traverse(current.left_son)
+                if not prune_right:
+                    _traverse(current.right_son)
+            else:
+                _traverse(current.left_son)
+                _traverse(current.right_son)
+
+        _traverse(tree.root)
+        return results, examined_nodes
+
+    @staticmethod
     def event_associations(
         tree: Tree,
         historic: Historic | None,
