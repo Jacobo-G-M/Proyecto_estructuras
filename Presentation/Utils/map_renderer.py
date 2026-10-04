@@ -598,16 +598,19 @@ class MapRenderer:
         c_px, c_py = cls.km_to_px(cx, cy, canvas_w, canvas_h, view_bounds=view_bounds)
 
         usable_w = max(1, canvas_w - cls.MARGIN_LEFT - cls.MARGIN_RIGHT)
-        x_min, x_max, _, _ = view_bounds
+        usable_h = max(1, canvas_h - cls.MARGIN_TOP - cls.MARGIN_BOTTOM)
+        x_min, x_max, y_min, y_max = view_bounds
         span_x = max(1.0, x_max - x_min)
+        span_y = max(1.0, y_max - y_min)
 
-        # Radius scaled dynamically by current zoom level
-        radius_px = (radius_km / span_x) * usable_w
+        # Radius scaled dynamically by current zoom level on both axes
+        radius_px_x = (radius_km / span_x) * usable_w
+        radius_px_y = (radius_km / span_y) * usable_h
 
         # Inspection circle
         canvas.create_oval(
-            c_px - radius_px, c_py - radius_px,
-            c_px + radius_px, c_py + radius_px,
+            c_px - radius_px_x, c_py - radius_px_y,
+            c_px + radius_px_x, c_py + radius_px_y,
             outline=ACCENT_CYAN,
             width=1.5,
             dash=(6, 4)
@@ -615,7 +618,7 @@ class MapRenderer:
 
         # Inspection badge
         canvas.create_text(
-            c_px - radius_px + 8, c_py - radius_px - 8,
+            c_px - radius_px_x + 8, c_py - radius_px_y - 8,
             text=f"R = {radius_km} km · EV-{selected_event.id}",
             anchor="w",
             fill=ACCENT_CYAN,
