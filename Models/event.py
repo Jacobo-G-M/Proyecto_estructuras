@@ -117,5 +117,5 @@ class Event:
       self.__origin_stations.append(station)
 
   def get_key(self) -> tuple[int, float, int]:
-    """Returns the sorting key K = (Priority, Magnitude, -ID) to ensure ID sorts ascending when fetching the max node."""
-    return (self.__priority, self.__magnitude, -self.__id)
+    """Returns the sorting key K = (Priority, Magnitude, ID) according to domain rules."""
+    return (self.__priority, self.__magnitude, self.__id)
