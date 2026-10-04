@@ -968,27 +968,85 @@ class QueriesView(ctk.CTkFrame):
             return
 
         report = self.observatory.verify_structure()
-        has_errors = any("Error" in line for line in report)
-        errors_list = [line for line in report if "Error" in line]
+
+        # Categorizar los hallazgos de la auditoría estructural
+        bst_errors = [line for line in report if "Orden" in line]
+        uniq_errors = [line for line in report if "duplicado" in line or "ciclo" in line]
+        height_errors = [line for line in report if "Metadatos" in line or "Altura" in line]
+        balance_issues = [line for line in report if "Balance" in line or "Desbalance" in line]
+        integrity_errors = [line for line in report if "Integridad" in line or "Estructural" in line]
 
         now_str = datetime.now().strftime("%Y-%m-%dT%H:%MZ")
         node_count = len(self.observatory.events_dict) if hasattr(self.observatory, 'events_dict') else 0
         rot_count = sum(self.observatory.metrics.cases.values()) if (self.observatory.metrics and hasattr(self.observatory.metrics, 'cases')) else 0
 
         # Actualizar las 4 tarjetas técnicas
-        bst_ok = not any("Orden" in line for line in errors_list)
-        uniq_ok = not any("Identificador duplicado" in line for line in errors_list)
-        h_ok = not any("Metadatos" in line or "Altura" in line for line in errors_list)
-        bf_ok = not any("Balance" in line for line in errors_list)
+        bst_ok = len(bst_errors) == 0
+        uniq_ok = len(uniq_errors) == 0
+        h_ok = len(height_errors) == 0
+        bf_ok = len(balance_issues) == 0
 
-        self._update_audit_pill(self.card_v_bst, "Orden BST global", "OK · inorden creciente K" if bst_ok else "✕ Error en orden", bst_ok)
-        self._update_audit_pill(self.card_v_uniq, "Unicidad de IDs", "OK · 0 duplicados" if uniq_ok else "✕ IDs duplicados", uniq_ok)
-        self._update_audit_pill(self.card_v_heights, "Alturas recalculadas", f"OK · {node_count}/{node_count} coinciden" if h_ok else "✕ Desfase de alturas", h_ok)
-        self._update_audit_pill(self.card_v_bf, "Factores balance", "OK · BF ∈ [-1,1]" if bf_ok else "✕ Desbalance fuera de rango", bf_ok)
+        self._update_audit_pill(
+            self.card_v_bst,
+            "Orden BST global",
+            "OK · inorden creciente K" if bst_ok else f"✕ Error orden ({len(bst_errors)})",
+            bst_ok
+        )
+        self._update_audit_pill(
+            self.card_v_uniq,
+            "Unicidad de IDs",
+            "OK · 0 duplicados" if uniq_ok else f"✕ {len(uniq_errors)} duplicados/ciclos",
+            uniq_ok
+        )
+        self._update_audit_pill(
+            self.card_v_heights,
+            "Alturas recalculadas",
+            f"OK · {node_count}/{node_count} coinciden" if h_ok else f"✕ Desfase en {len(height_errors)} nodo(s)",
+            h_ok
+        )
 
-        # Actualizar barra de estado
-        summary_text = f"reporte: auditoría {now_str} · {node_count} nodos · {len(errors_list)} errores · {rot_count} rotaciones totales"
-        self.lbl_audit_summary.configure(text=summary_text, text_color=SUCCESS if not has_errors else DANGER)
+        is_stress = bool(self.observatory and self.observatory.stress_mode)
+        if bf_ok:
+            bf_sub = "OK · BF ∈ [-1,1]"
+            bf_color = None
+        else:
+            if is_stress:
+                bf_sub = f"✕ {len(balance_issues)} desbalance(s) en estrés"
+                bf_color = WARNING
+            else:
+                bf_sub = f"✕ {len(balance_issues)} fuera de rango [-1,1]"
+                bf_color = DANGER
+
+        self._update_audit_pill(
+            self.card_v_bf,
+            "Factores balance",
+            bf_sub,
+            bf_ok,
+            custom_color=bf_color
+        )
+
+        total_issues = len(bst_errors) + len(uniq_errors) + len(height_errors) + len(balance_issues) + len(integrity_errors)
+        has_critical_errors = len(bst_errors) + len(uniq_errors) + len(height_errors) + len(integrity_errors) > 0 or (not is_stress and len(balance_issues) > 0)
+
+        # Actualizar barra de estado inferior
+        if total_issues > 0:
+            details = []
+            if balance_issues:
+                details.append(f"{len(balance_issues)} desbalance(s)")
+            if bst_errors:
+                details.append(f"{len(bst_errors)} err orden")
+            if height_errors:
+                details.append(f"{len(height_errors)} err altura")
+            if uniq_errors:
+                details.append(f"{len(uniq_errors)} duplicados")
+            if integrity_errors:
+                details.append(f"{len(integrity_errors)} err integridad")
+            issues_str = " · ".join(details)
+            summary_text = f"reporte: auditoría {now_str} · {node_count} nodos · {issues_str}"
+            self.lbl_audit_summary.configure(text=summary_text, text_color=DANGER if has_critical_errors else WARNING)
+        else:
+            summary_text = f"reporte: auditoría {now_str} · {node_count} nodos · 0 errores · {rot_count} rotaciones totales"
+            self.lbl_audit_summary.configure(text=summary_text, text_color=SUCCESS)
 
         self.audit_status["errors"] = report
         self.audit_status["last_audit_time"] = now_str
@@ -998,15 +1056,34 @@ class QueriesView(ctk.CTkFrame):
         if self.app and hasattr(self.app, 'refresh_all'):
             self.app.refresh_all()
 
-        if has_errors:
-            messagebox.showwarning("Inconsistencias Detectadas", "\n".join(errors_list[:5]))
-        else:
-            messagebox.showinfo("Auditoría Exitosa", "La estructura del árbol AVL cumple con todas las propiedades matemáticas de balance, alturas y orden lexicográfico K=(P, M, I).")
+        if total_issues > 0:
+            all_issues = balance_issues + bst_errors + height_errors + uniq_errors + integrity_errors
+            preview = "\n".join(all_issues[:8])
+            if len(all_issues) > 8:
+                preview += f"\n... y {len(all_issues) - 8} más."
 
-    def _update_audit_pill(self, pill_dict: dict, title: str, subtitle: str, is_ok: bool):
-        color = SUCCESS if is_ok else DANGER
+            if is_stress and balance_issues and not has_critical_errors:
+                messagebox.showwarning(
+                    "Desbalance Detectado (Modo Estrés)",
+                    f"El árbol AVL presenta {len(balance_issues)} nodo(s) desbalanceado(s) (|BF| > 1) debido al Modo Estrés activo:\n\n{preview}\n\n"
+                    "El balanceo automático por rotaciones está en pausa.\n"
+                    "Para recuperar el equilibrio del árbol, desactiva el interruptor 'Estrés' en la barra superior para ejecutar la Recuperación Global."
+                )
+            else:
+                messagebox.showwarning(
+                    "Inconsistencias Detectadas",
+                    f"Se detectaron las siguientes inconsistencias en la estructura del árbol AVL:\n\n{preview}"
+                )
+        else:
+            messagebox.showinfo(
+                "Auditoría Exitosa",
+                "La estructura del árbol AVL cumple con todas las propiedades matemáticas de balance, alturas y orden lexicográfico K=(P, M, I)."
+            )
+
+    def _update_audit_pill(self, pill_dict: dict, title: str, subtitle: str, is_ok: bool, custom_color: str = None):
+        color = custom_color or (SUCCESS if is_ok else DANGER)
         prefix = "✓ " if is_ok else "✕ "
-        bg_col = "#0c281a" if is_ok else "#2a1215"
+        bg_col = "#0c281a" if is_ok else ("#2a1608" if color == WARNING else "#2a1215")
 
         pill_dict["frame"].configure(fg_color=bg_col, border_color=color)
         pill_dict["title"].configure(text=f"{prefix}{title}", text_color=color)
