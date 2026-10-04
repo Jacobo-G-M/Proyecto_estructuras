@@ -105,52 +105,20 @@ class QueriesView(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(parent, fg_color="transparent")
         header_frame.pack(fill="x", pady=(0, 15))
 
-        left_box = ctk.CTkFrame(header_frame, fg_color="transparent")
-        left_box.pack(side="left", fill="y")
-
-        lbl_breadcrumb = ctk.CTkLabel(
-            left_box,
-            text="PRESENTATION / VIEWS / QUERIES_VIEW.PY · EXPANDIDO",
-            font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"),
-            text_color=ACCENT_CYAN
-        )
-        lbl_breadcrumb.pack(anchor="w")
-
         lbl_title = ctk.CTkLabel(
-            left_box,
+            header_frame,
             text="Consultas, Auditoría y Métricas",
             font=ctk.CTkFont(family=FONT_MAIN, size=24, weight="bold"),
             text_color=TEXT_PRIMARY
         )
-        lbl_title.pack(anchor="w", pady=(2, 0))
+        lbl_title.pack(side="left", pady=(2, 0))
 
-        lbl_subtitle = ctk.CTkLabel(
-            left_box,
-            text="Generador de 4 tabs con nodos visitados obligatorios + verificación estructural global.",
-            font=ctk.CTkFont(family=FONT_MAIN, size=12),
-            text_color=TEXT_MUTED
-        )
-        lbl_subtitle.pack(anchor="w", pady=(2, 0))
-
-        # Badges a la derecha
         right_box = ctk.CTkFrame(header_frame, fg_color="transparent")
         right_box.pack(side="right", anchor="s")
 
-        self.chip_tabs_info = ctk.CTkLabel(
-            right_box,
-            text="tabs: Top-k · Rangos · Asociaciones · Costoso",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED,
-            fg_color="#0e1620",
-            corner_radius=6,
-            padx=10,
-            pady=6
-        )
-        self.chip_tabs_info.pack(side="left", padx=(0, 6))
-
         self.chip_costly_count = ctk.CTkLabel(
             right_box,
-            text="0 costosos P3·depth>L",
+            text="0 costosos",
             font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"),
             text_color="#ffb020",
             fg_color="#0e1620",
@@ -158,7 +126,7 @@ class QueriesView(ctk.CTkFrame):
             padx=10,
             pady=6
         )
-        self.chip_costly_count.pack(side="left")
+        self.chip_costly_count.pack(side="right")
 
     # -------------------------------------------------------------------------
     # 2. Generador de Consultas Avanzadas (Columna Izquierda Superior)
@@ -172,7 +140,7 @@ class QueriesView(ctk.CTkFrame):
 
         lbl_title = ctk.CTkLabel(
             header,
-            text="Generador de Consultas Avanzadas",
+            text="Consultas Avanzadas",
             font=ctk.CTkFont(family=FONT_MAIN, size=14, weight="bold"),
             text_color=TEXT_PRIMARY
         )
@@ -196,7 +164,7 @@ class QueriesView(ctk.CTkFrame):
 
         self.btn_tab_top_k = ctk.CTkButton(
             tabs_bar,
-            text="Top-k pendientes ↓K",
+            text="Pendientes",
             font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"),
             fg_color=ACCENT_CYAN,
             text_color=TEXT_INVERSE,
@@ -208,7 +176,7 @@ class QueriesView(ctk.CTkFrame):
 
         self.btn_tab_range = ctk.CTkButton(
             tabs_bar,
-            text="Rango M + H + fechas",
+            text="Filtro por rango",
             font=ctk.CTkFont(family=FONT_MONO, size=11),
             fg_color="#101922",
             border_color="#1e2d3d",
@@ -222,7 +190,7 @@ class QueriesView(ctk.CTkFrame):
 
         self.btn_tab_by_id = ctk.CTkButton(
             tabs_bar,
-            text="Buscar por ID (Sec. 6)",
+            text="Buscar por ID",
             font=ctk.CTkFont(family=FONT_MONO, size=11),
             fg_color="#101922",
             border_color="#1e2d3d",
@@ -250,7 +218,7 @@ class QueriesView(ctk.CTkFrame):
 
         self.btn_tab_costly = ctk.CTkButton(
             tabs_bar,
-            text="Acceso costoso P3>L",
+            text="Acceso costoso",
             font=ctk.CTkFont(family=FONT_MONO, size=11),
             fg_color="#101922",
             border_color="#1e2d3d",
@@ -273,24 +241,24 @@ class QueriesView(ctk.CTkFrame):
 
         # Encabezado de la tabla (6 Columnas)
         tbl_hdr = ctk.CTkFrame(self.frame_table_container, fg_color="#070c12", corner_radius=0, height=30)
-        tbl_hdr.pack(fill="x")
-        tbl_hdr.grid_columnconfigure(0, weight=1)  # #
-        tbl_hdr.grid_columnconfigure(1, weight=2)  # ID
-        tbl_hdr.grid_columnconfigure(2, weight=3)  # K=(P,M,I)
-        tbl_hdr.grid_columnconfigure(3, weight=3)  # Detalle
-        tbl_hdr.grid_columnconfigure(4, weight=2)  # Estado
-        tbl_hdr.grid_columnconfigure(5, weight=2)  # Visitados
+        tbl_hdr.pack(fill="x", padx=(0, 16))
+        tbl_hdr.pack_propagate(False)
 
-        headers = ["#", "ID", "K=(P,M,I)", "Detalle", "Estado", "Visitados"]
+        headers = ["#", "ID", "K=(P,M,T)", "Detalle", "Estado", "Visitados"]
+        col_weights = [1, 2, 3, 3, 2, 2]
+        total_w = sum(col_weights)
+        rel_widths = [w/total_w for w in col_weights]
+        rel_xs = [sum(rel_widths[:i]) for i in range(len(rel_widths))]
+
         for col_idx, h_text in enumerate(headers):
             lbl = ctk.CTkLabel(
                 tbl_hdr,
                 text=h_text,
                 font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"),
                 text_color=TEXT_MUTED,
-                anchor="e" if h_text == "Visitados" else "w"
+                anchor="center"
             )
-            lbl.grid(row=0, column=col_idx, sticky="ew", padx=8, pady=4)
+            lbl.place(relx=rel_xs[col_idx], relwidth=rel_widths[col_idx], relheight=1.0)
 
         # Filas de la tabla (Scrollable)
         self.scroll_table_rows = ctk.CTkScrollableFrame(self.frame_table_container, fg_color="transparent", height=180)
@@ -311,15 +279,10 @@ class QueriesView(ctk.CTkFrame):
             # Param k
             f_k = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_k.pack(side="left", padx=(0, 6))
-            ctk.CTkLabel(f_k, text="k =", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(8, 4))
+            ctk.CTkLabel(f_k, text="Cantidad(Mayores)=", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(8, 4))
             self.entry_top_k = ctk.CTkEntry(f_k, width=45, height=26, fg_color="transparent", border_width=0, font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=TEXT_PRIMARY)
             self.entry_top_k.insert(0, "5")
             self.entry_top_k.pack(side="left", padx=(0, 6))
-
-            # Chip preview
-            f_info = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
-            f_info.pack(side="left", padx=4)
-            ctk.CTkLabel(f_info, text="Pendientes (P3 > P2 > P1) · In-order inverso", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(padx=8, pady=4)
 
         elif tab == "range":
             # Rango Magnitud
@@ -477,8 +440,7 @@ class QueriesView(ctk.CTkFrame):
         )
         self.combo_assoc_ids.pack(side="left", padx=4, pady=4)
 
-        lbl_formula = ctk.CTkLabel(selector_bar, text="MA>MB · Δt≤W · d≤R", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED)
-        lbl_formula.pack(side="right", padx=8, pady=4)
+
 
         # Sección 1: Candidatos Evaluados
         lbl_cand_title = ctk.CTkLabel(card, text="CANDIDATOS EVALUADOS", font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=TEXT_MUTED)
@@ -613,10 +575,10 @@ class QueriesView(ctk.CTkFrame):
         frame.grid(row=0, column=col, sticky="ew", padx=3, pady=2)
 
         lbl_t = ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=color)
-        lbl_t.pack(anchor="w", padx=10, pady=(6, 1))
+        lbl_t.pack(anchor="center", padx=10, pady=(6, 1))
 
         lbl_s = ctk.CTkLabel(frame, text=subtitle, font=ctk.CTkFont(family=FONT_MONO, size=9), text_color=TEXT_MUTED)
-        lbl_s.pack(anchor="w", padx=10, pady=(0, 6))
+        lbl_s.pack(anchor="center", padx=10, pady=(0, 6))
         return {"frame": frame, "title": lbl_t, "subtitle": lbl_s}
 
     def _create_stat_cell(self, parent, row: int, col: int, value: str, label: str, val_color: str):
@@ -634,24 +596,7 @@ class QueriesView(ctk.CTkFrame):
     # 5. Footer Técnico
     # -------------------------------------------------------------------------
     def _build_footer(self, parent):
-        footer_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        footer_frame.pack(fill="x", pady=(0, 5))
-
-        lbl_l = ctk.CTkLabel(
-            footer_frame,
-            text="queries_view.py consume Observatory.top_k() · range_query() · associations(id) · costly_access(L) · verify_structure()",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        )
-        lbl_l.pack(side="left")
-
-        lbl_r = ctk.CTkLabel(
-            footer_frame,
-            text="toda consulta reporta nodos visitados AVL",
-            font=ctk.CTkFont(family=FONT_MONO, size=10),
-            text_color=TEXT_MUTED
-        )
-        lbl_r.pack(side="right")
+        pass
 
     # =========================================================================
     # LÓGICA DE ACTUALIZACIÓN Y SINCRONIZACIÓN DE LA VISTA
@@ -678,14 +623,14 @@ class QueriesView(ctk.CTkFrame):
             self.combo_assoc_ids.configure(values=["-"])
             self.combo_assoc_ids.set("-")
 
-        # 2. Actualizar contador dinámico de eventos costosos P3 > L en el encabezado
+        # 2. Actualizar contador dinámico de eventos costosos
         costly_count = 0
         try:
             costly_events, _ = self.observatory.query_costly_high_priority_events()
             costly_count = len(costly_events)
         except Exception:
-            costly_count = 0
-        self.chip_costly_count.configure(text=f"{costly_count} costosos P3·depth>L")
+            pass
+        self.chip_costly_count.configure(text=f"{costly_count} costosos")
 
         # 3. Actualizar contadores en la cuadrícula de auditoría
         metrics = getattr(self.observatory, 'metrics', None)
@@ -811,7 +756,7 @@ class QueriesView(ctk.CTkFrame):
                 if hasattr(self.observatory, 'limit'):
                     self.observatory.limit = l_val
                 costly_items, visited = self.observatory.query_costly_high_priority_events()
-                self.chip_costly_count.configure(text=f"{len(costly_items)} costosos P3·depth>L")
+
                 results = [
                     {
                         "event": item["event"],
@@ -849,50 +794,49 @@ class QueriesView(ctk.CTkFrame):
             detail = item.get("detail", f"M{ev.magnitude} · {ev.depth}km")
             visited_cnt = item.get("visited", "-")
 
-            row_frame = ctk.CTkFrame(self.scroll_table_rows, fg_color="#081018" if idx % 2 == 0 else "transparent", corner_radius=4)
+            row_frame = ctk.CTkFrame(self.scroll_table_rows, fg_color="#081018" if idx % 2 == 0 else "transparent", corner_radius=4, height=30)
             row_frame.pack(fill="x", pady=1)
+            row_frame.pack_propagate(False)
 
-            row_frame.grid_columnconfigure(0, weight=1)
-            row_frame.grid_columnconfigure(1, weight=2)
-            row_frame.grid_columnconfigure(2, weight=3)
-            row_frame.grid_columnconfigure(3, weight=3)
-            row_frame.grid_columnconfigure(4, weight=2)
-            row_frame.grid_columnconfigure(5, weight=2)
+            col_weights = [1, 2, 3, 3, 2, 2]
+            total_w = sum(col_weights)
+            rel_widths = [w/total_w for w in col_weights]
+            rel_xs = [sum(rel_widths[:i]) for i in range(len(rel_widths))]
 
             # Clic en fila para explorar asociaciones inmediatamente
             row_frame.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
             # Columna 0: Índice #
-            lbl_idx = ctk.CTkLabel(row_frame, text=str(idx), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED)
-            lbl_idx.grid(row=0, column=0, sticky="w", padx=8, pady=4)
+            lbl_idx = ctk.CTkLabel(row_frame, text=str(idx), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED, anchor="center")
+            lbl_idx.place(relx=rel_xs[0], relwidth=rel_widths[0], relheight=1.0)
             lbl_idx.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
             # Columna 1: ID
-            lbl_id = ctk.CTkLabel(row_frame, text=f"EV-{ev.id}", font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=TEXT_PRIMARY)
-            lbl_id.grid(row=0, column=1, sticky="w", padx=8, pady=4)
+            lbl_id = ctk.CTkLabel(row_frame, text=f"EV-{ev.id}", font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=TEXT_PRIMARY, anchor="center")
+            lbl_id.place(relx=rel_xs[1], relwidth=rel_widths[1], relheight=1.0)
             lbl_id.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 2: Clave K=(P, M, I)
+            # Columna 2: Clave K=(P, M, T)
             k_tuple = ev.get_key() if hasattr(ev, 'get_key') else (ev.priority, ev.magnitude, ev.id)
-            lbl_k = ctk.CTkLabel(row_frame, text=str(k_tuple), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=ACCENT_CYAN)
-            lbl_k.grid(row=0, column=2, sticky="w", padx=8, pady=4)
+            lbl_k = ctk.CTkLabel(row_frame, text=str(k_tuple), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=ACCENT_CYAN, anchor="center")
+            lbl_k.place(relx=rel_xs[2], relwidth=rel_widths[2], relheight=1.0)
             lbl_k.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
             # Columna 3: Detalle
-            lbl_det = ctk.CTkLabel(row_frame, text=detail, font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED)
-            lbl_det.grid(row=0, column=3, sticky="w", padx=8, pady=4)
+            lbl_det = ctk.CTkLabel(row_frame, text=detail, font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED, anchor="center")
+            lbl_det.place(relx=rel_xs[3], relwidth=rel_widths[3], relheight=1.0)
             lbl_det.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
             # Columna 4: Estado
             st_text = str(ev.attention_state)[:4].upper() if hasattr(ev, 'attention_state') else "PEND"
             st_color = "#ffb020" if "PEND" in st_text else SUCCESS if "REV" in st_text else TEXT_MUTED
-            lbl_st = ctk.CTkLabel(row_frame, text=st_text, font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=st_color)
-            lbl_st.grid(row=0, column=4, sticky="w", padx=8, pady=4)
+            lbl_st = ctk.CTkLabel(row_frame, text=st_text, font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=st_color, anchor="center")
+            lbl_st.place(relx=rel_xs[4], relwidth=rel_widths[4], relheight=1.0)
             lbl_st.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
             # Columna 5: Nodos Visitados
-            lbl_vis = ctk.CTkLabel(row_frame, text=str(visited_cnt), font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color="#ffb020", anchor="e")
-            lbl_vis.grid(row=0, column=5, sticky="ew", padx=8, pady=4)
+            lbl_vis = ctk.CTkLabel(row_frame, text=str(visited_cnt), font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color="#ffb020", anchor="center")
+            lbl_vis.place(relx=rel_xs[5], relwidth=rel_widths[5], relheight=1.0)
             lbl_vis.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
     def _on_row_clicked(self, eid: int):
@@ -944,7 +888,7 @@ class QueriesView(ctk.CTkFrame):
         if not candidates and not chosen:
             ctk.CTkLabel(
                 self.frame_candidates_list,
-                text="Sin sismos candidatos (MA > MB, Δt ≤ 48h, d ≤ 40km).",
+                text="Sin sismos candidatos.",
                 font=ctk.CTkFont(family=FONT_MONO, size=10),
                 text_color=TEXT_MUTED
             ).pack(anchor="w", pady=4)
