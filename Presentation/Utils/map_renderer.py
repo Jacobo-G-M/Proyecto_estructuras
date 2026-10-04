@@ -660,9 +660,10 @@ class MapRenderer:
         cls,
         km_x: float,
         km_y: float,
-        stations: list
+        stations: list,
+        max_dist_km: float = float("inf")
     ) -> Tuple[Optional[object], float]:
-        """Finds the monitoring station closest to (km_x, km_y) and returns (station, distance_km)."""
+        """Finds the monitoring station closest to (km_x, km_y) within max_dist_km and returns (station, distance_km)."""
         closest = None
         min_dist = float("inf")
 
@@ -673,8 +674,8 @@ class MapRenderer:
                 continue
 
             dist = cls.distance_km((km_x, km_y), (sx, sy))
-            if dist < min_dist:
+            if dist <= max_dist_km and dist < min_dist:
                 min_dist = dist
                 closest = station
 
-        return closest, min_dist
+        return closest, (min_dist if closest is not None else float("inf"))
