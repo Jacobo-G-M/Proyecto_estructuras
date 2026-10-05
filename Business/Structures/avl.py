@@ -68,6 +68,12 @@ class AVL(Tree):
     # Step C: Resolve imbalances (handles balance factors greater than 1 in magnitude)
     while abs(current_node.balance_factor()) > 1:
       current_node = self.balance(current_node)
+      current_node.left_son = self._restore_node(current_node.left_son)
+      if current_node.left_son is not None:
+        current_node.left_son.father = current_node
+      current_node.right_son = self._restore_node(current_node.right_son)
+      if current_node.right_son is not None:
+        current_node.right_son.father = current_node
       current_node.update_height()
 
     return current_node

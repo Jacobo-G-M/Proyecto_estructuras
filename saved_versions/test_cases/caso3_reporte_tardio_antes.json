@@ -1,0 +1,122 @@
+{
+  "version": "1.0",
+  "simulation_clock": "2026-10-04T12:00:00",
+  "stress_mode": false,
+  "parameters": {
+    "limit_L": 3,
+    "max_time_W": 48.0,
+    "distance_epicenter_R": 40.0,
+    "max_tree_age_T": 72
+  },
+  "zones": [],
+  "stations": [
+    {
+      "id": 1,
+      "name": "Central",
+      "coords": [
+        400.0,
+        400.0
+      ]
+    }
+  ],
+  "tree": {
+    "root_id": 1,
+    "nodes": [
+      {
+        "id": 1,
+        "left_id": 2,
+        "right_id": null,
+        "height": 1,
+        "balance_factor": 1,
+        "event": {
+          "id": 1,
+          "priority": 2,
+          "magnitude": 5.6,
+          "depth": 20.0,
+          "epicenter": [
+            400.0,
+            400.0
+          ],
+          "date_time": "2026-10-04T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 2,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 2,
+          "priority": 1,
+          "magnitude": 4.2,
+          "depth": 15.0,
+          "epicenter": [
+            410.0,
+            405.0
+          ],
+          "date_time": "2026-10-04T10:20:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "historic": {
+    "archived": [],
+    "deleted": []
+  },
+  "report_queue": [
+    {
+      "id": 3,
+      "magnitude": 6.1,
+      "depth": 12.0,
+      "epicenter": [
+        402.0,
+        403.0
+      ],
+      "date_time": "2026-10-04T09:55:00",
+      "review": 1,
+      "origin_stations": [
+        1
+      ]
+    }
+  ],
+  "associations": [
+    {
+      "id": 1,
+      "chosen_reference_id": 1,
+      "referenced_by_ids": [
+        2
+      ]
+    }
+  ],
+  "metrics": {
+    "corrections_accepted": 0,
+    "discarded_reports": 0,
+    "conflicts": 0,
+    "active_events": 2,
+    "removed_events": 0,
+    "archived_events": 0,
+    "cases": {
+      "LL": 0,
+      "RR": 0,
+      "LR": 0,
+      "RL": 0
+    },
+    "turns": {
+      "left": 0,
+      "right": 0
+    }
+  }
+}

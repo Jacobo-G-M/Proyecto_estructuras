@@ -1,0 +1,199 @@
+{
+  "version": "1.0",
+  "simulation_clock": "2026-10-04T12:00:00",
+  "stress_mode": false,
+  "parameters": {
+    "limit_L": 3,
+    "max_time_W": 48.0,
+    "distance_epicenter_R": 40.0,
+    "max_tree_age_T": 72
+  },
+  "zones": [],
+  "stations": [
+    {
+      "id": 1,
+      "name": "Central",
+      "coords": [
+        500.0,
+        500.0
+      ]
+    }
+  ],
+  "tree": {
+    "root_id": 62,
+    "nodes": [
+      {
+        "id": 62,
+        "left_id": 50,
+        "right_id": 70,
+        "height": 2,
+        "balance_factor": 1,
+        "event": {
+          "id": 62,
+          "priority": 1,
+          "magnitude": 4.2,
+          "depth": 10.0,
+          "epicenter": [
+            500.0,
+            500.0
+          ],
+          "date_time": "2026-09-30T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 50,
+        "left_id": null,
+        "right_id": 60,
+        "height": 1,
+        "balance_factor": -1,
+        "event": {
+          "id": 50,
+          "priority": 1,
+          "magnitude": 3.5,
+          "depth": 10.0,
+          "epicenter": [
+            500.0,
+            500.0
+          ],
+          "date_time": "2026-10-04T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 60,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 60,
+          "priority": 1,
+          "magnitude": 4.0,
+          "depth": 10.0,
+          "epicenter": [
+            500.0,
+            500.0
+          ],
+          "date_time": "2026-09-30T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 70,
+        "left_id": null,
+        "right_id": null,
+        "height": 0,
+        "balance_factor": 0,
+        "event": {
+          "id": 70,
+          "priority": 2,
+          "magnitude": 5.0,
+          "depth": 10.0,
+          "epicenter": [
+            500.0,
+            500.0
+          ],
+          "date_time": "2026-09-30T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "historic": {
+    "archived": [
+      {
+        "id": 12,
+        "priority": 1,
+        "magnitude": 2.5,
+        "depth": 10.0,
+        "epicenter": [
+          500.0,
+          500.0
+        ],
+        "date_time": "2026-09-30T10:00:00",
+        "review": 1,
+        "attention_state": "Pending",
+        "status": "Archived",
+        "origin_stations": [
+          1
+        ]
+      },
+      {
+        "id": 10,
+        "priority": 1,
+        "magnitude": 2.0,
+        "depth": 10.0,
+        "epicenter": [
+          500.0,
+          500.0
+        ],
+        "date_time": "2026-09-30T10:00:00",
+        "review": 1,
+        "attention_state": "Pending",
+        "status": "Archived",
+        "origin_stations": [
+          1
+        ]
+      },
+      {
+        "id": 14,
+        "priority": 1,
+        "magnitude": 3.0,
+        "depth": 10.0,
+        "epicenter": [
+          500.0,
+          500.0
+        ],
+        "date_time": "2026-09-30T10:00:00",
+        "review": 1,
+        "attention_state": "Pending",
+        "status": "Archived",
+        "origin_stations": [
+          1
+        ]
+      }
+    ],
+    "deleted": []
+  },
+  "report_queue": [],
+  "associations": [],
+  "metrics": {
+    "corrections_accepted": 0,
+    "discarded_reports": 0,
+    "conflicts": 0,
+    "active_events": 4,
+    "removed_events": 0,
+    "archived_events": 3,
+    "cases": {
+      "LL": 1,
+      "RR": 2,
+      "LR": 0,
+      "RL": 0
+    },
+    "turns": {
+      "left": 2,
+      "right": 1
+    }
+  }
+}

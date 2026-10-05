@@ -14,7 +14,7 @@ class Association:
     @property
     def id(self) -> int:
         return self._id
-    #SETTER para _id
+    #SETTER for _id
     @id.setter
     def id(self, new_id: int) -> None:
         if isinstance(new_id, int):

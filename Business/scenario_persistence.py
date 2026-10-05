@@ -556,10 +556,10 @@ class ScenarioPersistence:
             # In-order: Step 1 - Explore Left subtree
             if l_id is not None and l_id in nodes_dict:
                 _inorder(l_id)
-            # In-order: Step 2 - Visit current node and extract its composite key K = (P, M, -I)
+            # In-order: Step 2 - Visit current node and extract its composite key K = (P, M, I)
             ev = cur_nd.get("event")
             if isinstance(ev, dict):
-                k = (ev.get("priority", 0), float(ev.get("magnitude", 0.0)), -int(ev.get("id", 0)))
+                k = (ev.get("priority", 0), float(ev.get("magnitude", 0.0)), int(ev.get("id", 0)))
                 inorder_keys.append((k, cur_id))
             # In-order: Step 3 - Explore Right subtree
             if r_id is not None and r_id in nodes_dict:

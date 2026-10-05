@@ -1,0 +1,99 @@
+{
+  "version": "1.0",
+  "simulation_clock": "2026-10-04T12:00:00",
+  "stress_mode": false,
+  "parameters": {
+    "limit_L": 3,
+    "max_time_W": 48.0,
+    "distance_epicenter_R": 40.0,
+    "max_tree_age_T": 72
+  },
+  "zones": [],
+  "stations": [
+    {
+      "id": 1,
+      "name": "Central",
+      "coords": [
+        500.0,
+        500.0
+      ]
+    }
+  ],
+  "tree": {
+    "root_id": 10,
+    "nodes": [
+      {
+        "id": 10,
+        "left_id": null,
+        "right_id": 20,
+        "height": 1,
+        "balance_factor": -1,
+        "event": {
+          "id": 10,
+          "priority": 2,
+          "magnitude": 5.0,
+          "depth": 20.0,
+          "epicenter": [
+            500.0,
+            500.0
+          ],
+          "date_time": "2026-10-04T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      },
+      {
+        "id": 20,
+        "left_id": null,
+        "right_id": null,
+        "height": 99,
+        "balance_factor": -7,
+        "event": {
+          "id": 20,
+          "priority": 2,
+          "magnitude": 5.5,
+          "depth": 20.0,
+          "epicenter": [
+            500.0,
+            500.0
+          ],
+          "date_time": "2026-10-04T10:00:00",
+          "review": 1,
+          "attention_state": "Pending",
+          "status": "Active",
+          "origin_stations": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "historic": {
+    "archived": [],
+    "deleted": []
+  },
+  "report_queue": [],
+  "associations": [],
+  "metrics": {
+    "corrections_accepted": 0,
+    "discarded_reports": 0,
+    "conflicts": 0,
+    "active_events": 2,
+    "removed_events": 0,
+    "archived_events": 0,
+    "cases": {
+      "LL": 0,
+      "RR": 0,
+      "LR": 0,
+      "RL": 0
+    },
+    "turns": {
+      "left": 0,
+      "right": 0
+    }
+  }
+}

@@ -129,14 +129,14 @@ class TestMetrics(unittest.TestCase):
     def test_pending_events_calculation(self):
         """pending_events should count nodes with pending/pendiente attention state."""
         nodes = [self.node1, self.node2, self.node3, self.node4]
-        # node1 is "Pending", node3 is "pendiente" -> 2
+        # node1 is "Pending", node3 is "pending" -> 2
         self.assertEqual(self.metrics.pending_events(nodes), 2)
         self.assertEqual(self.metrics.pending_events([]), 0)
 
     def test_reviewed_events_calculation(self):
         """reviewed_events should count nodes with reviewed/revisado attention state."""
         nodes = [self.node1, self.node2, self.node3, self.node4]
-        # node2 is "Reviewed", node4 is "revisado" -> 2
+        # node2 is "Reviewed", node4 is "reviewed" -> 2
         self.assertEqual(self.metrics.reviewed_events(nodes), 2)
         self.assertEqual(self.metrics.reviewed_events([]), 0)
 

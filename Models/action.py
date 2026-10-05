@@ -2,11 +2,11 @@ from datetime import datetime
 
 class Action:
     """
-    Modelo que representa una acción registrada en la Pila de Deshacer (Sección 13).
+    Model representing an action recorded in the Undo Stack (Section 13).
     
-    Implementa el Patrón Memento almacenando una instantánea completa (snapshot)
-    del catálogo operativo del observatorio antes de que se ejecute una mutación,
-    permitiendo restaurar el estado en caso de deshacer (undo).
+    Implements the Memento Pattern by saving a full snapshot
+    of the observatory operational state prior to executing a mutation,
+    enabling state restoration upon undo operations.
     """
     def __init__(
         self,
@@ -16,14 +16,14 @@ class Action:
         snapshot: dict | None = None,
         timestamp: datetime | None = None
     ):
-        # Inicialización de atributos mediante setters para validación de tipos
+        # Initialization of attributes via setters for type validation
         self.id = id
         self.action_type = action_type
         self.description = description
         self.snapshot = snapshot if snapshot is not None else {}
         self.timestamp = timestamp if timestamp is not None else datetime.now()
 
-    # --- id: Identificador numérico secuencial de la acción en la pila ---
+    # --- id: Sequential numeric identifier of the action in the stack ---
     @property
     def id(self) -> int:
         return self._id
@@ -34,7 +34,7 @@ class Action:
             raise TypeError("id must be an integer.")
         self._id = value
 
-    # --- action_type: Tipo de operación (CREATE_EVENT, EDIT_EVENT, REMOVE_EVENT, etc.) ---
+    # --- action_type: Operation type (CREATE_EVENT, EDIT_EVENT, REMOVE_EVENT, etc.) ---
     @property
     def action_type(self) -> str:
         return self._action_type
@@ -43,7 +43,7 @@ class Action:
     def action_type(self, value: str):
         self._action_type = str(value)
 
-    # --- description: Explicación textual legible para el usuario o la interfaz ---
+    # --- description: Readable textual explanation for the user or the interface ---
     @property
     def description(self) -> str:
         return self._description
@@ -52,7 +52,7 @@ class Action:
     def description(self, value: str):
         self._description = str(value)
 
-    # --- snapshot: Diccionario que contiene el estado profundo previo de los componentes ---
+    # --- snapshot: Dictionary containing the deep previous state of the components ---
     @property
     def snapshot(self) -> dict:
         return self._snapshot
@@ -63,7 +63,7 @@ class Action:
             raise TypeError("snapshot must be a dictionary.")
         self._snapshot = value
 
-    # --- timestamp: Marca de tiempo en la que se capturó la acción ---
+    # --- timestamp: Timestamp in which the action was captured ---
     @property
     def timestamp(self) -> datetime:
         return self._timestamp
