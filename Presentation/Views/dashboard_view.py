@@ -1,7 +1,7 @@
 """
-Vista de Panel de Control · Consola Maestra
-Demuestra el uso de los componentes atómicos (Card, MetricCard, SectionHeader,
-StatusBadge, PrimaryButton, SecondaryButton, etc.) conectados en vivo al Observatorio.
+Dashboard Control View · Master Console
+Demonstrates live integration of atomic components (Card, MetricCard, SectionHeader,
+StatusBadge, PrimaryButton, SecondaryButton, etc.) with the Observatory.
 """
 
 import customtkinter as ctk
@@ -17,8 +17,8 @@ FONT_MAIN = "Segoe UI"
 
 class DashboardView(ctk.CTkFrame):
     """
-    Vista de Panel de Control / Consola Ejecutiva.
-    Muestra métricas clave en vivo usando la librería de componentes atómicos.
+    Dashboard Control / Executive Console View.
+    Displays live KPIs using the atomic component library.
     """
     def __init__(self, master, app=None, observatory=None, **kwargs):
         super().__init__(master, fg_color="#070c12", corner_radius=0, **kwargs)
@@ -35,7 +35,7 @@ class DashboardView(ctk.CTkFrame):
         self.scroll_container.pack(fill="both", expand=True, padx=16, pady=12)
         container = self.scroll_container
 
-        # 1. Encabezado Molecular (SectionHeader)
+        # 1. Molecular Header (SectionHeader)
         self.header = SectionHeader(
             container,
             category="",
@@ -46,12 +46,12 @@ class DashboardView(ctk.CTkFrame):
 
 
 
-        # 2. Fila de Tarjetas de Métricas (MetricCards)
+        # 2. Metric Cards Row (MetricCards)
         metrics_grid = ctk.CTkFrame(container, fg_color="transparent")
         metrics_grid.pack(fill="x", pady=(0, 12))
         metrics_grid.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="metric_cols")
 
-        # Card 1: Eventos Activos
+        # Card 1: Active Events
         self.card_active = MetricCard(
             metrics_grid,
             title="Sismos Activos",
@@ -63,7 +63,7 @@ class DashboardView(ctk.CTkFrame):
         )
         self.card_active.grid(row=0, column=0, padx=(0, 6), sticky="ew")
 
-        # Card 2: Histórico
+        # Card 2: Historic
         self.card_archived = MetricCard(
             metrics_grid,
             title="Archivados",
@@ -75,7 +75,7 @@ class DashboardView(ctk.CTkFrame):
         )
         self.card_archived.grid(row=0, column=1, padx=3, sticky="ew")
 
-        # Card 3: Cola de Prioridad
+        # Card 3: Priority Queue
         self.card_queue = MetricCard(
             metrics_grid,
             title="Cola Reportes",
@@ -87,7 +87,7 @@ class DashboardView(ctk.CTkFrame):
         )
         self.card_queue.grid(row=0, column=2, padx=3, sticky="ew")
 
-        # Card 4: Estado del Sistema
+        # Card 4: System Status
         self.card_status = MetricCard(
             metrics_grid,
             title="Balance AVL",
@@ -99,20 +99,20 @@ class DashboardView(ctk.CTkFrame):
         )
         self.card_status.grid(row=0, column=3, padx=(6, 0), sticky="ew")
 
-        # 3. Fila de Paneles Intermedios (Dos Columnas)
+        # 3. Intermediate Panels Row (Two Columns)
         panels_row = ctk.CTkFrame(container, fg_color="transparent")
         panels_row.pack(fill="x", pady=(0, 10))
         panels_row.grid_columnconfigure(0, weight=3, uniform="bottom_cols")
         panels_row.grid_columnconfigure(1, weight=2, uniform="bottom_cols")
 
-        # Panel Izquierdo: Ficha del Observatorio y Estado
+        # Left Panel: Observatory Card and Status
         self.left_card = Card(panels_row)
         self.left_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
         StyledLabel(self.left_card, text="ESTADO OPERACIONAL", variant="tag").pack(anchor="w", padx=16, pady=(12, 2))
         StyledLabel(self.left_card, text="Detalles del Sistema Sismológico", variant="h2").pack(anchor="w", padx=16, pady=(0, 8))
 
-        # Filas clave-valor
+        # Key-value rows
         self.kv_clock = KeyValueRow(self.left_card, key="Reloj de Simulación (UTC):", value="--", is_highlighted=True)
         self.kv_clock.pack(fill="x", padx=16, pady=2)
 
@@ -125,7 +125,7 @@ class DashboardView(ctk.CTkFrame):
         self.kv_zones = KeyValueRow(self.left_card, key="Zonas Geográficas Configuradas:", value="0")
         self.kv_zones.pack(fill="x", padx=16, pady=2)
 
-        # Banner informativo atómico dentro del panel
+        # Atomic informative banner inside the panel
         self.banner = InfoBanner(
             self.left_card,
             title="Consistencia Estructural Verificada",
@@ -134,14 +134,14 @@ class DashboardView(ctk.CTkFrame):
         )
         self.banner.pack(fill="x", padx=16, pady=(8, 10))
 
-        # Panel Derecho: Accesos Rápidos
+        # Right Panel: Quick Access
         self.right_card = Card(panels_row)
         self.right_card.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
         StyledLabel(self.right_card, text="ACCIONES RÁPIDAS", variant="tag").pack(anchor="w", padx=16, pady=(12, 2))
         StyledLabel(self.right_card, text="Navegación Modular", variant="h2").pack(anchor="w", padx=16, pady=(0, 8))
 
-        # Botones de navegación usando los botones atómicos
+        # Navigation buttons using atomic buttons
         PrimaryButton(
             self.right_card,
             text="🌳 Ver Árbol AVL",
@@ -170,7 +170,7 @@ class DashboardView(ctk.CTkFrame):
             command=lambda: self.app.switch_view("consultas") if self.app else None
         ).pack(fill="x", padx=16, pady=3)
 
-        # 4. Sección de Parámetros Operativos Modificables
+        # 4. Modifiable Operational Parameters Section
         self.params_card = Card(container)
         self.params_card.pack(fill="x", pady=(0, 4))
 
@@ -189,7 +189,7 @@ class DashboardView(ctk.CTkFrame):
         params_grid.pack(fill="x", padx=12, pady=(6, 12))
         params_grid.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="param_cols")
 
-        # 1. Límite L
+        # 1. Limit L
         self.lbl_val_l, self.entry_l = self._create_param_box(
             params_grid, col=0,
             title="Límite L", code="L",
@@ -198,7 +198,7 @@ class DashboardView(ctk.CTkFrame):
             on_confirm=self._on_set_limit
         )
 
-        # 2. Ventana W
+        # 2. Window W
         self.lbl_val_w, self.entry_w = self._create_param_box(
             params_grid, col=1,
             title="Ventana W", code="W",
@@ -207,7 +207,7 @@ class DashboardView(ctk.CTkFrame):
             on_confirm=self._on_set_max_time
         )
 
-        # 3. Radio R
+        # 3. Radius R
         self.lbl_val_r, self.entry_r = self._create_param_box(
             params_grid, col=2,
             title="Radio R", code="R",
@@ -216,7 +216,7 @@ class DashboardView(ctk.CTkFrame):
             on_confirm=self._on_set_distance_epicenter
         )
 
-        # 4. Antigüedad T
+        # 4. Age T
         self.lbl_val_t, self.entry_t = self._create_param_box(
             params_grid, col=3,
             title="Antigüedad T", code="T",
@@ -396,15 +396,15 @@ class DashboardView(ctk.CTkFrame):
         )
 
     def refresh(self):
-        """Sincroniza todas las métricas atómicas con el Observatorio en vivo."""
+        """Synchronizes all atomic metrics with the live Observatory."""
         if not self.observatory:
             return
 
-        # 1. Total sismos activos
+        # 1. Total active earthquakes
         active_count = len(getattr(self.observatory, "events_dict", {}))
         self.card_active.set_value(active_count)
 
-        # 2. Total archivados
+        # 2. Total archived
         historic = getattr(self.observatory, "historic", None)
         archived_count = len(historic.archived) if historic and hasattr(historic, "archived") else 0
         self.card_archived.set_value(archived_count)
@@ -412,7 +412,7 @@ class DashboardView(ctk.CTkFrame):
         deleted_count = len(historic.deleted) if historic and hasattr(historic, "deleted") else 0
         self.kv_deleted.set_value(str(deleted_count))
 
-        # 3. Cola de reportes
+        # 3. Report queue
         queue = getattr(self.observatory, "report_queue", None)
         if hasattr(queue, "current_reports") and isinstance(queue.current_reports, list):
             queue_count = len(queue.current_reports)
@@ -422,7 +422,7 @@ class DashboardView(ctk.CTkFrame):
             queue_count = 0
         self.card_queue.set_value(queue_count)
 
-        # 4. Modo estrés / Balance AVL
+        # 4. Stress mode / AVL Balance
         stress = getattr(self.observatory, "stress_mode", False)
         if stress:
             self.card_status.set_value("Estrés")
@@ -433,12 +433,12 @@ class DashboardView(ctk.CTkFrame):
             self.card_status.set_subtitle("AVL balanceado")
             self.card_status.set_badge("OK", "success")
 
-        # 5. Reloj de simulación
+        # 5. Simulation clock
         clock = getattr(self.observatory, "clock_simulation", None)
         clock_str = clock.strftime("%Y-%m-%d %H:%M:%S") if clock else "--"
         self.kv_clock.set_value(clock_str)
 
-        # 6. Estaciones y Zonas
+        # 6. Stations and Zones
         stations = getattr(self.observatory, "stations", {})
         self.kv_stations.set_value(str(len(stations)))
 
@@ -446,7 +446,7 @@ class DashboardView(ctk.CTkFrame):
         zones = getattr(geo_map, "zones", []) if geo_map else []
         self.kv_zones.set_value(str(len(zones)))
 
-        # 7. Parámetros Modificables
+        # 7. Modifiable Parameters
         if hasattr(self, "lbl_val_l"):
             self.lbl_val_l.configure(text=str(getattr(self.observatory, "limit", 3)))
         if hasattr(self, "lbl_val_w"):

@@ -92,7 +92,7 @@ class SecondaryButton(ctk.CTkButton):
 class DangerButton(ctk.CTkButton):
     """
     Destructive action button with red tone.
-    Ideal for irreversible triggers: 'Eliminar Evento', 'Limpiar Catálogo', 'Archivar Subárbol'.
+    Ideal for irreversible triggers: 'Delete Event', 'Clear Catalog', 'Archive Subtree'.
     """
     def __init__(
         self,
@@ -126,7 +126,7 @@ class DangerButton(ctk.CTkButton):
 class WarningButton(ctk.CTkButton):
     """
     Warning action button with orange tone.
-    Ideal for attention-demanding triggers: 'Modo Estrés', 'Forzar Rotación', 'Recuperar AVL'.
+    Ideal for attention-demanding triggers: 'Stress Mode', 'Force Rotation', 'Recover AVL'.
     """
     def __init__(
         self,

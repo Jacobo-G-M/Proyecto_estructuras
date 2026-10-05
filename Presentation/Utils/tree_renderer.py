@@ -3,14 +3,14 @@ from typing import Callable, Any
 
 class TreeRenderer:
     """
-    Renderizador dinámico de alta fidelidad para árboles AVL y BST.
-    Replica exactamente los estilos visuales de Banani:
-    - Nodos con relleno saturado en AVL (P3 rojo, P2 naranja, P1 verde).
-    - Nodos compactos oscuros en BST mostrando claramente su topología sin balancear y sin solapamiento.
-    - Círculos de nodos con número de ID tanto en AVL como en BST para una visualización limpia y legible.
-    - Selección activa con cuadrado redondeado sólido cian.
-    - Halos de nodos costosos con cuadrado redondeado punteado ámbar/naranja.
-    - Cuadrícula sutil de puntos de fondo.
+    High-fidelity dynamic renderer for AVL and BST trees.
+    Renders visual representations for both tree topologies:
+    - Saturated node fills in AVL (P3 red, P2 orange, P1 green).
+    - Dark compact nodes in BST clearly displaying unbalanced topology without overlap.
+    - Node circles with integer ID labels in both AVL and BST for readability.
+    - Active selection highlighted with solid cyan rounded border.
+    - Costly node halos marked with dotted amber/orange rounded borders.
+    - Subtle background dot grid.
     """
 
     @staticmethod
@@ -23,7 +23,7 @@ class TreeRenderer:
         radius: float = 8.0,
         **kwargs
     ):
-        """Dibuja un cuadrado/rectángulo con esquinas redondeadas suaves en el canvas."""
+        """Draws a square/rectangle with smooth rounded corners on the canvas."""
         r = max(1.0, min(radius, abs(x2 - x1) / 2.0, abs(y2 - y1) / 2.0))
         points = [
             x1 + r, y1,
@@ -59,7 +59,7 @@ class TreeRenderer:
         offset_x: float = 0.0,
         offset_y: float = 0.0
     ):
-        """Dibuja la cuadrícula sutil de puntos oscuros con desplazamiento dinámico."""
+        """Draws the subtle grid of dark dots with dynamic displacement."""
         start_x = int(offset_x) % step
         start_y = int(offset_y) % step
         for x in range(start_x, width, step):
@@ -84,7 +84,7 @@ class TreeRenderer:
         offset_y: float = 0.0
     ):
         """
-        Dibuja el árbol completo en el canvas de Tkinter con soporte para zoom y desplazamiento (pan/drag).
+        Renders the complete tree onto the Tkinter canvas with zoom and pan support.
         """
         if root_node is None:
             canvas.create_text(
@@ -98,7 +98,7 @@ class TreeRenderer:
         costly_ids = costly_ids or []
         p_filter = p_filter or {1: True, 2: True, 3: True}
 
-        # 1. Obtener todos los nodos del árbol
+        # 1. Get all nodes of the tree
         all_nodes = []
         def collect_nodes(curr):
             if curr is None:
@@ -109,7 +109,7 @@ class TreeRenderer:
 
         collect_nodes(root_node)
 
-        # 2. Profundidades de cada nodo
+        # 2. Depths of each node
         node_depths = {}
         def get_depths(curr, d=0):
             if curr is None:
@@ -123,17 +123,17 @@ class TreeRenderer:
         coords = {}
 
         if is_bst_degenerate:
-            # --- LAYOUT PARA BST (Árbol binario sin balanceo con separación garantizada) ---
+            # --- LAYOUT FOR BST (Binary tree without balancing with guaranteed separation) ---
             node_radius = 26
             margin_y = 55
             min_node_step = 85
             level_height = 85
         else:
-            # --- LAYOUT PARA AVL (Árbol balanceado) ---
+            # --- LAYOUT FOR AVL (Balanced tree) ---
             node_radius = 30
             margin_y = 60
-            # Distancia horizontal mínima garantizada para evitar colisiones:
-            # Con 95 px y r=30 (diámetro 60 px), hay más de 35 px de espacio libre entre círculos
+            # Minimum guaranteed horizontal distance to avoid collisions:
+            # With 95 px and r=30 (diameter 60 px), there is more than 35 px of free space between circles
             min_node_step = 95
             level_height = 95
 
@@ -159,7 +159,7 @@ class TreeRenderer:
             ny = margin_y + offset_y + ly * zoom
             coords[id(node)] = (nx, ny)
 
-        # 3. Dibujar aristas / líneas conectoras
+        # 3. Draw edges / connecting lines
         line_w = max(1, min(4, int(2 * zoom)))
         def draw_edges(curr):
             if curr is None:
@@ -182,7 +182,7 @@ class TreeRenderer:
 
         draw_edges(root_node)
 
-        # 4. Dibujar nodos escalados
+        # 4. Draw scaled nodes
         r = max(20, min(44, int(node_radius * zoom)))
         pad_costly = max(9, int(14 * zoom))
         pad_sel = max(5, int(8 * zoom))
@@ -219,7 +219,7 @@ class TreeRenderer:
 
             tag_name = f"node_{event_id}"
 
-            # Halo redondeado punteado de acceso costoso
+            # Dotted rounded halo for expensive access
             if show_costly_halo and event_id in costly_ids and not is_bst_degenerate and is_visible:
                 cls._draw_round_rectangle(
                     canvas,
@@ -232,7 +232,7 @@ class TreeRenderer:
                     fill=""
                 )
 
-            # Recuadro redondeado sólido cian de selección activa
+            # Solid cyan rounded box for active selection
             if selected_event_id is not None and event_id == selected_event_id:
                 cls._draw_round_rectangle(
                     canvas,
@@ -244,7 +244,7 @@ class TreeRenderer:
                     fill=""
                 )
 
-            # Círculo del nodo
+            # Node circle
             canvas.create_oval(
                 nx - r, ny - r, nx + r, ny + r,
                 fill=fill_color,
@@ -253,7 +253,7 @@ class TreeRenderer:
                 tags=tag_name
             )
 
-            # Texto dentro del nodo: ID del nodo limpio y legible
+            # Text inside the node: Clean and readable node ID
             canvas.create_text(
                 nx, ny,
                 text=f"{event_id}",

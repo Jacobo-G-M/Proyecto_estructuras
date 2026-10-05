@@ -13,7 +13,7 @@ from Presentation.Views.queries_view import QueriesView
 
 class SismoLabApp(ctk.CTk):
     def __init__(self, observatory):
-        # Escala visual optimizada para mayor legibilidad y claridad de interfaz
+        # Optimized visual scale for greater readability and interface clarity
         ctk.set_appearance_mode("Dark")
         ctk.set_widget_scaling(1.15)
         ctk.set_window_scaling(1.0)
@@ -22,7 +22,7 @@ class SismoLabApp(ctk.CTk):
         self.observatory = observatory
         self._last_saved_signature = ""
 
-        # Configurar icono oficial de la aplicación (barra de tareas y título)
+        # Configure official application icon (taskbar and title)
         ico_path = os.path.join(os.path.dirname(__file__), "Assets", "logo.ico")
         if os.path.exists(ico_path):
             try:
@@ -30,10 +30,10 @@ class SismoLabApp(ctk.CTk):
             except Exception:
                 pass
 
-        # Conectar persistencia inicial: Cargar la última versión guardada en lugar de datos demo
+        # Connect initial persistence: Load the latest saved version instead of demo data
         self._load_latest_version_or_init()
 
-        # Configuración principal de la ventana (adaptable a laptops y pantallas estándar)
+        # Main window configuration (adaptable to laptops and standard screens)
         self.title("SismoLab AVL - Observatorio Sismológico")
         self.geometry("1366x768")
         self.minsize(1024, 660)
@@ -42,25 +42,25 @@ class SismoLabApp(ctk.CTk):
         # Interceptar el evento de cierre de ventana para alertar si hay cambios sin guardar
         self.protocol("WM_DELETE_WINDOW", self._on_close_window)
 
-        # Grid principal de la ventana
+        # Main window grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # 1. Sidebar (Panel Izquierdo Interactivo y compacto)
+        # 1. Sidebar (Interactive and compact Left Panel)
         self.sidebar = Sidebar(self, app=self, observatory=self.observatory, width=220)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         
-        # 2. Contenedor Derecho (Topbar + Vistas)
+        # 2. Right Container (Topbar + Views)
         self.right_container = ctk.CTkFrame(self, fg_color="transparent")
         self.right_container.grid(row=0, column=1, sticky="nsew")
         self.right_container.grid_columnconfigure(0, weight=1)
         self.right_container.grid_rowconfigure(1, weight=1)
 
-        # 3. Topbar (Barra Superior de Simulación)
+        # 3. Topbar (Simulation Top Bar)
         self.topbar = Topbar(self.right_container, app=self, observatory=self.observatory, height=60)
         self.topbar.grid(row=0, column=0, sticky="ew")
 
-        # 4. Registro y Gestión de Vistas Modulares
+        # 4. Registration and Management of Modular Views
         self.views = {
             "dashboard": DashboardView(self.right_container, app=self, observatory=self.observatory),
             "arboles": TreeView(self.right_container, app=self, observatory=self.observatory),
@@ -72,7 +72,7 @@ class SismoLabApp(ctk.CTk):
         self.current_view_key = None
         self.current_view = None
 
-        # Mostrar por defecto la vista de Dashboard
+        # Show Dashboard view by default
         self.switch_view("dashboard")
 
         # Registrar la firma del estado cargado inicialmente como base guardada
@@ -80,9 +80,8 @@ class SismoLabApp(ctk.CTk):
 
     def _load_latest_version_or_init(self):
         """
-        Localiza y carga la última versión persistente guardada en saved_versions/
-        ordenada por fecha de modificación más reciente. Si no existen versiones,
-        inicializa un escenario limpio sin inyectar datos de demostración.
+        Locates and loads the most recently modified persistent version in saved_versions/.
+        If no versions exist, initializes a clean scenario without injecting demo data.
         """
         target_dir = getattr(self.observatory, "VERSIONS_DIR", None)
         if not target_dir:
@@ -100,7 +99,7 @@ class SismoLabApp(ctk.CTk):
             pass
 
         if json_files:
-            # Seleccionar el archivo guardado más recientemente
+            # Select the most recently saved file
             latest_file = max(json_files, key=os.path.getmtime)
             stem = os.path.splitext(os.path.basename(latest_file))[0]
             ok = False
@@ -140,15 +139,15 @@ class SismoLabApp(ctk.CTk):
         return ""
 
     def capture_saved_state(self):
-        """Actualiza la firma base correspondiente a la versión guardada o cargada."""
+        """Updates the base signature corresponding to the saved or loaded version."""
         self._last_saved_signature = self._get_current_state_signature()
 
     def has_unsaved_changes(self) -> bool:
-        """Verifica si el observatorio tiene cambios respecto a la versión guardada/cargada."""
+        """Checks whether the observatory has unsaved changes relative to the saved/loaded version."""
         return self._get_current_state_signature() != self._last_saved_signature
 
     def save_current_scenario(self) -> bool:
-        """Guarda la versión actual en disco. Si no tiene archivo asociado, solicita nombre."""
+        """Saves the current version to disk. If no file is associated, prompts for a name."""
         filepath = getattr(self.observatory, "current_scenario_filepath", None)
         target_dir = getattr(self.observatory, "VERSIONS_DIR", None)
         if not target_dir:
@@ -183,9 +182,9 @@ class SismoLabApp(ctk.CTk):
 
     def _on_close_window(self):
         """
-        Intercepta el evento de cierre de ventana (WM_DELETE_WINDOW).
-        Si se han producido modificaciones después de cargar o guardar la versión,
-        muestra una alerta preguntando si desea guardar la versión actual.
+        Intercepts the window close event (WM_DELETE_WINDOW).
+        If modifications occurred after loading or saving the version,
+        prompts the user to save changes before closing.
         """
         if self.has_unsaved_changes():
             current_name = getattr(self.observatory, "current_scenario_name", "Versión Actual")
@@ -196,7 +195,7 @@ class SismoLabApp(ctk.CTk):
             )
             # resp == True  -> Guardar y salir
             # resp == False -> Salir sin guardar
-            # resp is None  -> Cancelar cierre y permanecer en la aplicación
+            # resp is None -> Cancel close and remain in application
             if resp is None:
                 return
             elif resp is True:
@@ -208,31 +207,31 @@ class SismoLabApp(ctk.CTk):
 
     def switch_view(self, view_key: str):
         """
-        Cambia dinámicamente la vista activa en la aplicación.
-        Permite a cualquier miembro del equipo integrar su pantalla de forma desacoplada.
+        Dynamically switches the active view in the application.
+        Allows modular views to be plugged in cleanly.
         """
         if view_key not in self.views:
             return
 
-        # Ocultar la vista previa si existe
+        # Hide preview if it exists
         if self.current_view is not None:
             self.current_view.grid_remove()
 
-        # Mostrar la nueva vista seleccionada
+        # Show the new selected view
         self.current_view_key = view_key
         self.current_view = self.views[view_key]
         self.current_view.grid(row=1, column=0, sticky="nsew")
 
-        # Notificar a la barra lateral para actualizar el resaltado cian
+        # Notify the sidebar to update the cyan highlight
         if hasattr(self, "sidebar") and self.sidebar:
             self.sidebar.set_active(view_key)
 
-        # Refrescar datos de la vista recién montada
+        # Refresh data of the newly mounted view
         if hasattr(self.current_view, "refresh"):
             self.current_view.refresh()
 
     def refresh_all(self):
-        """Notifica y actualiza todas las vistas y componentes con el estado más reciente."""
+        """Notifies and updates all views and components with the latest state."""
         if hasattr(self, "topbar") and self.topbar:
             self.topbar.refresh()
         if hasattr(self, "sidebar") and self.sidebar:

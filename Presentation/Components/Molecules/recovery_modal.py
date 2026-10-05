@@ -2,10 +2,10 @@
 Recovery Report Modal for SismoLab AVL.
 Informative popup window displayed when restoring the AVL tree balance (Global Recovery).
 Satisfies the requirement:
-'Al solicitar la recuperación global, se pausa el procesamiento de reportes.
-El sistema detecta los desbalances y aplica las rotaciones necesarias hasta
-restablecer la propiedad AVL. Se muestran los cambios y su costo.
-No se permite vaciar el árbol para sustituirlo por otro construido a partir de una lista ordenada.'
+'When requesting global recovery, report processing is paused.
+The system detects imbalances and performs necessary rotations until
+AVL property is restored. Changes and computational cost are displayed.
+Clearing the tree to rebuild from a sorted list is strictly forbidden.'
 """
 
 import os
@@ -61,17 +61,17 @@ class RecoveryReportModal(ctk.CTkToplevel):
         self.result = result or {}
         self.success = self.result.get("success", False)
 
-        # Configuración básica de ventana
+        # Basic window configuration
         self.title("Restauración Global AVL - SismoLab")
         self.geometry("680x740")
         self.minsize(660, 600)
         self.resizable(False, False)
         self.configure(fg_color=BG_ROOT)
 
-        # Configurar icono oficial de la aplicación (logo.ico)
+        # Configure official application icon (logo.ico)
         self._set_app_icon()
 
-        # Vincular con ventana principal
+        # Link with main window
         if master:
             try:
                 top = master.winfo_toplevel() if hasattr(master, "winfo_toplevel") else master
@@ -79,25 +79,25 @@ class RecoveryReportModal(ctk.CTkToplevel):
             except Exception:
                 pass
 
-        # Centrado sobre la ventana padre
+        # Centered over the parent window
         self._center_on_master(master)
 
-        # Configuración modal y atajo de escape
+        # Modal configuration and escape shortcut
         self.bind("<Escape>", lambda e: self.destroy())
         self.after(100, self._apply_modal_focus)
 
-        # Contenedor raíz
+        # Root container
         self._build_ui()
 
     def _set_app_icon(self):
-        """Aplica el icono oficial del observatorio (logo.ico) a la barra de título de la ventana."""
+        """Applies the official observatory icon (logo.ico) to the window's title bar."""
         ico_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Assets", "logo.ico"))
         if os.path.exists(ico_path):
             try:
                 self.iconbitmap(ico_path)
             except Exception:
                 pass
-            # Reaplicar con retardo para asegurar que sobreescriba el icono por defecto de CustomTkinter en Windows
+            # Re-apply with delay to ensure it overwrites the default CustomTkinter icon on Windows
             self.after(200, lambda: self._apply_icon(ico_path))
 
     def _apply_icon(self, ico_path: str):
@@ -134,12 +134,12 @@ class RecoveryReportModal(ctk.CTkToplevel):
             pass
 
     def _build_ui(self):
-        # Frame principal con padding
+        # Main frame with padding
         main_container = ctk.CTkFrame(self, fg_color="transparent")
         main_container.pack(fill="both", expand=True, padx=20, pady=(18, 16))
 
         # -------------------------------------------------------------
-        # 1. ENCABEZADO
+        # 1. HEADER
         # -------------------------------------------------------------
         header_frame = ctk.CTkFrame(main_container, fg_color="transparent")
         header_frame.pack(fill="x", pady=(0, 10))
@@ -182,7 +182,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
         lbl_desc.pack(fill="x")
 
         # -------------------------------------------------------------
-        # 2. BANNER DE GARANTÍAS Y RESTRICCIONES (CONFORME AL DOCUMENTO)
+        # 2. GUARANTEES AND RESTRICTIONS BANNER (ACCORDING TO DOCUMENT)
         # -------------------------------------------------------------
         banner = InfoBanner(
             main_container,
@@ -197,7 +197,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
         banner.pack(fill="x", pady=(0, 12))
 
         # -------------------------------------------------------------
-        # 3. TARJETAS DE RESUMEN KPI (2x2)
+        # 3. KPI SUMMARY CARDS (2x2)
         # -------------------------------------------------------------
         total_rotations = self.result.get("total_rotations", 0)
         total_turns = self.result.get("total_turns", 0)
@@ -253,7 +253,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
         )
 
         # -------------------------------------------------------------
-        # 4. CONTENEDOR DESPLAZABLE CON DETALLE TÉCNICO
+        # 4. SCROLLABLE CONTAINER WITH TECHNICAL DETAIL
         # -------------------------------------------------------------
         scroll = ctk.CTkScrollableFrame(
             main_container,
@@ -264,17 +264,17 @@ class RecoveryReportModal(ctk.CTkToplevel):
         )
         scroll.pack(fill="both", expand=True, pady=(0, 14))
 
-        # SECCIÓN A: Desglose de Rotaciones y Costos de Puntero
+        # SECTION A: Breakdown of Rotations and Pointer Costs
         self._build_rotations_breakdown(scroll)
 
-        # SECCIÓN B: Cambios Topológicos (Raíz y Nodos)
+        # SECTION B: Topological Changes (Root and Nodes)
         self._build_topology_changes(scroll)
 
-        # SECCIÓN C: Verificación y Auditoría
+        # SECTION C: Verification and Audit
         self._build_audit_section(scroll)
 
         # -------------------------------------------------------------
-        # 5. BOTÓN DE CIERRE INFERIOR
+        # 5. BOTTOM CLOSE BUTTON
         # -------------------------------------------------------------
         btn_close = PrimaryButton(
             main_container,
@@ -345,7 +345,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
         cases = self.result.get("cases", {})
         turns = self.result.get("turns", {})
 
-        # Tabla de casos de rotación
+        # Rotation cases table
         table_frame = ctk.CTkFrame(
             frame,
             fg_color=BG_CARD_ALT,
@@ -396,7 +396,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
             )
             lbl_desc.pack(fill="x", pady=(0, 2))
 
-        # Fila de giros de enlace elementales
+        # Row of elementary link rotations
         turns_left = turns.get("left", 0)
         turns_right = turns.get("right", 0)
         lbl_turns = ctk.CTkLabel(
@@ -468,7 +468,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
         )
         lbl_root_desc.pack(fill="x", pady=(2, 0))
 
-        # Muestra de nodos que tenían desbalance
+        # Sample of nodes that had imbalance
         imbalanced_nodes = self.result.get("imbalanced_nodes", [])
         row_nodes = ctk.CTkFrame(card, fg_color="transparent")
         row_nodes.pack(fill="x", padx=10, pady=(4, 8))
@@ -483,7 +483,7 @@ class RecoveryReportModal(ctk.CTkToplevel):
         lbl_imb_t.pack(fill="x")
 
         if imbalanced_nodes:
-            # Mostrar hasta 5 nodos
+            # Show up to 5 nodes
             lines = []
             for node in imbalanced_nodes[:5]:
                 bf = node.get("bf", 0)

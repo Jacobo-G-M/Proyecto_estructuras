@@ -1,19 +1,18 @@
 """
 Presentation / Views / queries_view.py
-Vista de Consultas, Auditoría y Métricas.
-Implementa fielmente el diseño de Banani en CustomTkinter:
-- Encabezado con breadcrumb, título y badge dinámico de eventos costosos P3>L.
-- Fila superior (2 Columnas):
-  * Columna 1 (Izquierda): Generador de Consultas Avanzadas con 4 pestañas interactivas:
-    1. Top-k pendientes en orden descendente de K=(P, M, I) con poda temprana.
-    2. Filtros por rango de magnitud, profundidad y fechas con poda matemática.
-    3. Búsqueda y trazabilidad de asociaciones y réplicas.
-    4. Detección de accesos costosos de alta prioridad (profundidad > L).
-  * Columna 2 (Derecha): AssociationExplorer detallado con candidato ganador, candidatos evaluados y réplicas.
-- Fila inferior: Centro de Auditoría y Verificación Estructural Global:
-  * 4 tarjetas de verificación técnica (Orden BST, Unicidad de IDs, Alturas recalculadas, Factores de balance).
-  * 12 tarjetas de métricas acumulativas de negocio y rotaciones AVL (LL, RR, LR, RL, giros).
-  * Barra de reporte descargable en JSON.
+Queries, Audit and Metrics View in CustomTkinter:
+- Header with breadcrumbs, title, and dynamic badge for costly P3>L events.
+- Top row (2 Columns):
+  * Column 1 (Left): Advanced Query Builder with 4 interactive tabs:
+    1. Top-k pending events in descending order of K=(P, M, I) with early pruning.
+    2. Range filters by magnitude, depth, and dates with mathematical pruning.
+    3. Search and traceability for associations and replicas.
+    4. Detection of costly high-priority accesses (depth > L).
+  * Column 2 (Right): Detailed AssociationExplorer with winning reference, evaluated candidates, and replicas.
+- Bottom row: Global Structural Audit and Verification Center:
+  * 4 technical validation cards (BST order, ID uniqueness, recalculated heights, balance factors).
+  * 12 business and AVL rotation metric cards (LL, RR, LR, RL turns).
+  * Exportable JSON audit report bar.
 """
 
 import json
@@ -42,7 +41,7 @@ class QueriesView(ctk.CTkFrame):
         self.app = app
         self.observatory = observatory
 
-        # Estado de navegación y parámetros de consulta
+        # Navigation state and query parameters
         self.active_query_tab = "top_k"
         self.last_visited_nodes = 0
         self.selected_assoc_event_id = None
@@ -56,17 +55,17 @@ class QueriesView(ctk.CTkFrame):
             "last_audit_time": None
         }
 
-        # Construir Interfaz de Usuario
+        # Build User Interface
         self._build_ui()
         self.refresh()
         self._handle_execute_query()
 
     # =========================================================================
-    # CONSTRUCCIÓN DE LA INTERFAZ
+    # INTERFACE CONSTRUCTION
     # =========================================================================
 
     def _build_ui(self):
-        # Contenedor principal con scroll vertical adaptable a cualquier resolución
+        # Main container with vertical scroll adaptable to any resolution
         self.scroll_container = ctk.CTkScrollableFrame(
             self,
             fg_color="transparent",
@@ -74,32 +73,32 @@ class QueriesView(ctk.CTkFrame):
         )
         self.scroll_container.pack(fill="both", expand=True, padx=20, pady=15)
 
-        # 1. Encabezado de la Vista
+        # 1. View Header
         self._build_header(self.scroll_container)
 
-        # 2. Grid Superior: Generador de Consultas (Izq) + Association Explorer (Der)
+        # 2. Top Grid: Query Builder (Left) + Association Explorer (Right)
         top_grid = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
         top_grid.pack(fill="x", pady=(0, 15))
         top_grid.grid_columnconfigure(0, weight=6)
         top_grid.grid_columnconfigure(1, weight=4)
 
-        # Componente Izquierdo: Generador de Consultas
+        # Left Component: Query Generator
         self.card_query_gen = self._build_query_generator(top_grid)
         self.card_query_gen.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-        # Componente Derecho: Association Explorer
+        # Right Component: Association Explorer
         self.card_assoc_exp = self._build_association_explorer(top_grid)
         self.card_assoc_exp.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
 
-        # 3. Componente Inferior: Centro de Auditoría y Verificación Estructural
+        # 3. Bottom Component: Structural Auditing and Verification Center
         self.card_audit_center = self._build_audit_center(self.scroll_container)
         self.card_audit_center.pack(fill="x", pady=(0, 15))
 
-        # 4. Pie de Página Técnico
+        # 4. Technical Footer
         self._build_footer(self.scroll_container)
 
     # -------------------------------------------------------------------------
-    # 1. Encabezado
+    # 1. Header
     # -------------------------------------------------------------------------
     def _build_header(self, parent):
         header_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -129,12 +128,12 @@ class QueriesView(ctk.CTkFrame):
         self.chip_costly_count.pack(side="right")
 
     # -------------------------------------------------------------------------
-    # 2. Generador de Consultas Avanzadas (Columna Izquierda Superior)
+    # 2. Advanced Queries Generator (Top Left Column)
     # -------------------------------------------------------------------------
     def _build_query_generator(self, parent):
         card = Card(parent, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
 
-        # Header de la tarjeta
+        # Card Header
         header = ctk.CTkFrame(card, fg_color="transparent")
         header.pack(fill="x", padx=16, pady=(12, 6))
 
@@ -158,7 +157,7 @@ class QueriesView(ctk.CTkFrame):
         )
         self.badge_visited_nodes.pack(side="right")
 
-        # Pestañas de tipo de consulta (4 Tabs)
+        # Query type tabs (4 Tabs)
         tabs_bar = ctk.CTkFrame(card, fg_color="transparent")
         tabs_bar.pack(fill="x", padx=16, pady=(4, 8))
 
@@ -230,16 +229,16 @@ class QueriesView(ctk.CTkFrame):
         )
         self.btn_tab_costly.pack(side="left", padx=4)
 
-        # Barra dinámica de parámetros de la consulta seleccionada
+        # Dynamic parameter bar of the selected query
         self.frame_params = ctk.CTkFrame(card, fg_color="transparent")
         self.frame_params.pack(fill="x", padx=16, pady=4)
         self._render_param_controls()
 
-        # Tabla de Resultados
+        # Results Table
         self.frame_table_container = ctk.CTkFrame(card, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=8)
         self.frame_table_container.pack(fill="both", expand=True, padx=16, pady=(8, 14))
 
-        # Encabezado de la tabla (6 Columnas)
+        # Table header (6 Columns)
         tbl_hdr = ctk.CTkFrame(self.frame_table_container, fg_color="#070c12", corner_radius=0, height=30)
         tbl_hdr.pack(fill="x", padx=(0, 16))
         tbl_hdr.pack_propagate(False)
@@ -260,14 +259,14 @@ class QueriesView(ctk.CTkFrame):
             )
             lbl.place(relx=rel_xs[col_idx], relwidth=rel_widths[col_idx], relheight=1.0)
 
-        # Filas de la tabla (Scrollable)
+        # Table rows (Scrollable)
         self.scroll_table_rows = ctk.CTkScrollableFrame(self.frame_table_container, fg_color="transparent", height=180)
         self.scroll_table_rows.pack(fill="both", expand=True)
 
         return card
 
     # -------------------------------------------------------------------------
-    # Renderizado Dinámico de Parámetros según Pestaña
+    # Dynamic Rendering of Parameters according to Tab
     # -------------------------------------------------------------------------
     def _render_param_controls(self):
         for widget in self.frame_params.winfo_children():
@@ -285,7 +284,7 @@ class QueriesView(ctk.CTkFrame):
             self.entry_top_k.pack(side="left", padx=(0, 6))
 
         elif tab == "range":
-            # Rango Magnitud
+            # Magnitude Range
             f_m = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_m.pack(side="left", padx=(0, 6))
             ctk.CTkLabel(f_m, text="M ∈", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(6, 2))
@@ -297,7 +296,7 @@ class QueriesView(ctk.CTkFrame):
             self.entry_max_m.insert(0, "7.0")
             self.entry_max_m.pack(side="left", padx=(0, 6))
 
-            # Profundidad H
+            # Depth H
             f_h = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_h.pack(side="left", padx=4)
             ctk.CTkLabel(f_h, text="H ≤", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(6, 2))
@@ -306,7 +305,7 @@ class QueriesView(ctk.CTkFrame):
             self.entry_max_h.pack(side="left")
             ctk.CTkLabel(f_h, text="km", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(side="left", padx=(0, 6))
 
-            # Días rango
+            # Days range
             f_days = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_days.pack(side="left", padx=4)
             ctk.CTkLabel(f_days, text="Últimos", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(side="left", padx=(6, 2))
@@ -316,7 +315,7 @@ class QueriesView(ctk.CTkFrame):
             ctk.CTkLabel(f_days, text="días", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(side="left", padx=(0, 6))
 
         elif tab == "by_id":
-            # Búsqueda por ID según Sección 6
+            # Search by ID according to Section 6
             f_id = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_id.pack(side="left", padx=(0, 6))
             ctk.CTkLabel(f_id, text="ID =", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(8, 4))
@@ -332,7 +331,7 @@ class QueriesView(ctk.CTkFrame):
             ctk.CTkLabel(f_info, text="Sección 6: Localización O(1) · métricas de nodo AVL (prof, h, FB) · asociaciones", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(padx=8, pady=4)
 
         elif tab == "assoc":
-            # Evento objetivo ID
+            # Target event ID
             f_id = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_id.pack(side="left", padx=(0, 6))
             ctk.CTkLabel(f_id, text="ID =", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(8, 4))
@@ -343,13 +342,13 @@ class QueriesView(ctk.CTkFrame):
             self.entry_target_id.insert(0, init_id)
             self.entry_target_id.pack(side="left", padx=(0, 6))
 
-            # Reglas fijas
+            # Fixed rules
             f_rules = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_rules.pack(side="left", padx=4)
             ctk.CTkLabel(f_rules, text="W ≤ 48h · R ≤ 40km · MA > MB", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(padx=8, pady=4)
 
         elif tab == "costly":
-            # Límite L
+            # Limit L
             f_l = ctk.CTkFrame(self.frame_params, fg_color="#0b131c", border_color=BORDER_SUBTLE, border_width=1, corner_radius=6)
             f_l.pack(side="left", padx=(0, 6))
             ctk.CTkLabel(f_l, text="L =", font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED).pack(side="left", padx=(8, 4))
@@ -362,7 +361,7 @@ class QueriesView(ctk.CTkFrame):
             f_info.pack(side="left", padx=4)
             ctk.CTkLabel(f_info, text="Condición: Prioridad P=3 y profundidad en AVL > L", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(padx=8, pady=4)
 
-        # Botones de Acción: Ejecutar y Exportar
+        # Action Buttons: Execute and Export
         btn_exec = ctk.CTkButton(
             self.frame_params,
             text="Ejecutar",
@@ -392,7 +391,7 @@ class QueriesView(ctk.CTkFrame):
         btn_export.pack(side="right", padx=4)
 
     # -------------------------------------------------------------------------
-    # 3. Explorador de Asociaciones (Columna Derecha Superior)
+    # 3. Associations Explorer (Top Right Column)
     # -------------------------------------------------------------------------
     def _build_association_explorer(self, parent):
         card = Card(parent, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
@@ -421,7 +420,7 @@ class QueriesView(ctk.CTkFrame):
         )
         self.badge_assoc_visited.pack(side="right")
 
-        # Selector de ID + Regla
+        # ID Selector + Rule
         selector_bar = ctk.CTkFrame(card, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=6)
         selector_bar.pack(fill="x", padx=16, pady=4)
 
@@ -442,21 +441,21 @@ class QueriesView(ctk.CTkFrame):
 
 
 
-        # Sección 1: Candidatos Evaluados
+        # Section 1: Evaluated Candidates
         lbl_cand_title = ctk.CTkLabel(card, text="CANDIDATOS EVALUADOS", font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=TEXT_MUTED)
         lbl_cand_title.pack(anchor="w", padx=16, pady=(10, 4))
 
         self.frame_candidates_list = ctk.CTkFrame(card, fg_color="transparent")
         self.frame_candidates_list.pack(fill="x", padx=16)
 
-        # Sección 2: Lo toman como referencia
+        # Section 2: Taken as reference
         lbl_ref_title = ctk.CTkLabel(card, text="LO TOMAN COMO REFERENCIA", font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=TEXT_MUTED)
         lbl_ref_title.pack(anchor="w", padx=16, pady=(10, 4))
 
         self.frame_replicas_list = ctk.CTkFrame(card, fg_color="transparent")
         self.frame_replicas_list.pack(fill="x", padx=16)
 
-        # Pie de tarjeta: Criterio de Desempate del PDF
+        # Card footer: PDF Tiebreaker Criterion
         footer_tiebreak = ctk.CTkFrame(card, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=6)
         footer_tiebreak.pack(fill="x", padx=16, pady=(12, 14))
 
@@ -471,12 +470,12 @@ class QueriesView(ctk.CTkFrame):
         return card
 
     # -------------------------------------------------------------------------
-    # 4. Centro de Auditoría y Verificación Estructural (Inferior)
+    # 4. Structural Auditing and Verification Center (Bottom)
     # -------------------------------------------------------------------------
     def _build_audit_center(self, parent):
         card = Card(parent, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
 
-        # Header con Botón de Verificación
+        # Header with Verification Button
         header = ctk.CTkFrame(card, fg_color="transparent")
         header.pack(fill="x", padx=16, pady=(12, 8))
 
@@ -501,27 +500,27 @@ class QueriesView(ctk.CTkFrame):
         )
         btn_verify.pack(side="right")
 
-        # 4 Tarjetas de Verificación Técnica (1x4)
+        # 4 Technical Verification Cards (1x4)
         cards_grid = ctk.CTkFrame(card, fg_color="transparent")
         cards_grid.pack(fill="x", padx=16, pady=4)
         cards_grid.grid_columnconfigure((0, 1, 2, 3), weight=1, uniform="audit_cards")
 
-        # 1. Orden BST
+        # 1. BST Order
         self.card_v_bst = self._create_audit_pill(cards_grid, 0, "✓ Orden BST global", "OK · inorden creciente K", SUCCESS)
-        # 2. Unicidad de IDs
+        # 2. Uniqueness of IDs
         self.card_v_uniq = self._create_audit_pill(cards_grid, 1, "✓ Unicidad de IDs", "OK · 0 duplicados", SUCCESS)
-        # 3. Alturas recalculadas
+        # 3. Recalculated heights
         self.card_v_heights = self._create_audit_pill(cards_grid, 2, "✓ Alturas recalculadas", "OK · coinciden", SUCCESS)
-        # 4. Factores de balance
+        # 4. Balance factors
         self.card_v_bf = self._create_audit_pill(cards_grid, 3, "✓ Factores balance", "OK · BF ∈ [-1,1]", SUCCESS)
 
-        # Grid de 12 Tarjetas de Estadísticas (2 Filas de 6)
+        # Grid of 12 Statistics Cards (2 Rows of 6)
         stats_grid = ctk.CTkFrame(card, fg_color="transparent")
         stats_grid.pack(fill="x", padx=16, pady=(10, 8))
         for col_idx in range(6):
             stats_grid.grid_columnconfigure(col_idx, weight=1, uniform="stat_cards")
 
-        # Fila 1: Métricas de Negocio
+        # Row 1: Business Metrics
         self.lbl_stat_active = self._create_stat_cell(stats_grid, 0, 0, "0", "Activos", TEXT_PRIMARY)
         self.lbl_stat_archived = self._create_stat_cell(stats_grid, 0, 1, "0", "Archivados", TEXT_MUTED)
         self.lbl_stat_deleted = self._create_stat_cell(stats_grid, 0, 2, "0", "Eliminados (IDs)", TEXT_MUTED)
@@ -529,7 +528,7 @@ class QueriesView(ctk.CTkFrame):
         self.lbl_stat_conflicts = self._create_stat_cell(stats_grid, 0, 4, "0", "Conflictos", "#ffb020")
         self.lbl_stat_discarded = self._create_stat_cell(stats_grid, 0, 5, "0", "Descartados", DANGER)
 
-        # Fila 2: Balanceos y Giros AVL
+        # Row 2: AVL Balancings and Rotations
         self.lbl_stat_ll = self._create_stat_cell(stats_grid, 1, 0, "0", "Balanceos LL", ACCENT_CYAN)
         self.lbl_stat_rr = self._create_stat_cell(stats_grid, 1, 1, "0", "Balanceos RR", ACCENT_CYAN)
         self.lbl_stat_lr = self._create_stat_cell(stats_grid, 1, 2, "0", "Balanceos LR", "#ff7a1a")
@@ -537,7 +536,7 @@ class QueriesView(ctk.CTkFrame):
         self.lbl_stat_left_turns = self._create_stat_cell(stats_grid, 1, 4, "0", "Giros izquierda", TEXT_PRIMARY)
         self.lbl_stat_right_turns = self._create_stat_cell(stats_grid, 1, 5, "0", "Giros derecha", TEXT_PRIMARY)
 
-        # Barra de Resumen de Auditoría y Botón de Descarga
+        # Audit Summary Bar and Download Button
         report_bar = ctk.CTkFrame(card, fg_color="transparent")
         report_bar.pack(fill="x", padx=16, pady=(4, 14))
 
@@ -593,21 +592,21 @@ class QueriesView(ctk.CTkFrame):
         return lbl_val
 
     # -------------------------------------------------------------------------
-    # 5. Footer Técnico
+    # 5. Technical Footer
     # -------------------------------------------------------------------------
     def _build_footer(self, parent):
         pass
 
     # =========================================================================
-    # LÓGICA DE ACTUALIZACIÓN Y SINCRONIZACIÓN DE LA VISTA
+    # VIEW UPDATE AND SYNCHRONIZATION LOGIC
     # =========================================================================
 
     def refresh(self):
-        """Refresca todos los datos visuales, listas de IDs y contadores acumulados."""
+        """Refreshes all visual data, ID lists and accumulated counters."""
         if not self.observatory:
             return
 
-        # 1. Actualizar lista de IDs en el combo de asociaciones
+        # 1. Update list of IDs in the associations combobox
         event_ids = []
         if hasattr(self.observatory, 'events_dict') and self.observatory.events_dict:
             event_ids.extend([str(eid) for eid in sorted(self.observatory.events_dict.keys())])
@@ -623,7 +622,7 @@ class QueriesView(ctk.CTkFrame):
             self.combo_assoc_ids.configure(values=["-"])
             self.combo_assoc_ids.set("-")
 
-        # 2. Actualizar contador dinámico de eventos costosos
+        # 2. Update dynamic costly events counter
         costly_count = 0
         try:
             costly_events, _ = self.observatory.query_costly_high_priority_events()
@@ -632,7 +631,7 @@ class QueriesView(ctk.CTkFrame):
             pass
         self.chip_costly_count.configure(text=f"{costly_count} costosos")
 
-        # 3. Actualizar contadores en la cuadrícula de auditoría
+        # 3. Update counters in the audit grid
         metrics = getattr(self.observatory, 'metrics', None)
         n_act = len(self.observatory.events_dict) if hasattr(self.observatory, 'events_dict') else 0
         n_arc = len(self.observatory.historic.archived) if (self.observatory.historic and hasattr(self.observatory.historic, 'archived')) else 0
@@ -653,17 +652,17 @@ class QueriesView(ctk.CTkFrame):
             self.lbl_stat_left_turns.configure(text=str(metrics.turns.get("left", 0)))
             self.lbl_stat_right_turns.configure(text=str(metrics.turns.get("right", 0)))
 
-        # 4. Refrescar el explorador de asociaciones para el ID seleccionado
+        # 4. Refresh the associations explorer for the selected ID
         if self.selected_assoc_event_id:
             self._render_association_details(self.selected_assoc_event_id)
 
     # -------------------------------------------------------------------------
-    # Manejo de Pestañas del Generador de Consultas
+    # Query Builder Tabs Management
     # -------------------------------------------------------------------------
     def _switch_query_tab(self, tab: str):
         self.active_query_tab = tab
 
-        # Configurar colores de pestañas
+        # Configure tab colors
         tabs = [
             ("top_k", self.btn_tab_top_k),
             ("range", self.btn_tab_range),
@@ -681,11 +680,11 @@ class QueriesView(ctk.CTkFrame):
         self._handle_execute_query()
 
     # =========================================================================
-    # EJECUCIÓN DE CONSULTAS Y RENDERIZADO DE TABLA
+    # QUERY EXECUTION AND TABLE RENDERING
     # =========================================================================
 
     def _handle_execute_query(self):
-        """Ejecuta la consulta correspondiente según la pestaña activa y actualiza la tabla."""
+        """Executes the corresponding query based on the active tab and updates the table."""
         if not self.observatory:
             return
 
@@ -708,11 +707,11 @@ class QueriesView(ctk.CTkFrame):
                 now = self.observatory.clock_simulation
                 start_dt = now - timedelta(days=days)
 
-                # Consulta combinada aplicando podas del árbol
+                # Combined query applying tree pruning
                 events_m, visited_m = self.observatory.query_by_magnitude_range(min_m, max_m)
                 visited = visited_m
 
-                # Filtrar en memoria por profundidad y rango de fechas
+                # Filter in memory by depth and date range
                 filtered_events = [ev for ev in events_m if ev.depth <= max_h and start_dt <= ev.date_time <= now]
                 results = [{"event": ev, "visited": visited, "detail": f"M{ev.magnitude} · {ev.depth}km · {ev.date_time.strftime('%m-%d')}"} for ev in filtered_events]
 
@@ -775,7 +774,7 @@ class QueriesView(ctk.CTkFrame):
             messagebox.showerror("Error en Consulta", f"No se pudo completar la consulta:\n{ex}")
 
     def _render_table_rows(self, results: list[dict]):
-        """Dibuja las filas de resultados en la tabla."""
+        """Draws the result rows in the table."""
         for widget in self.scroll_table_rows.winfo_children():
             widget.destroy()
 
@@ -803,38 +802,38 @@ class QueriesView(ctk.CTkFrame):
             rel_widths = [w/total_w for w in col_weights]
             rel_xs = [sum(rel_widths[:i]) for i in range(len(rel_widths))]
 
-            # Clic en fila para explorar asociaciones inmediatamente
+            # Click on row to explore associations immediately
             row_frame.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 0: Índice #
+            # Column 0: Index #
             lbl_idx = ctk.CTkLabel(row_frame, text=str(idx), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=TEXT_MUTED, anchor="center")
             lbl_idx.place(relx=rel_xs[0], relwidth=rel_widths[0], relheight=1.0)
             lbl_idx.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 1: ID
+            # Column 1: ID
             lbl_id = ctk.CTkLabel(row_frame, text=f"EV-{ev.id}", font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color=TEXT_PRIMARY, anchor="center")
             lbl_id.place(relx=rel_xs[1], relwidth=rel_widths[1], relheight=1.0)
             lbl_id.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 2: Clave K=(P, M, T)
+            # Column 2: Key K=(P, M, T)
             k_tuple = ev.get_key() if hasattr(ev, 'get_key') else (ev.priority, ev.magnitude, ev.id)
             lbl_k = ctk.CTkLabel(row_frame, text=str(k_tuple), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=ACCENT_CYAN, anchor="center")
             lbl_k.place(relx=rel_xs[2], relwidth=rel_widths[2], relheight=1.0)
             lbl_k.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 3: Detalle
+            # Column 3: Detail
             lbl_det = ctk.CTkLabel(row_frame, text=detail, font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED, anchor="center")
             lbl_det.place(relx=rel_xs[3], relwidth=rel_widths[3], relheight=1.0)
             lbl_det.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 4: Estado
+            # Column 4: Status
             st_text = str(ev.attention_state)[:4].upper() if hasattr(ev, 'attention_state') else "PEND"
             st_color = "#ffb020" if "PEND" in st_text else SUCCESS if "REV" in st_text else TEXT_MUTED
             lbl_st = ctk.CTkLabel(row_frame, text=st_text, font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=st_color, anchor="center")
             lbl_st.place(relx=rel_xs[4], relwidth=rel_widths[4], relheight=1.0)
             lbl_st.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Columna 5: Nodos Visitados
+            # Column 5: Visited Nodes
             lbl_vis = ctk.CTkLabel(row_frame, text=str(visited_cnt), font=ctk.CTkFont(family=FONT_MONO, size=11, weight="bold"), text_color="#ffb020", anchor="center")
             lbl_vis.place(relx=rel_xs[5], relwidth=rel_widths[5], relheight=1.0)
             lbl_vis.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
@@ -845,7 +844,7 @@ class QueriesView(ctk.CTkFrame):
         self._render_association_details(eid)
 
     # -------------------------------------------------------------------------
-    # Renderizado de Asociación en AssociationExplorer
+    # Association Rendering in AssociationExplorer
     # -------------------------------------------------------------------------
     def _on_assoc_id_selected(self, choice: str):
         try:
@@ -856,7 +855,7 @@ class QueriesView(ctk.CTkFrame):
             pass
 
     def _render_association_details(self, event_id: int):
-        """Consulta y renderiza los candidatos y réplicas del evento seleccionado."""
+        """Queries and renders the candidates and replicas of the selected event."""
         if not self.observatory:
             return
 
@@ -884,7 +883,7 @@ class QueriesView(ctk.CTkFrame):
         candidates = report.get("candidates", [])
         replicas = report.get("referenced_by", [])
 
-        # 1. Renderizar Candidatos Evaluados
+        # 1. Render Evaluated Candidates
         if not candidates and not chosen:
             ctk.CTkLabel(
                 self.frame_candidates_list,
@@ -893,7 +892,7 @@ class QueriesView(ctk.CTkFrame):
                 text_color=TEXT_MUTED
             ).pack(anchor="w", pady=4)
         else:
-            # Ganadora si existe
+            # Winner if exists
             if chosen and chosen.get("event"):
                 c_ev = chosen["event"]
                 c_st = chosen.get("status", "Activo").lower()
@@ -905,11 +904,11 @@ class QueriesView(ctk.CTkFrame):
                 ctk.CTkLabel(f_win, text=f"✓ EV-{c_ev.id} · GANADORA", font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=SUCCESS).pack(side="left", padx=8, pady=4)
                 ctk.CTkLabel(f_win, text=f"{round(dist, 1)}km · {round(dt_h, 1)}h · {c_st}", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(side="right", padx=8, pady=4)
 
-            # Otros candidatos evaluados
+            # Other evaluated candidates
             for cand in candidates[:3]:
                 c_ev = cand["event"]
                 if chosen and chosen.get("event") and chosen["event"].id == c_ev.id:
-                    continue  # Ya mostrado como ganador
+                    continue  # Already shown as winner
                 c_st = cand.get("status", "Activo").lower()
                 dist = math.sqrt((c_ev.epicenter[0] - target_event.epicenter[0])**2 + (c_ev.epicenter[1] - target_event.epicenter[1])**2)
                 dt_h = abs((target_event.date_time - c_ev.date_time).total_seconds()) / 3600.0
@@ -919,7 +918,7 @@ class QueriesView(ctk.CTkFrame):
                 ctk.CTkLabel(f_cand, text=f"EV-{c_ev.id} · M{c_ev.magnitude} > M{target_event.magnitude} ✓", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_PRIMARY).pack(side="left", padx=8, pady=4)
                 ctk.CTkLabel(f_cand, text=f"{round(dist, 1)}km · {round(dt_h, 1)}h · {c_st}", font=ctk.CTkFont(family=FONT_MONO, size=10), text_color=TEXT_MUTED).pack(side="right", padx=8, pady=4)
 
-        # 2. Renderizar Réplicas que lo toman como referencia
+        # 2. Render Replicas that take it as a reference
         if not replicas:
             ctk.CTkLabel(
                 self.frame_replicas_list,
@@ -959,17 +958,17 @@ class QueriesView(ctk.CTkFrame):
                 ).pack(side="left")
 
     # =========================================================================
-    # ACCIONES DE AUDITORÍA Y VERIFICACIÓN
+    # AUDIT AND VERIFICATION ACTIONS
     # =========================================================================
 
     def _handle_verify_structure(self):
-        """Ejecuta la verificación estructural completa en el árbol y actualiza indicadores."""
+        """Executes the full structural verification on the tree and updates indicators."""
         if not self.observatory:
             return
 
         report = self.observatory.verify_structure()
 
-        # Categorizar los hallazgos de la auditoría estructural
+        # Categorize the findings of the structural audit
         bst_errors = [line for line in report if "Orden" in line]
         uniq_errors = [line for line in report if "duplicado" in line or "ciclo" in line]
         height_errors = [line for line in report if "Metadatos" in line or "Altura" in line]
@@ -980,7 +979,7 @@ class QueriesView(ctk.CTkFrame):
         node_count = len(self.observatory.events_dict) if hasattr(self.observatory, 'events_dict') else 0
         rot_count = sum(self.observatory.metrics.cases.values()) if (self.observatory.metrics and hasattr(self.observatory.metrics, 'cases')) else 0
 
-        # Actualizar las 4 tarjetas técnicas
+        # Update the 4 technical cards
         bst_ok = len(bst_errors) == 0
         uniq_ok = len(uniq_errors) == 0
         h_ok = len(height_errors) == 0
@@ -1028,7 +1027,7 @@ class QueriesView(ctk.CTkFrame):
         total_issues = len(bst_errors) + len(uniq_errors) + len(height_errors) + len(balance_issues) + len(integrity_errors)
         has_critical_errors = len(bst_errors) + len(uniq_errors) + len(height_errors) + len(integrity_errors) > 0 or (not is_stress and len(balance_issues) > 0)
 
-        # Actualizar barra de estado inferior
+        # Update bottom status bar
         if total_issues > 0:
             details = []
             if balance_issues:
@@ -1051,7 +1050,7 @@ class QueriesView(ctk.CTkFrame):
         self.audit_status["errors"] = report
         self.audit_status["last_audit_time"] = now_str
 
-        # Sincronizar contadores globales de la app
+        # Synchronize app global counters
         self.refresh()
         if self.app and hasattr(self.app, 'refresh_all'):
             self.app.refresh_all()
@@ -1090,7 +1089,7 @@ class QueriesView(ctk.CTkFrame):
         pill_dict["subtitle"].configure(text=subtitle)
 
     def _handle_download_audit_report(self):
-        """Descarga el reporte de auditoría en formato estructurado JSON."""
+        """Downloads the audit report in structured JSON format."""
         if not self.observatory:
             return
 
@@ -1124,7 +1123,7 @@ class QueriesView(ctk.CTkFrame):
                 messagebox.showerror("Error al Exportar", f"No se pudo guardar el archivo:\n{ex}")
 
     def _handle_export_query(self):
-        """Exporta los resultados de la consulta actual a un archivo JSON."""
+        """Exports the current query results to a JSON file."""
         if not self.current_query_results:
             messagebox.showwarning("Sin Resultados", "No hay resultados de consulta disponibles para exportar.")
             return

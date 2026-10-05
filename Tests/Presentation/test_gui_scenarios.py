@@ -45,14 +45,14 @@ class TestGUIScenarios(unittest.TestCase):
 
     def test_caso1_gui_limites_y_empates(self):
         """
-        CASO 1: LÍMITES Y EMPATES en la GUI
-        - Carga de topología desde la Topbar.
-        - Renderizado en TreeView y verificación de claves K=(P, M, I).
-        - Evento A (borde de zona x=300) clasificado con P=3.
-        - Evento B (fuera de zona) clasificado con P=2.
-        - Evento C (M=6.0) clasificado con P=3.
-        - Desempate por ID entre Evento D (ID 20) y Evento E (ID 35) con misma P=2, M=5.0.
-        - Renderizado y validación en MapView y DashboardView.
+        SCENARIO 1: BOUNDARIES AND TIE-BREAKING in the GUI
+        - Topology loading from Topbar.
+        - TreeView rendering and verification of keys K=(P, M, I).
+        - Event A (zone boundary x=300) classified with P=3.
+        - Event B (outside zone) classified with P=2.
+        - Event C (M=6.0) classified with P=3.
+        - ID tie-break between Event D (ID 20) and Event E (ID 35) with same P=2, M=5.0.
+        - Rendering and validation in MapView and DashboardView.
         """
         filepath = os.path.join(SCENARIOS_DIR, "caso1_limites_empates.json")
         self.assertTrue(os.path.exists(filepath), f"File not found: {filepath}")
@@ -61,21 +61,21 @@ class TestGUIScenarios(unittest.TestCase):
             self.app.topbar._load_specific_scenario(filepath, "caso1_limites_empates")
             self.app.update()
 
-        # Verificar sincronización en la Topbar
+        # Verify synchronization in the Topbar
         self.assertEqual(self.app.topbar.current_scenario_name, "caso1_limites_empates")
 
-        # 1. Verificar Dashboard
+        # 1. Verify Dashboard
         self.app.switch_view("dashboard")
         self.app.update()
         self.assertEqual(self.obs.metrics.active_events, 5)
         self.assertEqual(len(self.obs.events_dict), 5)
 
-        # 2. Verificar TreeView y propiedades de claves K
+        # 2. Verify TreeView and K key properties
         self.app.switch_view("arboles")
         self.app.update()
         tree_view = self.app.views["arboles"]
 
-        # Verificar prioridades esperadas
+        # Verify expected priorities
         ev_a = self.obs.events_dict[50]
         ev_b = self.obs.events_dict[10]
         ev_c = self.obs.events_dict[60]
@@ -88,15 +88,15 @@ class TestGUIScenarios(unittest.TestCase):
         self.assertEqual(ev_d.priority, 2, "Evento D debe tener P=2")
         self.assertEqual(ev_e.priority, 2, "Evento E debe tener P=2")
 
-        # Verificar desempate en la clave K: (2, 5.0, 35) > (2, 5.0, 20)
+        # Verify tie-break in key K: (2, 5.0, 35) > (2, 5.0, 20)
         self.assertGreater(ev_e.get_key(), ev_d.get_key())
 
-        # Probar selección de nodo en el Inspector de TreeView
+        # Test node selection in the TreeView Inspector
         tree_view.selected_event_id = 50
         tree_view._refresh_inspector()
         self.assertIn("(3, 4.5, 50)", tree_view.lbl_hero_tuple.cget("text"))
 
-        # 3. Verificar MapView
+        # 3. Verify MapView
         self.app.switch_view("mapa")
         self.app.update()
         map_view = self.app.views["mapa"]
@@ -105,11 +105,11 @@ class TestGUIScenarios(unittest.TestCase):
 
     def test_caso2_gui_correccion_y_reporte_antiguo(self):
         """
-        CASO 2: CORRECCIÓN Y REPORTE ANTIGUO en la GUI
-        - Estado inicial: Evento 100 con M=4.8, P=2, Rev 1.
-        - Procesamiento de Reporte 2 en EventsView (Paso a Paso): Corrección aceptada a M=6.2, P=3, Rev 2.
-        - Procesamiento de Reporte 3 en EventsView (Paso a Paso): Descarte por revisión obsoleta (Rev 1).
-        - Métricas actualizadas y visualización en EventsView y TreeView.
+        SCENARIO 2: CORRECTION AND OUTDATED REPORT in the GUI
+        - Initial state: Event 100 with M=4.8, P=2, Rev 1.
+        - Processing Report 2 in EventsView (Step-by-step): Accepted correction to M=6.2, P=3, Rev 2.
+        - Processing Report 3 in EventsView (Step-by-step): Discarded due to outdated revision (Rev 1).
+        - Updated metrics and UI rendering in EventsView and TreeView.
         """
         filepath = os.path.join(SCENARIOS_DIR, "caso2_correccion_reporte_antiguo_inicial.json")
         self.assertTrue(os.path.exists(filepath), f"File not found: {filepath}")
@@ -122,14 +122,14 @@ class TestGUIScenarios(unittest.TestCase):
         self.app.switch_view("eventos")
         self.app.update()
 
-        # Verificar estado inicial de la cola
+        # Verify initial state of the queue
         self.assertEqual(len(self.obs.report_queue.current_reports), 2)
         ev100 = self.obs.events_dict[100]
         self.assertEqual(ev100.priority, 2)
         self.assertEqual(ev100.review, 1)
         self.assertEqual(ev100.get_key(), (2, 4.8, 100))
 
-        # --- Paso 1 en la GUI: Procesar Reporte de Corrección ---
+        # --- Step 1 in the GUI: Process Correction Report ---
         events_view._handle_step_queue()
         self.app.update()
 
@@ -140,18 +140,18 @@ class TestGUIScenarios(unittest.TestCase):
         self.assertEqual(ev100.get_key(), (3, 6.2, 100))
         self.assertEqual(self.obs.metrics.corrections_accepted, 1)
 
-        # --- Paso 2 en la GUI: Procesar Reporte Antiguo Obsoleto ---
+        # --- Step 2 in the GUI: Process Obsolete Old Report ---
         events_view._handle_step_queue()
         self.app.update()
 
         self.assertEqual(len(self.obs.report_queue.current_reports), 0)
-        # El evento NO debe revertir a Rev 1
+        # The event MUST NOT revert to Rev 1
         self.assertEqual(ev100.review, 2)
         self.assertEqual(ev100.priority, 3)
         self.assertEqual(ev100.magnitude, 6.2)
         self.assertEqual(self.obs.metrics.discarded_reports, 1)
 
-        # Verificar que TreeView refleja la nueva clave K=(3, 6.2, 100)
+        # Verify that TreeView reflects the new key K=(3, 6.2, 100)
         self.app.switch_view("arboles")
         self.app.update()
         tree_view = self.app.views["arboles"]
@@ -161,13 +161,13 @@ class TestGUIScenarios(unittest.TestCase):
 
     def test_caso3_gui_reporte_tardio_y_replicas(self):
         """
-        CASO 3: REPORTE TARDÍO Y ASOCIACIÓN DE RÉPLICAS en la GUI
-        - Carga de topología antes de la llegada tardía (Eventos 1 y 2).
-        - Evento 1 es referencia y Evento 2 es su réplica.
-        - Llega Evento 3 tardío (ocurrió a las 09:55, anterior a 1 y 2, con mayor magnitud M=6.1).
-        - Se ejecuta paso en EventsView: se reasocian réplicas determinísticamente.
-        - Evento 3 pasa a ser referencia principal y Eventos 1 y 2 pasan a ser sus réplicas.
-        - MapView y QueriesView reflejan la nueva estructura de asociaciones.
+        SCENARIO 3: LATE REPORT AND REPLICA ASSOCIATION in the GUI
+        - Topology loading prior to late event arrival (Events 1 and 2).
+        - Event 1 is reference and Event 2 is its replica.
+        - Late Event 3 arrives (occurred at 09:55, earlier than 1 and 2, higher magnitude M=6.1).
+        - Step executed in EventsView: replicas are deterministically re-associated.
+        - Event 3 becomes primary reference and Events 1 and 2 become its replicas.
+        - MapView and QueriesView display updated association topology.
         """
         filepath = os.path.join(SCENARIOS_DIR, "caso3_reporte_tardio_antes.json")
         self.assertTrue(os.path.exists(filepath), f"File not found: {filepath}")
@@ -176,15 +176,15 @@ class TestGUIScenarios(unittest.TestCase):
             self.app.topbar._load_specific_scenario(filepath, "caso3_reporte_tardio_antes")
             self.app.update()
 
-        # Verificar parámetros operativos
+        # Verify operational parameters
         self.assertEqual(self.obs.max_time, 48.0)
         self.assertEqual(self.obs.distance_epicenter, 40.0)
 
-        # Estado previo: Evento 1 como referencia de Evento 2
+        # Previous state: Event 1 as reference for Event 2
         self.assertEqual(len(self.obs.associations), 1)
         self.assertEqual(self.obs.associations[0].chosen_reference.id, 1)
 
-        # Procesar en la GUI la llegada del Evento 3 tardío desde la cola de reportes
+        # Process in the GUI the arrival of late Event 3 from the report queue
         events_view = self.app.views["eventos"]
         self.app.switch_view("eventos")
         self.app.update()
@@ -192,21 +192,21 @@ class TestGUIScenarios(unittest.TestCase):
         events_view._handle_step_queue()
         self.app.update()
 
-        # El Evento 3 fue registrado en el observatorio
+        # Event 3 was registered in the observatory
         self.assertIn(3, self.obs.events_dict)
 
-        # Reclustering determinista: Evento 3 es ahora la referencia de 1 y 2
+        # Deterministic reclustering: Event 3 is now the reference for 1 and 2
         self.assertEqual(len(self.obs.associations), 1)
         assoc = self.obs.associations[0]
         self.assertEqual(assoc.chosen_reference.id, 3)
         child_ids = sorted([r.id for r in assoc.referenced_by])
         self.assertEqual(child_ids, [1, 2])
 
-        # Verificar visualización en MapView
+        # Verify visualization in MapView
         self.app.switch_view("mapa")
         self.app.update()
 
-        # Verificar en QueriesView (Association Explorer)
+        # Verify in QueriesView (Association Explorer)
         self.app.switch_view("consultas")
         self.app.update()
         report_assoc, _ = self.obs.query_event_associations(3)
@@ -220,27 +220,27 @@ class TestGUIScenarios(unittest.TestCase):
 
     def test_caso4_gui_rotaciones_y_recuperacion_estres(self):
         """
-        CASO 4: ROTACIONES (LL, RR, LR, RL) Y RECUPERACIÓN DE MODO ESTRÉS en la GUI
-        - Parte A: Carga de secuencia de inserciones con rotaciones elementales verificadas.
-        - Parte B: Carga de archivo en modo estrés desbalanceado (|FB| > 1).
-        - Topbar muestra 'Estrés: Activo' y habilita el botón 'Recuperar Equilibrio AVL'.
-        - Se ejecuta el botón de recuperación en la interfaz:
-          * Árbol rebalanceado in-situ sin perder identidades.
-          * Modo estrés desactivado ('Estrés: Inactivo').
-          * Consistencia de orden BST preservada.
+        SCENARIO 4: ROTATIONS (LL, RR, LR, RL) AND STRESS MODE RECOVERY in the GUI
+        - Part A: Loading insertion sequence with verified elementary rotations.
+        - Part B: Loading unbalanced stress mode file (|BF| > 1).
+        - Topbar indicates 'Stress: Active' and enables 'Recover AVL Balance' button.
+        - Recovery button executed in UI:
+          * In-place tree rebalancing preserving object identity.
+          * Stress mode deactivated ('Stress: Inactive').
+          * BST ordering invariant preserved.
         """
-        # Parte A: Carga de secuencia de rotaciones
+        # Part A: Loading rotation sequence
         seq_path = os.path.join(SCENARIOS_DIR, "caso4_rotaciones_secuencia.json")
         self.assertTrue(os.path.exists(seq_path), f"File not found: {seq_path}")
 
         res = self.obs.load_scenario_by_insertions(seq_path, adopt_avl=True)
         self.assertIn("avl", res)
         self.assertIn("metrics", res)
-        # Verificar que se registraron los 4 tipos de rotaciones
+        # Verify that all 4 types of rotations were registered
         for case in ["LL", "RR", "LR", "RL"]:
             self.assertGreater(self.obs.metrics.cases.get(case, 0), 0, f"Debe disparar caso {case}")
 
-        # Parte B: Modo estrés y recuperación
+        # Part B: Stress mode and recovery
         stress_path = os.path.join(SCENARIOS_DIR, "caso4_estres_desbalanceado.json")
         self.assertTrue(os.path.exists(stress_path), f"File not found: {stress_path}")
 
@@ -248,21 +248,21 @@ class TestGUIScenarios(unittest.TestCase):
             self.app.topbar._load_specific_scenario(stress_path, "caso4_estres_desbalanceado")
             self.app.update()
 
-        # Verificar que la UI detecta Modo Estrés ACTIVO
+        # Verify that UI detects ACTIVE Stress Mode
         self.assertTrue(self.obs.stress_mode)
         self.assertEqual(self.app.topbar.switch_stress.get(), 1)
         self.assertEqual(self.app.topbar.btn_recover.cget("state"), "normal")
 
-        # Verificar desbalance en el árbol (> 1)
+        # Verify imbalance in the tree (> 1)
         max_bf = max(abs(n.balance_factor()) for n in self.obs.tree.inorder())
         self.assertGreater(max_bf, 1, "El árbol en estrés debe estar desbalanceado (|FB| > 1)")
 
-        # Ejecutar Recuperación Global en la GUI
+        # Execute Global Recovery in the GUI
         with patch("Presentation.Components.Molecules.recovery_modal.RecoveryReportModal"):
             self.app.topbar._on_recover_click()
             self.app.update()
 
-        # Verificar que el árbol recuperó el equilibrio AVL (|FB| <= 1)
+        # Verify that the tree recovered the AVL balance (|FB| <= 1)
         self.assertFalse(self.obs.stress_mode)
         self.assertEqual(self.app.topbar.switch_stress.get(), 0)
         self.assertEqual(self.app.topbar.btn_recover.cget("state"), "disabled")
@@ -270,21 +270,21 @@ class TestGUIScenarios(unittest.TestCase):
         max_bf_after = max(abs(n.balance_factor()) for n in self.obs.tree.inorder())
         self.assertLessEqual(max_bf_after, 1, "El árbol recuperado debe ser AVL válido (|FB| <= 1)")
 
-        # Verificar que el orden BST se mantuvo intacto
+        # Verify that the BST order remained intact
         inorder_keys = [n.get_key() for n in self.obs.tree.inorder()]
         self.assertEqual(inorder_keys, sorted(inorder_keys), "El orden BST debe preservarse")
 
     def test_caso5_gui_archivo_masivo_subarboles_y_undo(self):
         """
-        CASO 5: ARCHIVO MASIVO DE SUBÁRBOLES Y DESHACER en la GUI
-        - Topología con dos ramas:
-          * Subárbol A (raíz 12): 3 nodos, todos P=1 y antigüedad 98h > T=72h (ELEGIBLE).
-          * Subárbol B (raíz 62): 3 nodos (60, 62, 70), antigüedad 98h, pero nodo 70 tiene P=2 (NO ELEGIBLE).
-        - En EventsView se ejecuta 'Ejecutar Archivo de Rama':
-          * Se archivan los 3 nodos del Subárbol A (10, 12, 14).
-          * El Subárbol B permanece intacto en el árbol activo (60, 62, 70).
-        - Se ejecuta '↩ Deshacer' en la Topbar:
-          * Se restaura el Subárbol A al árbol activo AVL.
+        SCENARIO 5: BULK SUBTREE ARCHIVING AND UNDO in the GUI
+        - Two-branch topology:
+          * Subtree A (root 12): 3 nodes, all P=1 and age 98h > T=72h (ELIGIBLE).
+          * Subtree B (root 62): 3 nodes (60, 62, 70), age 98h, but node 70 has P=2 (NOT ELIGIBLE).
+        - In EventsView, 'Ejecutar Archivo de Rama' is triggered:
+          * 3 nodes in Subtree A (10, 12, 14) are archived.
+          * Subtree B remains intact in active tree (60, 62, 70).
+        - '↩ Deshacer' is executed in Topbar:
+          * Subtree A is restored to active AVL tree.
         """
         filepath = os.path.join(SCENARIOS_DIR, "caso5_archivo_subarboles.json")
         self.assertTrue(os.path.exists(filepath), f"File not found: {filepath}")
@@ -297,31 +297,31 @@ class TestGUIScenarios(unittest.TestCase):
         self.app.switch_view("eventos")
         self.app.update()
 
-        # Verificar estado previo: 7 eventos activos, 0 archivados
+        # Verify previous state: 7 active events, 0 archived
         self.assertEqual(len(self.obs.events_dict), 7)
         self.assertEqual(len(self.obs.historic.archived), 0)
 
-        # Configurar umbral T=72h y ejecutar archivo masivo en la GUI
+        # Configure threshold T=72h and execute mass archive in the GUI
         events_view.archive_threshold_hours = 72
         events_view._handle_execute_archive()
         self.app.update()
 
-        # Subárbol A archivado: nodos 10, 12, 14 en histórico
+        # Archived Subtree A: nodes 10, 12, 14 in historic
         self.assertEqual(len(self.obs.events_dict), 4)
         self.assertEqual(len(self.obs.historic.archived), 3)
         for nid in [10, 12, 14]:
             self.assertIn(nid, self.obs.historic.archived)
             self.assertNotIn(nid, self.obs.events_dict)
 
-        # Subárbol B permanece en activo: nodos 60, 62, 70 (más raíz 50)
+        # Subtree B remains active: nodes 60, 62, 70 (plus root 50)
         for nid in [50, 60, 62, 70]:
             self.assertIn(nid, self.obs.events_dict)
 
-        # Probar DESHACER en la interfaz gráfica (Topbar)
+        # Test UNDO in the graphical interface (Topbar)
         self.app.topbar._on_undo()
         self.app.update()
 
-        # Estado completamente restaurado
+        # Fully restored state
         self.assertEqual(len(self.obs.events_dict), 7)
         self.assertEqual(len(self.obs.historic.archived), 0)
         for nid in [10, 12, 14, 50, 60, 62, 70]:
@@ -329,14 +329,14 @@ class TestGUIScenarios(unittest.TestCase):
 
     def test_caso6_gui_persistencia_consistencia_y_rechazo(self):
         """
-        CASO 6: PERSISTENCIA, CONSISTENCIA Y RECHAZO en la GUI
-        - Intentar cargar por Topbar archivos corruptos intencionalmente:
-          1. Orden BST violado.
-          2. IDs duplicados entre activo e histórico.
-          3. Alturas / factores de balance inconsistentes.
-          4. Desbalance fuera de {-1, 0, 1} sin modo estrés habilitado.
-        - La GUI debe capturar el error, desplegar cuadro de diálogo de error (messagebox.showerror),
-          y abortar la carga atómicamente dejando el estado del observatorio intacto.
+        SCENARIO 6: PERSISTENCE, CONSISTENCY AND REJECTION in the GUI
+        - Attempt loading intentionally corrupted files via Topbar:
+          1. Violated BST ordering.
+          2. Duplicate IDs between active and historic sets.
+          3. Inconsistent heights / balance factors.
+          4. Imbalance outside {-1, 0, 1} without active stress mode.
+        - GUI catches the exception, displays error dialog (messagebox.showerror),
+          and aborts load atomically leaving observatory state intact.
         """
         error_cases = [
             ("caso6_error_bst_invalido.json", "orden BST"),
@@ -356,11 +356,11 @@ class TestGUIScenarios(unittest.TestCase):
                 self.app.topbar._load_specific_scenario(filepath, filename)
                 self.app.update()
 
-                # La GUI debe haber mostrado el diálogo de error al usuario
+                # The GUI must have shown the error dialog to the user
                 self.assertTrue(mock_err.called, f"Expected showerror dialog for {filename}")
                 self.assertFalse(mock_info.called, f"showinfo should NOT be called for invalid {filename}")
 
-                # El observatorio debe haber abortado atómicamente sin mutaciones
+                # The observatory must have aborted atomically without mutations
                 self.assertEqual(
                     len(self.obs.events_dict),
                     events_before,

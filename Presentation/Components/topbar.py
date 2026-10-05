@@ -16,17 +16,17 @@ class Topbar(ctk.CTkFrame):
 
         self._is_compact = False
 
-        # 1. Módulo del Reloj (Izquierda)
+        # 1. Clock Module (Left)
         self.clock_frame = ctk.CTkFrame(
             self, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=10
         )
         self.clock_frame.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="w")
         
-        # Contenedor simétrico para Etiqueta, Hora y Fecha
+        # Symmetrical container for Label, Time and Date
         time_box = ctk.CTkFrame(self.clock_frame, fg_color="transparent")
         time_box.grid(row=0, column=0, rowspan=2, padx=(12, 10), pady=4)
         
-        # Etiqueta de contexto superior
+        # Top context label
         self.lbl_clock_tag = ctk.CTkLabel(
             time_box, text="RELOJ", height=12,
             font=ctk.CTkFont(family=FONT_MAIN, size=9, weight="bold"),
@@ -34,7 +34,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.lbl_clock_tag.pack(anchor="center", pady=(1, 0))
 
-        # Hora prominente al centro
+        # Prominent time in the center
         self.lbl_clock_time = ctk.CTkLabel(
             time_box, text="--:--:--", height=18,
             font=ctk.CTkFont(family=FONT_MONO, size=14, weight="bold"),
@@ -42,7 +42,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.lbl_clock_time.pack(anchor="center", pady=(0, 0))
         
-        # Fecha abajo
+        # Date below
         self.lbl_clock_date = ctk.CTkLabel(
             time_box, text="----/--/--", height=12,
             font=ctk.CTkFont(family=FONT_MAIN, size=10),
@@ -50,7 +50,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.lbl_clock_date.pack(anchor="center", pady=(0, 1))
         
-        # Botón +1h rápido
+        # Quick +1h button
         self.btn_add_time = ctk.CTkButton(
             self.clock_frame, text="+1h", width=40, height=28, corner_radius=6,
             fg_color="#22d3ee", text_color="#06202a", font=ctk.CTkFont(family=FONT_MAIN, size=12, weight="bold"),
@@ -58,7 +58,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.btn_add_time.grid(row=0, column=1, rowspan=2, padx=(0, 4), pady=6)
 
-        # Entrada de horas personalizada y botón de suma
+        # Custom time input and add button
         self.entry_custom_hours = ctk.CTkEntry(
             self.clock_frame, width=42, height=28, corner_radius=6,
             placeholder_text="h", justify="center",
@@ -77,13 +77,13 @@ class Topbar(ctk.CTkFrame):
         )
         self.btn_add_custom.grid(row=0, column=3, rowspan=2, padx=(0, 8), pady=6)
 
-        # 2. Módulo de Estrés (Centro)
+        # 2. Stress Module (Center)
         self.stress_frame = ctk.CTkFrame(
             self, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=10
         )
         self.stress_frame.grid(row=0, column=1, padx=5, pady=8, sticky="w")
         
-        # Switch interactivo en el lado izquierdo
+        # Interactive switch on the left side
         self.switch_stress = ctk.CTkSwitch(
             self.stress_frame,
             text="Estrés: Inactivo",
@@ -99,7 +99,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.switch_stress.grid(row=0, column=0, padx=(10, 8), pady=6)
         
-        # Botón de recuperación: se activa solo cuando el switch pone el sistema en estrés
+        # Recovery button: activated only when the switch puts the system in stress
         self.btn_recover = ctk.CTkButton(
             self.stress_frame,
             text="Recuperar Equilibrio AVL",
@@ -116,7 +116,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.btn_recover.grid(row=0, column=1, padx=(0, 8), pady=6)
 
-        # 3. Acciones (Deshacer, JSON, Versión)
+        # 3. Actions (Undo, JSON, Version)
         self.actions_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.actions_frame.grid(row=0, column=3, padx=(5, 12), pady=8, sticky="e")
         
@@ -128,7 +128,7 @@ class Topbar(ctk.CTkFrame):
         )
         self.btn_undo.pack(side="left", padx=3)
         
-        # Pill interactivo de versión / Escenario Activo
+        # Interactive version pill / Active Scenario
         self.current_scenario_name = getattr(self.observatory, 'current_scenario_name', "Sin_titulo") if self.observatory else "Sin_titulo"
         self.current_scenario_filepath = getattr(self.observatory, 'current_scenario_filepath', None) if self.observatory else None
         self.version_pill = ctk.CTkFrame(
@@ -149,12 +149,12 @@ class Topbar(ctk.CTkFrame):
             widget.bind("<Enter>", lambda e: self.version_pill.configure(border_color="#38bdf8", fg_color="#101a26"))
             widget.bind("<Leave>", lambda e: self.version_pill.configure(border_color="#1a2736", fg_color="#0b131c"))
 
-        # Adaptabilidad automática ante cambios de tamaño de ventana
+        # Automatic adaptability to window size changes
         self.bind("<Configure>", self._on_resize)
         self.refresh()
 
     def _on_resize(self, event):
-        """Ajusta dinámicamente los botones y componentes para evitar recortes."""
+        """Dynamically adjusts buttons and components to avoid clipping."""
         if event.width <= 10:
             return
 
@@ -165,7 +165,7 @@ class Topbar(ctk.CTkFrame):
                 self.btn_recover.configure(text="Recuperar AVL" if is_narrow else "Recuperar Equilibrio AVL")
 
     def refresh(self):
-        """Actualiza el reloj y el estado de estrés desde el observatorio."""
+        """Updates the clock and the stress state from the observatory."""
         if self.observatory is None:
             return
 
@@ -202,7 +202,7 @@ class Topbar(ctk.CTkFrame):
                 border_color="#1a2736"
             )
 
-        # Sincronizar escenario activo con el observatorio
+        # Synchronize active scenario with the observatory
         if self.observatory and hasattr(self.observatory, 'current_scenario_name'):
             obs_name = self.observatory.current_scenario_name or "Demo Activo"
             if self.current_scenario_name != obs_name:
@@ -247,29 +247,29 @@ class Topbar(ctk.CTkFrame):
 
     def _execute_recovery_flow(self):
         """
-        Ejecuta el protocolo de recuperación global del equilibrio AVL:
-        1. Pausa el procesamiento continuo de reportes si estuviera activo (requerimiento oficial).
-        2. Ejecuta rebalanceo global in-situ en el observatorio.
-        3. Refresca todas las vistas de la aplicación.
-        4. Despliega la ventana emergente informativa con el desglose de rotaciones y costos.
+        Executes the global AVL balance recovery protocol:
+        1. Pauses continuous report processing if active (official requirement).
+        2. Executes in-place global rebalance in the observatory.
+        3. Refreshes all application views.
+        4. Displays informative popup with rotation breakdowns and costs.
         """
         if not self.observatory or not self.app:
             return
 
-        # 1. Pausar procesamiento de reportes si la vista de eventos está corriendo en ráfaga
+        # 1. Pause report processing if the events view is running in burst mode
         if hasattr(self.app, "views") and isinstance(self.app.views, dict):
             events_view = self.app.views.get("eventos")
             if events_view and getattr(events_view, "burst_running", False):
                 if hasattr(events_view, "_handle_pause_burst"):
                     events_view._handle_pause_burst()
 
-        # 2. Rebalanceo global in-situ
+        # 2. Global in-situ rebalancing
         result = self.observatory.global_recovery()
 
-        # 3. Refrescar todas las pantallas para reflejar el nuevo árbol y estado normal
+        # 3. Refresh all screens to reflect new tree and normal state
         self.app.refresh_all()
 
-        # 4. Mostrar ventana emergente informativa con informe de cambios y costos
+        # 4. Show informative popup window with changes report and costs
         if result:
             from Presentation.Components.Molecules.recovery_modal import RecoveryReportModal
             RecoveryReportModal(self.app, result=result)
@@ -289,7 +289,7 @@ class Topbar(ctk.CTkFrame):
         self.app.refresh_all()
 
     def set_scenario_name(self, name: str):
-        """Actualiza el nombre del escenario activo en el pill superior y en el observatorio."""
+        """Updates the active scenario name in the top pill and in the observatory."""
         if not name:
             name = "Demo Activo"
         if name.endswith(".json"):
@@ -304,7 +304,7 @@ class Topbar(ctk.CTkFrame):
             self.lbl_version.configure(text=f"▾ {display}")
 
     def _on_scenario_pill_click(self, event=None):
-        """Despliega un menú emergente con los escenarios disponibles en saved_versions/."""
+        """Displays a popup menu with available scenarios in saved_versions/."""
         if not self.observatory:
             return
 
@@ -333,7 +333,7 @@ class Topbar(ctk.CTkFrame):
         )
         menu.add_separator()
 
-        # Listar archivos JSON existentes en saved_versions/
+        # List existing JSON files in saved_versions/
         json_files = []
         try:
             for f in sorted(os.listdir(target_dir)):
@@ -353,7 +353,7 @@ class Topbar(ctk.CTkFrame):
                     command=lambda p=full_path, s=stem: self._load_specific_scenario(p, s)
                 )
 
-        # Listar subdirectorios como submenús organizados (ej. casos_de_prueba)
+        # List subdirectories as organized submenus (e.g. test_cases)
         try:
             subdirs = [
                 d for d in sorted(os.listdir(target_dir))
@@ -414,7 +414,7 @@ class Topbar(ctk.CTkFrame):
             menu.grab_release()
 
     def _on_save_current_version(self):
-        """Sobrescribe y guarda directamente el escenario/versión actual."""
+        """Directly overwrites and saves the current scenario/version."""
         if not self.observatory:
             return
 
@@ -442,13 +442,13 @@ class Topbar(ctk.CTkFrame):
             messagebox.showerror("Error al Guardar", f"No se pudo guardar la versión actual:\n{e}")
 
     def _load_specific_scenario(self, filepath: str, name: str = None):
-        """Carga un archivo de escenario JSON específico y actualiza la aplicación."""
+        """Loads a specific JSON scenario file and updates the application."""
         if not self.observatory or not self.app:
             return
         if not name:
             name = os.path.splitext(os.path.basename(filepath))[0]
         try:
-            # 1. Intentar carga atómica canónica por topología
+            # 1. Attempt canonical atomic load by topology
             ok, errors = self.observatory.load_scenario_by_topology(filepath)
             if ok:
                 self.current_scenario_filepath = os.path.abspath(filepath)
@@ -461,7 +461,7 @@ class Topbar(ctk.CTkFrame):
                 )
                 self.app.refresh_all()
             else:
-                # 2. Fallback a inserciones si el JSON contiene lista plana de eventos
+                # 2. Fallback to insertions if the JSON contains a flat list of events
                 try:
                     res = self.observatory.load_scenario_by_insertions(filepath, adopt_avl=True)
                     if res and "avl" in res:

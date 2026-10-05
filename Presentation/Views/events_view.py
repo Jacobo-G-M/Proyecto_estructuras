@@ -24,25 +24,25 @@ class EventsView(ctk.CTkFrame):
         self.app = app
         self.observatory = observatory
 
-        # Variables de control
+        # Control variables
         self.active_catalog_tab = "activos"
         self.burst_running = False
         self.burst_speed_ms = 400
         self.archive_threshold_hours = 72
 
-        # Cargar reportes de demostración en la cola si está vacía
+        # Load demo reports into the queue if it is empty
         self._ensure_demo_queue()
 
-        # Construir UI
+        # Build UI
         self._build_ui()
         self.refresh()
 
     # =========================================================================
-    # CONSTRUCCIÓN DE LA INTERFAZ
+    # INTERFACE CONSTRUCTION
     # =========================================================================
 
     def _build_ui(self):
-        # Contenedor con scroll vertical para adaptarse a cualquier resolución
+        # Vertical scroll container to adapt to any resolution
         self.scroll_container = ctk.CTkScrollableFrame(
             self,
             fg_color="transparent",
@@ -50,31 +50,31 @@ class EventsView(ctk.CTkFrame):
         )
         self.scroll_container.pack(fill="both", expand=True, padx=20, pady=15)
 
-        # 1. Encabezado de la Vista
+        # 1. View Header
         self._build_header(self.scroll_container)
 
-        # 2. Grid de 3 Columnas
+        # 2. 3-Column Grid
         columns_grid = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
         columns_grid.pack(fill="both", expand=True, pady=(0, 15))
         columns_grid.grid_columnconfigure((0, 1, 2), weight=1, uniform="col_events")
 
-        # Columna 1: Formulario CRUD
+        # Column 1: CRUD Form
         self.col_form = self._build_crud_form(columns_grid)
         self.col_form.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-        # Columna 2: Gestor de Ráfagas FIFO
+        # Column 2: FIFO Burst Manager
         self.col_queue = self._build_queue_manager(columns_grid)
         self.col_queue.grid(row=0, column=1, sticky="nsew", padx=4)
 
-        # Columna 3: Archivo de Subárboles y Catálogos
+        # Column 3: Subtree and Catalog Archive
         self.col_archive = self._build_archive_panel(columns_grid)
         self.col_archive.grid(row=0, column=2, sticky="nsew", padx=(8, 0))
 
-        # 3. Barra de Estado / Footer
+        # 3. Status Bar / Footer
         self._build_footer(self.scroll_container)
 
     # -------------------------------------------------------------------------
-    # 1. Encabezado
+    # 1. Header
     # -------------------------------------------------------------------------
     def _build_header(self, parent):
         header_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -89,13 +89,13 @@ class EventsView(ctk.CTkFrame):
         lbl_title.pack(anchor="w", pady=(2, 0))
 
     # -------------------------------------------------------------------------
-    # Columna 1: Formulario de Evento · CRUD
+    # Column 1: Event Form · CRUD
     # -------------------------------------------------------------------------
     def _build_crud_form(self, parent) -> ctk.CTkFrame:
         card = Card(parent, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
         card.pack_propagate(True)
 
-        # Header de tarjeta
+        # Card header
         header = ctk.CTkFrame(card, fg_color="transparent")
         header.pack(fill="x", padx=16, pady=(16, 10))
 
@@ -112,7 +112,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.badge_valid.pack(side="right", ipadx=6, ipady=2)
 
-        # Campos de entrada
+        # Input fields
         form_body = ctk.CTkFrame(card, fg_color="transparent")
         form_body.pack(fill="x", padx=16, pady=4)
 
@@ -120,23 +120,23 @@ class EventsView(ctk.CTkFrame):
         self.entry_id = self._create_form_row(form_body, "ID", "1 – 999999", "1043", ACCENT_CYAN)
         self.entry_id.bind("<KeyRelease>", lambda e: self._on_form_change())
 
-        # 2. Magnitud M
+        # 2. Magnitude M
         self.entry_mag = self._create_form_row(form_body, "Magnitud M", "-2.0 a 10.0", "5.4", ACCENT_CYAN)
         self.entry_mag.bind("<KeyRelease>", lambda e: self._on_form_change())
 
-        # 3. Profundidad
+        # 3. Depth
         self.entry_depth = self._create_form_row(form_body, "Profundidad", "0.0 – 700.0 km", "12.5", ACCENT_CYAN)
         self.entry_depth.bind("<KeyRelease>", lambda e: self._on_form_change())
 
-        # 4. Coord X
+        # 4. X Coord
         self.entry_x = self._create_form_row(form_body, "Coord X", "0.0 – 1000.0", "412.0", ACCENT_CYAN)
         self.entry_x.bind("<KeyRelease>", lambda e: self._on_form_change())
 
-        # 5. Coord Y
+        # 5. Y Coord
         self.entry_y = self._create_form_row(form_body, "Coord Y", "0.0 – 1000.0", "388.0", ACCENT_CYAN)
         self.entry_y.bind("<KeyRelease>", lambda e: self._on_form_change())
 
-        # 6. Estación (OptionMenu)
+        # 6. Station (OptionMenu)
         row_station = ctk.CTkFrame(form_body, fg_color="transparent")
         row_station.pack(fill="x", pady=3)
         lbls_st = ctk.CTkFrame(row_station, fg_color="transparent")
@@ -159,7 +159,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.option_station.pack(fill="x", pady=(2, 0))
 
-        # 7. Fecha y Hora
+        # 7. Date and Time
         row_dt = ctk.CTkFrame(form_body, fg_color="transparent")
         row_dt.pack(fill="x", pady=3)
         lbls_dt = ctk.CTkFrame(row_dt, fg_color="transparent")
@@ -189,7 +189,7 @@ class EventsView(ctk.CTkFrame):
         btn_t_up = ctk.CTkButton(f_time, text="▶", width=20, fg_color="#1a2736", hover_color="#24384e", text_color="#fff", command=lambda: self._step_datetime(hours=1))
         btn_t_up.pack(side="left")
 
-        # 8. Prioridad Calculada (Display)
+        # 8. Calculated Priority (Display)
         row_p = ctk.CTkFrame(form_body, fg_color="transparent")
         row_p.pack(fill="x", pady=3)
         lbls_p = ctk.CTkFrame(row_p, fg_color="transparent")
@@ -209,13 +209,13 @@ class EventsView(ctk.CTkFrame):
         )
         self.lbl_p_calc.pack(fill="x", pady=(2, 0))
 
-        # Mensaje de retroalimentación de formulario
+        # Form feedback message
         self.lbl_form_msg = ctk.CTkLabel(
             card, text="", font=ctk.CTkFont(family=FONT_MAIN, size=11), text_color=TEXT_MUTED
         )
         self.lbl_form_msg.pack(fill="x", padx=16, pady=(4, 0))
 
-        # Botones de Acción (Fila 1)
+        # Action Buttons (Row 1)
         btn_grid1 = ctk.CTkFrame(card, fg_color="transparent")
         btn_grid1.pack(fill="x", padx=16, pady=(8, 4))
         btn_grid1.grid_columnconfigure((0, 1), weight=1, uniform="crud1")
@@ -234,7 +234,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.btn_edit.grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
-        # Botones de Acción (Fila 2)
+        # Action Buttons (Row 2)
         btn_grid2 = ctk.CTkFrame(card, fg_color="transparent")
         btn_grid2.pack(fill="x", padx=16, pady=(0, 10))
         btn_grid2.grid_columnconfigure((0, 1, 2), weight=1, uniform="crud2")
@@ -297,12 +297,12 @@ class EventsView(ctk.CTkFrame):
         return entry
 
     # ---------------------------------------------------------
-    # Columna 2: Cola FIFO · Gestor de Ráfagas
+    # Column 2: FIFO Queue · Burst Manager
     # ---------------------------------------------------------
     def _build_queue_manager(self, parent) -> ctk.CTkFrame:
         card = Card(parent, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
 
-        # Header de tarjeta
+        # Card header
         header = ctk.CTkFrame(card, fg_color="transparent")
         header.pack(fill="x", padx=16, pady=(16, 10))
 
@@ -318,7 +318,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.lbl_queue_count.pack(side="right", ipadx=6, ipady=2)
 
-        # Botones de control de procesamiento
+        # Processing control buttons
         btn_grid = ctk.CTkFrame(card, fg_color="transparent")
         btn_grid.pack(fill="x", padx=16, pady=4)
         btn_grid.grid_columnconfigure((0, 1, 2), weight=1, uniform="queue_ctrl")
@@ -352,7 +352,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.btn_pause.grid(row=0, column=2, sticky="ew", padx=(4, 0))
 
-        # Control de velocidad
+        # Speed control
         speed_frame = ctk.CTkFrame(card, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=RADIUS_MD)
         speed_frame.pack(fill="x", padx=16, pady=8)
 
@@ -379,7 +379,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.lbl_speed_val.pack(side="right", padx=10)
 
-        # Lista de reportes en cola (FIFO)
+        # Queue of reports (FIFO)
         self.frame_queue_items = ctk.CTkScrollableFrame(
             card,
             fg_color="transparent",
@@ -388,7 +388,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.frame_queue_items.pack(fill="both", expand=True, padx=16, pady=(4, 8))
 
-        # Consola / Log en vivo de decisiones y rotaciones
+        # Live console / log of decisions and rotations
         self.log_box = ctk.CTkTextbox(
             card,
             fg_color="#070c12",
@@ -407,12 +407,12 @@ class EventsView(ctk.CTkFrame):
         return card
 
     # ---------------------------------------------------------
-    # Columna 3: Archivar Rama + Catálogos
+    # Column 3: Archive Branch + Catalogs
     # ---------------------------------------------------------
     def _build_archive_panel(self, parent) -> ctk.CTkFrame:
         container = ctk.CTkFrame(parent, fg_color="transparent")
 
-        # Tarjeta 1: Archivar Rama · Eventos Antiguos
+        # Card 1: Archive Branch · Old Events
         card_archive = Card(container, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
         card_archive.pack(fill="x", pady=(0, 12))
 
@@ -431,7 +431,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.lbl_eligible_badge.pack(padx=10, pady=5)
 
-        # Slider Umbral T
+        # Threshold Slider T
         slider_t_box = ctk.CTkFrame(card_archive, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=RADIUS_MD)
         slider_t_box.pack(fill="x", padx=16, pady=6)
 
@@ -454,7 +454,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.lbl_t_val.pack(side="right", padx=10)
 
-        # Tarjeta resultado de análisis (Ámbar)
+        # Analysis result card (Amber)
         self.frame_eligibility_result = ctk.CTkFrame(
             card_archive,
             fg_color="#20180a",
@@ -482,7 +482,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.lbl_elig_detail.pack(anchor="w", padx=10, pady=(1, 8))
 
-        # Botón Ejecutar Archivo Masivo
+        # Execute Mass Archive Button
         self.btn_exec_archive = ctk.CTkButton(
             card_archive,
             text="Ejecutar Archivo de Rama",
@@ -498,11 +498,11 @@ class EventsView(ctk.CTkFrame):
         )
         self.btn_exec_archive.pack(fill="x", padx=16, pady=(4, 14))
 
-        # Tarjeta 2: Catálogo de Eventos (Segmented Tabs + Lista)
+        # Card 2: Event Catalog (Segmented Tabs + List)
         card_catalog = Card(container, fg_color="#0e1620", border_color="#1e2d3d", corner_radius=12)
         card_catalog.pack(fill="both", expand=True)
 
-        # Pestañas Activos / Archivados / Eliminados
+        # Active / Archived / Deleted Tabs
         tabs_box = ctk.CTkFrame(card_catalog, fg_color="#101922", corner_radius=RADIUS_SM)
         tabs_box.pack(fill="x", padx=16, pady=(16, 8))
         tabs_box.grid_columnconfigure((0, 1, 2), weight=1, uniform="cat_tab")
@@ -534,7 +534,7 @@ class EventsView(ctk.CTkFrame):
         )
         self.btn_tab_elim.grid(row=0, column=2, sticky="ew", padx=2, pady=2)
 
-        # Lista de eventos scrolleable
+        # Scrollable events list
         self.frame_catalog_items = ctk.CTkScrollableFrame(
             card_catalog,
             fg_color="transparent",
@@ -554,25 +554,25 @@ class EventsView(ctk.CTkFrame):
         pass
 
     # =========================================================================
-    # LÓGICA DE ACTUALIZACIÓN Y SINCRONIZACIÓN DE LA VISTA
+    # VIEW UPDATE AND SYNCHRONIZATION LOGIC
     # =========================================================================
 
     def refresh(self):
-        """Refresca todos los datos visuales de la vista con el estado del observatorio."""
+        """Refreshes all visual data in the view with the observatory's state."""
         if not self.observatory:
             return
 
-        # 1. Actualizar contador de cola
+        # 1. Update queue counter
         queue_size = len(self.observatory.report_queue.current_reports) if self.observatory.report_queue else 0
         self.lbl_queue_count.configure(text=f"{queue_size} en cola")
 
-        # 2. Renderizar lista de reportes en cola
+        # 2. Render queued reports list
         self._render_queue_items()
 
-        # 3. Renderizar catálogo de eventos (Activos / Archivados / Eliminados)
+        # 3. Render event catalog (Active / Archived / Deleted)
         self._render_catalog_items()
 
-        # 4. Actualizar contadores en pestañas
+        # 4. Update counters in tabs
         n_act = len(self.observatory.events_dict) if hasattr(self.observatory, 'events_dict') else 0
         n_arc = len(self.observatory.historic.archived) if (self.observatory.historic and hasattr(self.observatory.historic, 'archived')) else 0
         n_del = len(self.observatory.historic.deleted) if (self.observatory.historic and hasattr(self.observatory.historic, 'deleted')) else 0
@@ -581,12 +581,12 @@ class EventsView(ctk.CTkFrame):
         self.btn_tab_archiv.configure(text=f"Archiv. {n_arc}")
         self.btn_tab_elim.configure(text=f"Elim. {n_del}")
 
-        # 5. Evaluar elegibilidad según el umbral de prueba actual del previsualizador
+        # 5. Evaluate eligibility according to the preview's current test threshold
         self._check_eligible_badge()
         self._handle_analyze_archive()
 
     def _render_queue_items(self):
-        """Dibuja las tarjetas de los reportes en espera en la cola FIFO."""
+        """Draws the waiting report cards in the FIFO queue."""
         for widget in self.frame_queue_items.winfo_children():
             widget.destroy()
 
@@ -618,13 +618,13 @@ class EventsView(ctk.CTkFrame):
             )
             item_frame.pack(fill="x", pady=2.5)
 
-            # Icono con ID
+            # Icon with ID
             icon_box = ctk.CTkFrame(item_frame, width=32, height=32, fg_color="#13202e", border_color="#1e2d3d", border_width=1, corner_radius=16)
             icon_box.pack(side="left", padx=8, pady=6)
             icon_box.pack_propagate(False)
             ctk.CTkLabel(icon_box, text=str(rep.id), font=ctk.CTkFont(family=FONT_MONO, size=10, weight="bold"), text_color=TEXT_PRIMARY).place(relx=0.5, rely=0.5, anchor="center")
 
-            # Información principal
+            # Main information
             info_box = ctk.CTkFrame(item_frame, fg_color="transparent")
             info_box.pack(side="left", fill="both", expand=True, padx=4)
 
@@ -646,7 +646,7 @@ class EventsView(ctk.CTkFrame):
                 anchor="w"
             ).pack(anchor="w")
 
-            # Badge de previsión
+            # Forecast badge
             badge_text, badge_color = self._preview_report_badge(rep)
             badge_lbl = ctk.CTkLabel(
                 item_frame, text=badge_text,
@@ -656,7 +656,7 @@ class EventsView(ctk.CTkFrame):
             badge_lbl.pack(side="right", padx=8, ipadx=5, ipady=1)
 
     def _preview_report_badge(self, report: Report) -> tuple[str, str]:
-        """Calcula visualmente la etiqueta esperada para el reporte."""
+        """Visually calculates the expected label for the report."""
         if not self.observatory:
             return ("PEND", TEXT_MUTED)
         if self.observatory.historic and hasattr(self.observatory.historic, 'deleted') and report.id in self.observatory.historic.deleted:
@@ -676,7 +676,7 @@ class EventsView(ctk.CTkFrame):
             return ("ANTIGUO", TEXT_MUTED)
 
     def _render_catalog_items(self):
-        """Renderiza la lista de eventos en el catálogo seleccionado (Activos, Archivados o Eliminados)."""
+        """Renders the event list in the selected catalog (Active, Archived or Deleted)."""
         for widget in self.frame_catalog_items.winfo_children():
             widget.destroy()
 
@@ -703,7 +703,7 @@ class EventsView(ctk.CTkFrame):
             row = ctk.CTkFrame(self.frame_catalog_items, fg_color="#0b131c", border_color="#1e2d3d", border_width=1, corner_radius=RADIUS_SM)
             row.pack(fill="x", pady=2)
 
-            # Funciones de hover
+            # Hover functions
             def on_enter(e, r=row):
                 r.configure(fg_color="#182736")
             def on_leave(e, r=row):
@@ -734,7 +734,7 @@ class EventsView(ctk.CTkFrame):
             lbl_k.bind("<Enter>", on_enter)
             lbl_k.bind("<Leave>", on_leave)
 
-            # Status Badge a la derecha
+            # Status Badge on the right
             if ev.status == "Deleted":
                 b_text, b_color = "ELIM", DANGER
             elif ev.status == "Archived":
@@ -755,10 +755,10 @@ class EventsView(ctk.CTkFrame):
             badge.bind("<Leave>", on_leave)
 
     def _switch_catalog_tab(self, tab: str):
-        """Cambia la pestaña activa del catálogo de eventos."""
+        """Changes the active tab of the event catalog."""
         self.active_catalog_tab = tab
 
-        # Estilizar pestañas
+        # Style tabs
         self.btn_tab_activos.configure(
             fg_color=ACCENT_CYAN if tab == "activos" else "transparent",
             text_color=TEXT_INVERSE if tab == "activos" else TEXT_SECONDARY,
@@ -778,7 +778,7 @@ class EventsView(ctk.CTkFrame):
         self._render_catalog_items()
 
     def _check_eligible_badge(self):
-        """Actualiza el badge T=X en el encabezado con el umbral de prueba."""
+        """Updates the T=X badge in the header with the test threshold."""
         if not self.observatory:
             return
             
@@ -792,7 +792,7 @@ class EventsView(ctk.CTkFrame):
         self.lbl_eligible_badge.configure(text=f"T={t_val}h · {cnt} elegibles")
 
     # =========================================================================
-    # ACCIONES DEL FORMULARIO CRUD
+    # CRUD FORM ACTIONS
     # =========================================================================
 
     def _step_datetime(self, days=0, hours=0):
@@ -815,14 +815,14 @@ class EventsView(ctk.CTkFrame):
             pass
 
     def _on_form_change(self):
-        """Se ejecuta al modificar campos clave para recalcular la prioridad y validar."""
+        """Executed when modifying key fields to recalculate priority and validate."""
         try:
             mag = float(self.entry_mag.get().strip())
             depth = float(self.entry_depth.get().strip())
             x = float(self.entry_x.get().strip())
             y = float(self.entry_y.get().strip())
 
-            # Validar rangos obligatorios del PDF
+            # Validate mandatory ranges from the PDF
             is_valid = (-2.0 <= mag <= 10.0) and (0.0 <= depth <= 700.0) and (0.0 <= x <= 1000.0) and (0.0 <= y <= 1000.0)
             if is_valid:
                 p = self.observatory.calculate_priority(mag, depth, (x, y)) if self.observatory else 1
@@ -835,7 +835,7 @@ class EventsView(ctk.CTkFrame):
             self.badge_valid.configure(text="✕ entrada incompleta", text_color=TEXT_MUTED, fg_color="#101922")
 
     def _handle_create_event(self):
-        """Valida y crea manualmente un evento en el observatorio."""
+        """Validates and manually creates an event in the observatory."""
         try:
             eid = int(self.entry_id.get().strip())
             mag = float(self.entry_mag.get().strip())
@@ -883,7 +883,7 @@ class EventsView(ctk.CTkFrame):
             self._show_msg(f"Error al crear: {ex}", DANGER)
 
     def _handle_edit_event(self):
-        """Modifica un evento existente en el catálogo activo."""
+        """Modifies an existing event in the active catalog."""
         try:
             eid = int(self.entry_id.get().strip())
             mag = float(self.entry_mag.get().strip())
@@ -929,7 +929,7 @@ class EventsView(ctk.CTkFrame):
             self._show_msg(f"Error en modificación: {ex}", DANGER)
 
     def _handle_mark_reviewed(self):
-        """Marca el evento actual como 'Reviewed'."""
+        """Marks the current event as 'Reviewed'."""
         try:
             eid = int(self.entry_id.get().strip())
             success = self.observatory.mark_as_reviewed(eid)
@@ -945,7 +945,7 @@ class EventsView(ctk.CTkFrame):
             self._show_msg(f"Error al marcar revisado: {ex}", DANGER)
 
     def _handle_delete_event(self):
-        """Elimina individualmente un evento activo."""
+        """Individually deletes an active event."""
         try:
             eid = int(self.entry_id.get().strip())
             ev = self.observatory.remove_event(eid)
@@ -961,7 +961,7 @@ class EventsView(ctk.CTkFrame):
             self._show_msg(f"Error al eliminar: {ex}", DANGER)
 
     def _load_event_into_form(self, ev):
-        """Carga los atributos de un evento en los campos del formulario."""
+        """Loads an event's attributes into the form fields."""
         self.entry_id.delete(0, "end")
         self.entry_id.insert(0, str(ev.id))
 
@@ -992,7 +992,7 @@ class EventsView(ctk.CTkFrame):
         self._on_form_change()
         self._show_msg(f"Cargado evento EV-{ev.id} en formulario.", TEXT_SECONDARY)
 
-        # Consulta técnica detallada usando query_event (profundidad, factor balance, rol de réplica/referencia)
+        # Detailed technical query using query_event (depth, balance factor, replica/reference role)
         if self.observatory and hasattr(self.observatory, 'query_event'):
             info = self.observatory.query_event(ev.id)
             if info:
@@ -1006,7 +1006,7 @@ class EventsView(ctk.CTkFrame):
                     self._log(f"[CONSULTA EV-{ev.id}] {meta}", ACCENT_CYAN)
 
     def _clear_form(self):
-        """Limpia los campos del formulario y restablece valores predeterminados."""
+        """Clears form fields and resets default values."""
         self.entry_id.delete(0, "end")
         self.entry_mag.delete(0, "end")
         self.entry_depth.delete(0, "end")
@@ -1033,11 +1033,11 @@ class EventsView(ctk.CTkFrame):
         self.lbl_form_msg.configure(text=text, text_color=color)
 
     # =========================================================================
-    # ACCIONES DE LA COLA FIFO Y RÁFAGAS
+    # FIFO QUEUE AND BURST ACTIONS
     # =========================================================================
 
     def _handle_step_queue(self):
-        """Procesa un solo reporte de la cabeza de la cola."""
+        """Processes a single report from the head of the queue."""
         if not self.observatory or not self.observatory.report_queue or self.observatory.report_queue.is_empty():
             self._log("[COLA] Cola vacía. No hay reportes para procesar.", TEXT_MUTED)
             return
@@ -1057,7 +1057,7 @@ class EventsView(ctk.CTkFrame):
                 self.app.refresh_all()
 
     def _handle_toggle_burst(self):
-        """Inicia el modo continuo de procesamiento de ráfagas."""
+        """Starts continuous burst processing mode."""
         if self.burst_running:
             return
         self.burst_running = True
@@ -1065,7 +1065,7 @@ class EventsView(ctk.CTkFrame):
         self._burst_tick()
 
     def _burst_tick(self):
-        """Tick recurrente para procesar la cola paso a paso a la velocidad configurada."""
+        """Recurring tick to process the queue step-by-step at the configured speed."""
         if not self.burst_running:
             return
 
@@ -1077,7 +1077,7 @@ class EventsView(ctk.CTkFrame):
             self._log("[RÁFAGA] Ráfaga completada. Cola vacía.", SUCCESS)
 
     def _handle_pause_burst(self):
-        """Pausa el modo continuo."""
+        """Pauses continuous mode."""
         self.burst_running = False
         self.btn_burst.configure(text="● Continuo", fg_color=SUCCESS)
 
@@ -1086,12 +1086,12 @@ class EventsView(ctk.CTkFrame):
         self.lbl_speed_val.configure(text=f"{self.burst_speed_ms} ms")
 
     def _log(self, text: str, color_hint: str = None):
-        """Inserta una línea en la consola de log en vivo."""
+        """Inserts a line in the live log console."""
         self.log_box.insert("end", text + "\n")
         self.log_box.see("end")
 
     def _ensure_demo_queue(self):
-        """Carga reportes de prueba en la cola si actualmente está vacía."""
+        """Loads test reports into the queue if currently empty."""
         if not self.observatory:
             return
         if self.observatory.report_queue is None:
@@ -1099,7 +1099,7 @@ class EventsView(ctk.CTkFrame):
             self.observatory.report_queue = Report_Queue()
 
     def _load_demo_burst(self):
-        """Carga una ráfaga representativa de 6 reportes (Alta, Confirm, Conflicto, Antiguo)."""
+        """Loads a representative burst of 6 reports (High, Confirm, Conflict, Old)."""
         if not self.observatory or not self.observatory.stations:
             return
 
@@ -1123,19 +1123,19 @@ class EventsView(ctk.CTkFrame):
         self.refresh()
 
     # =========================================================================
-    # ACCIONES DE ARCHIVO DE SUBÁRBOLES
+    # SUBTREE ARCHIVE ACTIONS
     # =========================================================================
 
     def _on_t_change(self, value):
         self.archive_threshold_hours = int(value)
         self.lbl_t_val.configure(text=f"{self.archive_threshold_hours} h")
-        # Ya no modificamos self.observatory.max_tree_age permanentemente aquí.
-        # Solo actualizamos la vista previa.
+        # We no longer permanently modify self.observatory.max_tree_age here.
+        # We only update the preview.
         self._check_eligible_badge()
         self._handle_analyze_archive()
 
     def _handle_analyze_archive(self):
-        """Ejecuta la vista previa de búsqueda de ramas elegibles usando el umbral del slider."""
+        """Executes the eligible branches search preview using the slider threshold."""
         if not self.observatory:
             return
 
@@ -1159,11 +1159,11 @@ class EventsView(ctk.CTkFrame):
             self.btn_exec_archive.configure(text="Sin ramas para archivar", state="disabled")
 
     def _handle_execute_archive(self):
-        """Ejecuta el archivo masivo de la rama elegible seleccionada y fija el nuevo valor global de T."""
+        """Executes the mass archival of the selected eligible branch and sets the new global value of T."""
         if not self.observatory:
             return
 
-        # El usuario confirmó la acción: ahora sí fijamos el nuevo valor global de T en el observatorio
+        # The user confirmed the action: now we set the new global value of T in the observatory
         self.observatory.max_tree_age = self.archive_threshold_hours
         try:
             res = self.observatory.archive_subtree(execute=True)

@@ -317,16 +317,16 @@ class Observatory:
 			new_event.add_origin_station(station)
 
 		# -----------------------------------------------------------------
-		# 4. REGISTRAR ACCIÓN DE DESHACER (SECCIÓN 13) E INSERTAR EN AVL
+		# 4. REGISTER UNDO ACTION (SECTION 13) AND INSERT INTO AVL
 		# -----------------------------------------------------------------
-		# Se toma una instantánea del estado antes de insertar el nuevo evento en el árbol
-		# y en el catálogo. Si esta llamada proviene de process_report_step, _suppress_undo_recording
-		# estará en True y no se duplicará la acción; si es creación manual, se apila normalmente.
+		# A snapshot of the state is taken before inserting the new event into the tree
+		# and in the catalog. If this call comes from process_report_step, _suppress_undo_recording
+		# will be True and the action won't be duplicated; if manual creation, it's pushed normally.
 		self._record_action("CREATE_EVENT", f"Create event ID {event_id}")
 
 		new_node = Node(id=event_id, event=new_event)
 		self.events_dict[event_id] = new_event
-		# Si self.tree es una instancia de AVL, se inserta en él aplicando balanceo automático
+		# If self.tree is an instance of AVL, it is inserted into it applying automatic balancing
 		if hasattr(self, 'tree') and self.tree is not None:
 			if hasattr(self.tree, 'insert'):
 				self.tree.insert(new_node)
@@ -372,29 +372,29 @@ class Observatory:
 	# Method to process a single report from report_queue step by step --------------------------
 	def process_report_step(self) -> dict | None:
 		"""
-		Procesa un único reporte de la cola report_queue (disparador paso a paso para UI/CLI).
-		Retorna un diccionario con el resultado del paso, o None si la cola está vacía.
+		Processes a single report from report_queue (step-by-step trigger for UI/CLI).
+		Returns a dictionary with the step result, or None if the queue is empty.
 		
-		Lógica de Deshacer (Sección 13):
-		1. Registra la acción 'PROCESS_REPORT_STEP' ANTES de extraer el reporte (dequeue).
-		   De este modo, al hacer undo_action, la cola recupera el reporte exactamente al frente.
-		2. Se activa self._suppress_undo_recording = True en un bloque try/finally para que las
-		   sub-operaciones (como crear evento en Regla 1 o editar en Regla 2) no generen
-		   acciones secundarias indeseadas en la pila de deshacer.
+		Undo Logic (Section 13):
+		1. Records the action 'PROCESS_REPORT_STEP' BEFORE dequeuing the report.
+		   This way, upon calling undo_action, the queue restores the report directly to the front.
+		2. Enables self._suppress_undo_recording = True in a try/finally block so internal
+		   sub-operations (like creating events in Rule 1 or editing in Rule 2) do not generate
+		   unwanted secondary actions on the undo stack.
 		"""
 		if self.report_queue is None or self.report_queue.is_empty():
 			print("No reports in the queue to process.")
 			return None
 
-		# Registrar snapshot antes de extraer el reporte de la cola o mutar catálogos
+		# Register snapshot before extracting the report from the queue or mutating catalogs
 		next_report = self.report_queue.current_reports[0] if (hasattr(self.report_queue, 'current_reports') and self.report_queue.current_reports) else None
 		rep_desc = f"report ID {next_report.id} (rev {next_report.review})" if next_report else "report"
 		self._record_action("PROCESS_REPORT_STEP", f"Process step for {rep_desc}")
 
-		# Suprimir grabaciones anidadas durante la aplicación de reglas del reporte
+		# Suppress nested recordings during report rules application
 		self._suppress_undo_recording = True
 		try:
-			# Rastrear rotaciones antes del paso para reportar rotaciones específicas de este reporte
+			# Track rotations before the step to report specific rotations of this report
 			cases_before = self.metrics.cases if self.metrics is not None else {}
 			turns_before = self.metrics.turns if self.metrics is not None else {}
 
@@ -633,7 +633,7 @@ class Observatory:
 		if new_date_time > self.clock_simulation:
 			raise ValueError("El tiempo de ocurrencia no puede ser futuro.")
 
-		# Registrar snapshot en la pila de deshacer antes de modificar los datos físicos o la clave del árbol AVL
+		# Register snapshot in the undo stack before modifying the physical data or the AVL tree key
 		self._record_action("EDIT_EVENT", f"Edit event ID {event_id}")
 
 		# Calculate the new priority
@@ -672,7 +672,7 @@ class Observatory:
 
 		event_to_remove = self.events_dict[event_id]
 
-		# Registrar snapshot antes de eliminar el nodo del árbol AVL y removerlo de los catálogos
+		# Register snapshot before deleting the node from the AVL tree and removing it from the catalogs
 		self._record_action("REMOVE_EVENT", f"Remove event ID {event_id}")
 
 		# Remove from the tree if it exists
@@ -714,11 +714,11 @@ class Observatory:
 
 		print(f"Archivando subárbol con raíz ID={best_root_node.id}.")
 		print(f"Eventos afectados ({len(ids_afectados)}): {ids_afectados}")
-		# Registrar la acción de archivo masivo como una única unidad atómica en la pila de deshacer
+		# Register the massive archive action as a single atomic unit in the undo stack
 		self._record_action("ARCHIVE_SUBTREE", f"Archive subtree rooted at ID {best_root_node.id} ({len(nodes_to_archive)} events)")
 
-		# Suprimir grabaciones anidadas: la Sección 13 estipula que las eliminaciones y rotaciones
-		# internas de un archivo masivo no se deshacen por separado
+		# Suppress nested recordings: Section 13 stipulates that deletions and rotations
+		# internal mass file operations are not undone separately
 		self._suppress_undo_recording = True
 		try:
 			# extract the events from the nodes and archive them
@@ -749,7 +749,7 @@ class Observatory:
 			"affected_ids": ids_afectados
 		}
 
-	# --- MÉTODOS AUXILIARES PARA EL ARCHIVO MASIVO ---
+	# --- AUXILIARY METHODS FOR MASS ARCHIVE ---
 
 	def _find_best_branch(self, max_age_hours: float | None = None) -> tuple:
 		"""
@@ -790,7 +790,7 @@ class Observatory:
 		if target_time <= self.clock_simulation:
 			raise ValueError(f"The clock can only advance to a future time. Current: {self.clock_simulation.isoformat()}, Target: {target_time.isoformat()}")
 
-		# Guardar el estado previo en la pila de deshacer antes de adelantar el reloj de simulación
+		# Save the previous state in the undo stack before advancing the simulation clock
 		previous_time = self.clock_simulation
 		self._record_action("ADVANCE_CLOCK", f"Advance clock from {previous_time.isoformat()} to {target_time.isoformat()}")
 		self.clock_simulation = target_time
@@ -815,7 +815,7 @@ class Observatory:
 		
 		# Identify expired events before deleting to avoid modifying dict during iteration
 		for event in self.events_dict.values():
-			# Regla 6: Solo los eventos NO gestionados ('Pending') expiran y se auto-archivan al superar W
+			# Rule 6: Only UNMANAGED events ('Pending') expire and auto-archive when exceeding W
 			state = str(getattr(event, 'attention_state', 'Pending')).strip().lower()
 			if state in ('reviewed', 'revisado'):
 				continue
@@ -852,45 +852,43 @@ class Observatory:
 		return expired_ids
 
 	# =========================================================================
-	#              SISTEMA DE PILA DE DESHACER (SECCIÓN 13 - SNAPSHOTS)
+	#              UNDO STACK SYSTEM (SECTION 13 - SNAPSHOTS)
 	# =========================================================================
 
 	def _record_action(self, action_type: str, description: str) -> None:
 		"""
-		Registra una instantánea (snapshot / patrón Memento) en la pila de deshacer (undo_stack).
+		Records a state snapshot (Memento pattern) into the undo stack (undo_stack).
 		
-		Funcionamiento:
-		1. Supresión de acciones anidadas: Si _suppress_undo_recording está activo (por ejemplo,
-		   durante el procesamiento de un reporte que internamente crea o edita eventos, o en
-		   un archivo masivo de subárbol), se ignora el registro interno para cumplir con la regla:
-		   "Las inserciones y rotaciones internas de una corrección o archivo masivo no se deshacen por separado".
-		2. Desacoplamiento de callback: El árbol AVL almacena un callback vinculado (_handle_tree_rotation)
-		   hacia esta instancia de Observatory. Para evitar que copy.deepcopy intente clonar recursivamente
-		   toda la instancia de Observatory a través de ese método ligado, se desacopla temporalmente
-		   (asignando None) y se restaura inmediatamente en el bloque 'finally'.
-		3. Preservación de identidad de objetos (Deepcopy unificado): Al clonar en una sola estructura
-		   el árbol, el diccionario de eventos, el histórico, la cola, las métricas y las asociaciones,
-		   Python garantiza que las referencias internas apunten a los mismos objetos en memoria
-		   (es decir, node.event es exactamente la misma instancia que events_dict[node.id]).
-		4. Almacenamiento en pila: Se crea un objeto Action con un ID autoincremental, tipo de acción,
-		   descripción explicativa, la instantánea de estado y la marca de tiempo actual, apilándolo
-		   en self.undo_stack.
+		Mechanism:
+		1. Nested actions suppression: If _suppress_undo_recording is active (e.g.,
+		   during the execution of a report that creates or updates events internally, or during
+		   a bulk subtree archiving), internal snapshot recording is skipped per specification:
+		   "Internal insertions and rotations of a correction or bulk archive are not undone separately".
+		2. Callback decoupling: The AVL tree holds a bound callback (_handle_tree_rotation)
+		   referencing this Observatory instance. To prevent copy.deepcopy from recursively cloning
+		   the entire Observatory instance through that method, it is temporarily unlinked
+		   (assigned to None) and cleanly restored in a 'finally' block.
+		3. Object identity preservation (Unified deepcopy): By cloning the tree, event dictionary,
+		   historic catalog, queue, metrics, and associations in a single combined structure,
+		   Python preserves shared object references (i.e. node.event is identical to events_dict[node.id]).
+		4. Stack storage: Constructs an Action instance with an auto-incrementing ID, action type,
+		   description, snapshot payload, and current timestamp, pushing it onto self.undo_stack.
 		"""
-		# Si hay una operación compuesta en curso, no registrar pasos internos secundarios
+		# If there is a composite operation in progress, do not record secondary internal steps
 		if getattr(self, '_suppress_undo_recording', False):
 			return
 
-		# Asegurar que la pila de deshacer esté instanciada
+		# Ensure the undo stack is instantiated
 		if self.undo_stack is None:
 			self.undo_stack = Undo_stack()
 
-		# Desvincular temporalmente el callback de rotación para evitar clonación circular del Observatorio
+		# Temporarily decouple the rotation callback to avoid circular cloning of the Observatory
 		original_callback = getattr(self.tree, '_AVL__on_rotation', None) if self.tree is not None else None
 		if original_callback is not None:
 			self.tree._AVL__on_rotation = None
 
 		try:
-			# Clonación profunda unificada para mantener coherencia e identidad referencial de los objetos
+			# Unified deep cloning to maintain referential identity and coherence of objects
 			copied_state = copy.deepcopy({
 				'tree': self.tree,
 				'events_dict': self.events_dict,
@@ -902,11 +900,11 @@ class Observatory:
 				'geographical_map': self.geographical_map
 			})
 		finally:
-			# Restaurar siempre el callback en el árbol activo en ejecución
+			# Always restore the callback in the running active tree
 			if original_callback is not None:
 				self.tree._AVL__on_rotation = original_callback
 
-		# Construir el diccionario de la instantánea con todos los componentes operativos
+		# Build the snapshot dictionary with all operational components
 		snapshot = {
 			'tree': copied_state['tree'],
 			'events_dict': copied_state['events_dict'],
@@ -926,7 +924,7 @@ class Observatory:
 			'current_scenario_filepath': getattr(self, 'current_scenario_filepath', None)
 		}
 		
-		# Crear la acción y apilarla en la estructura Undo_stack
+		# Create the action and stack it in the Undo_stack structure
 		action_id = self.undo_stack.size() + 1
 		action = Action(
 			id=action_id,
@@ -939,59 +937,59 @@ class Observatory:
 
 	def undo_action(self) -> bool:
 		"""
-		Deshace la última acción registrada en la pila (Sección 13).
+		Undoes the latest action recorded in the undo stack (Section 13).
 		
-		Funcionamiento:
-		1. Extrae (desapila) la última Action de self.undo_stack.
-		2. Restaura el estado completo del observatorio a partir del snapshot:
-		   - Árbol AVL activo y sus enlaces de nodos.
-		   - Diccionario de acceso rápido events_dict.
-		   - Catálogo histórico (archivados y eliminados).
-		   - Cola de reportes (restaura los reportes procesados a su posición en la cola).
-		   - Reloj de simulación y parámetros de configuración (bypasseando setters).
-		   - Métricas acumuladas, relaciones de asociación/réplicas, estaciones y mapa geográfico.
-		3. Reconecta el callback de rotaciones del árbol AVL restaurado hacia _handle_tree_rotation
-		   para que cualquier operación futura continúe registrando rotaciones en Metrics.
+		Mechanism:
+		1. Pops the most recent Action from self.undo_stack.
+		2. Restores full observatory state from the snapshot:
+		   - Active AVL tree and node connections.
+		   - Fast-lookup dictionary events_dict.
+		   - Historical catalogs (archived and deleted).
+		   - Report queue (restores processed reports to their initial queue slot).
+		   - Simulation clock and operational parameters (bypassing validation setters).
+		   - Accumulated metrics, replica associations, stations, and geographic map.
+		3. Reconnects the restored AVL tree's rotation callback to _handle_tree_rotation
+		   so that subsequent tree operations continue tracking rotations in Metrics.
 		
-		Retorna True si la acción se revirtió con éxito, o False si la pila estaba vacía.
+		Returns True if successfully undone, or False if the stack was empty.
 		"""
-		# Verificar si hay acciones previas disponibles para revertir
+		# Verify if there are previous actions available to revert
 		if self.undo_stack is None or self.undo_stack.is_empty():
 			raise ValueError("No previous actions available to undo.")
 
-		# Desapilar la acción más reciente
+		# Pop the most recent action
 		last_action = self.undo_stack.unstack()
 		s = last_action.snapshot
 
-		# Restaurar el árbol AVL y reconectar el callback de rotación
+		# Restore the AVL tree and reconnect the rotation callback
 		self.tree = s.get('tree')
 		if self.tree is not None and hasattr(self.tree, '_AVL__on_rotation'):
 			self.tree._AVL__on_rotation = self._handle_tree_rotation
 
-		# Restaurar estructuras de datos y catálogos
+		# Restore data structures and catalogs
 		self.events_dict = s.get('events_dict', {})
 		self.historic = s.get('historic')
 		self.report_queue = s.get('report_queue')
 		self.stations = s.get('stations', [])
 		self.geographical_map = s.get('geographical_map')
 		
-		# Restaurar reloj de simulación y parámetros del observatorio
+		# Restore simulation clock and observatory parameters
 		self.clock_simulation = s.get('clock_simulation', self.clock_simulation)
 		self._limit = s.get('limit', self.limit)
 		
-		# Usamos los campos privados _max_time y _distance_epicenter para evitar 
-		# disparar los setters que sobreescribirían la asociación que apenas restauramos
+		# We use the private fields _max_time and _distance_epicenter to avoid 
+		# trigger the setters that would overwrite the association we just restored
 		self._max_time = s.get('max_time', self.max_time)
 		self._distance_epicenter = s.get('distance_epicenter', self.distance_epicenter)
 		
 		self._max_tree_age = s.get('max_tree_age', self.max_tree_age)
 		self.stress_mode = s.get('stress_mode', self.stress_mode)
 		
-		# Sincronizar explícitamente el modo de estrés en el árbol restaurado
+		# Explicitly synchronize stress mode in the restored tree
 		if self.tree is not None:
 			self.tree.stress_mode = self.stress_mode
 		
-		# Restaurar métricas acumuladas y asociaciones
+		# Restore accumulated metrics and associations
 		self.metrics = s.get('metrics')
 		self.associations = s.get('associations', [])
 		self.current_scenario_name = s.get('current_scenario_name', "Demo Activo")
@@ -1029,7 +1027,7 @@ class Observatory:
 			print(f"Aviso: El evento {event_id} ya se encuentra marcado como 'Reviewed'.")
 			return True
 
-		# Registrar instantánea en la pila de deshacer antes de mutar el estado de atención
+		# Register snapshot in the undo stack before mutating attention state
 		self._record_action("MARK_AS_REVIEWED", f"Mark event ID {event_id} as Reviewed")
 
 		# 3. Change the attention state
@@ -1039,37 +1037,37 @@ class Observatory:
 		return True
 
 	# =========================================================================
-	#              SISTEMA DE VERSIONES PERSISTENTES (SECCIÓN 13)
+	#              PERSISTENT VERSIONING SYSTEM (SECTION 13)
 	# =========================================================================
 
-	# Ruta absoluta del directorio donde se almacenarán las versiones físicas en formato JSON
+	# Absolute path of the directory where physical versions will be stored in JSON format
 	VERSIONS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "saved_versions")
 
 	def _serialize_scenario(self) -> dict:
 		"""
-		Serializa el escenario operativo completo a un diccionario compatible con JSON
-		usando el esquema canónico de ScenarioPersistence (Sección 12).
+		Serializes the entire operational scenario into a JSON-compatible dictionary
+		following the canonical schema of ScenarioPersistence (Section 12).
 
-		Delega completamente a ScenarioPersistence.export_to_dict(self) para garantizar
-		que el formato de las versiones persistentes sea idéntico al de save_scenario()
-		y cargable por load_scenario_by_topology(), eliminando la duplicación de esquemas.
+		Delegates to ScenarioPersistence.export_to_dict(self) to ensure
+		that the saved version format is strictly identical to save_scenario()
+		and loadable via load_scenario_by_topology(), preventing schema drift.
 		"""
 		return ScenarioPersistence.export_to_dict(self)
 
 	def _deserialize_scenario(self, data: dict) -> None:
 		"""
-		Restaura el estado operativo del observatorio a partir de un diccionario serializado.
+		Restores the operational state of the observatory from a serialized dictionary.
 
-		Delega a ScenarioPersistence.load_by_topology() escribiendo los datos en un archivo
-		temporal, lo que garantiza:
-		  1. Misma validación que load_scenario_by_topology() (BST order, ciclos, alturas, etc.).
-		  2. Reconstrucción atómica: si alguna validación falla se lanza ValueError con los errores,
-		     y el estado del observatorio NO se modifica (todo-o-nada).
-		  3. Esquema unificado: compatible con el producido por _serialize_scenario().
+		Delegates to ScenarioPersistence.load_by_topology() via a temporary file,
+		guaranteeing:
+		  1. Same validation as load_scenario_by_topology() (BST order, cycles, heights, etc.).
+		  2. Atomic reconstruction: if any check fails, raises ValueError with error details,
+		     leaving the observatory state unmodified (all-or-nothing).
+		  3. Unified schema: compatible with _serialize_scenario().
 		"""
 		import tempfile
 
-		# Escribir el dict a un archivo temporal para poder llamar load_by_topology
+		# Write the dict to a temporary file to be able to call load_by_topology
 		with tempfile.NamedTemporaryFile(
 			mode="w",
 			suffix=".json",
@@ -1088,7 +1086,7 @@ class Observatory:
 				)
 		finally:
 			self._suppress_undo_recording = False
-			# Eliminar el archivo temporal en cualquier caso
+			# Delete the temporary file in any case
 			try:
 				os.remove(tmp_path)
 			except OSError:
@@ -1096,20 +1094,20 @@ class Observatory:
 
 	def save_version(self, name: str) -> bool:
 		"""
-		Guarda una versión con nombre del escenario operativo actual en un archivo persistente JSON.
+		Saves a named version of the current operational scenario to a persistent JSON file.
 		
-		Funcionamiento:
-		1. Normaliza el nombre eliminando espacios y caracteres no válidos.
-		2. Asegura la existencia del directorio físico 'saved_versions/'.
-		3. Serializa todo el estado llamando a _serialize_scenario() e incrusta metadatos (nombre, timestamp).
-		4. Escribe el archivo JSON formateado con indentación legible.
-		5. Actualiza la lista en memoria self.versions evitando duplicados si el nombre ya existía.
+		Mechanism:
+		1. Normalizes the scenario name by stripping whitespace and invalid filesystem characters.
+		2. Ensures existence of the physical 'saved_versions/' directory.
+		3. Serializes state via _serialize_scenario() and embeds metadata (name, timestamp).
+		4. Writes human-readable indented JSON to disk.
+		5. Updates self.versions in memory, preventing duplicates if name already exists.
 		"""
 		if not name or not name.strip():
 			print("Error: Version name cannot be empty.")
 			return False
 
-		# Limpiar el nombre: espacios → '_', luego eliminar caracteres prohibidos por el OS
+		# Clean the name: spaces → '_', then remove characters forbidden by the OS
 		import re
 		clean_name = name.strip().replace(" ", "_")
 		clean_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', clean_name)
@@ -1120,7 +1118,7 @@ class Observatory:
 		os.makedirs(self.VERSIONS_DIR, exist_ok=True)
 		file_path = os.path.join(self.VERSIONS_DIR, f"{clean_name}.json")
 
-		# Generar payload serializado e incorporar metadatos de versión
+		# Generate serialized payload and incorporate version metadata
 		payload = self._serialize_scenario()
 		payload['version_meta'] = {
 			'name': clean_name,
@@ -1131,7 +1129,7 @@ class Observatory:
 			with open(file_path, 'w', encoding='utf-8') as f:
 				json.dump(payload, f, indent=4, ensure_ascii=False)
 
-			# Mantener registro en la lista self.versions sin duplicar si ya existía
+			# Keep record in the self.versions list without duplicating if it already existed
 			existing = next((v for v in self.versions if v.name == clean_name), None)
 			if existing is not None:
 				existing.date_created = datetime.now()
@@ -1155,23 +1153,23 @@ class Observatory:
 
 	def list_versions(self) -> list[str]:
 		"""
-		Retorna una lista ordenada con los nombres de todas las versiones persistentes disponibles en disco.
-		Sincroniza automáticamente la lista en memoria self.versions:
-		  - Elimina entradas cuyo archivo ya no existe en disco (versiones fantasma).
-		  - Agrega entradas por archivos nuevos detectados en disco.
+		Returns a sorted list of names of all persistent versions available on disk.
+		Automatically synchronizes the in-memory self.versions list:
+		  - Clears entries whose files no longer exist on disk.
+		  - Registers newly detected version files on disk.
 		"""
 		if not os.path.exists(self.VERSIONS_DIR):
 			return []
 
-		# Purgar de memoria las entradas cuyos archivos físicos ya no existen
+		# Purge entries from memory whose physical files no longer exist
 		self.versions = [v for v in self.versions if os.path.exists(v.file_path)]
 
 		version_names = []
 		for file in os.listdir(self.VERSIONS_DIR):
 			if file.endswith(".json"):
-				v_name = file[:-5]  # Elimina la extensión '.json'
+				v_name = file[:-5]  # Removes the '.json' extension
 				version_names.append(v_name)
-				# Sincronizar self.versions si el archivo no estaba cargado en memoria previamente
+				# Synchronize self.versions if the file was not previously loaded in memory
 				if not any(v.name == v_name for v in self.versions):
 					f_path = os.path.join(self.VERSIONS_DIR, file)
 					try:
@@ -1188,19 +1186,19 @@ class Observatory:
 
 	def restore_version(self, name: str) -> bool:
 		"""
-		Restaura una versión persistente guardada desde el disco.
+		Restores a persistent scenario version saved on disk.
 		
-		Regla de la Sección 13:
-		Esta operación de restauración se registra como una acción deshacible en la pila
-		undo_stack ('RESTORE_VERSION') antes de sobreescribir el catálogo, permitiendo
-		al usuario deshacer la restauración y regresar al estado inmediatamente anterior.
+		Section 13 Rule:
+		This restore operation is tracked as an undoable action in undo_stack
+		('RESTORE_VERSION') prior to overwriting the catalog, allowing the user
+		to undo the restore and return to the immediately previous state.
 		"""
 		import re
 		clean_name = name.strip().replace(" ", "_")
 		clean_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', clean_name)
 		file_path = os.path.join(self.VERSIONS_DIR, f"{clean_name}.json")
 
-		# Validar que el archivo exista físicamente en el disco
+		# Validate that the file physically exists on disk
 		if not os.path.exists(file_path):
 			print(f"Error: Version '{clean_name}' does not exist.")
 			return False
@@ -1212,7 +1210,7 @@ class Observatory:
 			print(f"Error reading version '{clean_name}': {e}")
 			return False
 
-		# Validar PRIMERO el contenido antes de tocar el undo stack o el estado (Sección 12 / atomicidad)
+		# Validate FIRST the content before touching the undo stack or state (Section 12 / atomicity)
 		validation_errors = ScenarioPersistence.validate_topology_data(
 			data,
 			geographical_map=self.geographical_map,
@@ -1224,11 +1222,11 @@ class Observatory:
 			return False
 
 		try:
-			# Solo si la validación pasó: registrar snapshot del estado actual en undo_stack
-			# (permite al usuario deshacer la restauración con undo_action())
+			# Only if validation passed: register snapshot of current state in undo_stack
+			# (allows the user to undo the restoration with undo_action())
 			self._record_action("RESTORE_VERSION", f"Restore version '{clean_name}'")
 
-			# Aplicar la reconstrucción completa del estado (atómica, ya validada)
+			# Apply complete state reconstruction (atomic, already validated)
 			self._deserialize_scenario(data)
 			self.current_scenario_name = clean_name
 			self.current_scenario_filepath = file_path
@@ -1339,9 +1337,9 @@ class Observatory:
 
 	def load_scenario_by_topology(self, filepath: str, stress_mode_override: bool | None = None) -> tuple[bool, list[str]]:
 		"""
-		Delega la carga atómica y validación de topología a ScenarioPersistence.
-		Según la Sección 13, cargar un escenario nuevo sobreescribe el actual, por lo que
-		esta operación debe registrarse para poder deshacerse si el usuario se equivocó de archivo.
+		Delegates atomic scenario loading and topology validation to ScenarioPersistence.
+		Per Section 13, loading a new scenario replaces current state, hence this operation
+		is recorded in the undo stack so it can be reverted if the user selected the wrong file.
 		"""
 		import os, json
 		if not os.path.exists(filepath):
@@ -1353,7 +1351,7 @@ class Observatory:
 		except Exception as e:
 			return False, [f"Failed to parse JSON file: {e}"]
 		
-		# Validar la topología ANTES de alterar el observatorio o ensuciar el stack
+		# Validate the topology BEFORE altering the observatory or dirtying the stack
 		from Business.scenario_persistence import ScenarioPersistence
 		errors = ScenarioPersistence.validate_topology_data(
 			data, 
@@ -1363,11 +1361,11 @@ class Observatory:
 		if errors:
 			return False, errors
 		
-		# Si la validación es exitosa, registramos el estado actual antes de perderlo
+		# If the validation is successful, we register the current state before losing it
 		if hasattr(self, '_record_action'):
 			self._record_action("LOAD_SCENARIO", f"Loaded scenario from {os.path.basename(filepath)}")
 		
-		# Aplicamos la reconstrucción atómica delegando a ScenarioPersistence
+		# We apply the atomic reconstruction delegating to ScenarioPersistence
 		self._suppress_undo_recording = True
 		try:
 			res = ScenarioPersistence.load_by_topology(self, filepath, stress_mode_override)
@@ -1610,9 +1608,9 @@ class Observatory:
 
 	def global_recovery(self) -> dict:
 		"""
-		Fuerza un rebalanceo global del árbol y desactiva el modo de estrés (Sección 13).
-		Registra la acción en la pila para poder deshacerse y recopila el informe completo
-		de cambios topológicos, rotaciones y costo computacional para informar al usuario.
+		Forces an in-place global tree rebalance and turns off stress mode (Section 13).
+		Pushes the action onto the undo stack and compiles a full report of
+		topological modifications, rotation counts, and computational cost for UI presentation.
 		"""
 		import time
 		start_time = time.perf_counter()
@@ -1620,7 +1618,7 @@ class Observatory:
 		if hasattr(self, '_record_action'):
 			self._record_action("GLOBAL_RECOVERY", "Restauración global post-estrés")
 			
-		# 1. Métricas previas del árbol
+		# 1. Previous tree metrics
 		pre_height = self.tree.root.height if (self.tree and self.tree.root) else 0
 		pre_root_id = self.tree.root.id if (self.tree and self.tree.root) else None
 		pre_root_key = self.tree.root.get_key() if (self.tree and self.tree.root) else None
@@ -1637,11 +1635,11 @@ class Observatory:
 		cases_before = self.metrics.cases.copy() if self.metrics is not None else {}
 		turns_before = self.metrics.turns.copy() if self.metrics is not None else {}
 
-		# 2. El árbol rebalancea su topología de abajo hacia arriba in-situ y apaga su flag interno
+		# 2. The tree rebalances its topology bottom-up in-place and turns off its internal flag
 		if self.tree is not None:
 			self.tree.restore_balance()
 			
-		# 3. Métricas posteriores
+		# 3. Post metrics
 		post_height = self.tree.root.height if (self.tree and self.tree.root) else 0
 		post_root_id = self.tree.root.id if (self.tree and self.tree.root) else None
 		post_root_key = self.tree.root.get_key() if (self.tree and self.tree.root) else None
@@ -1653,10 +1651,10 @@ class Observatory:
 				if abs(bf) > 1:
 					imbalanced_nodes_after.append({"id": node.id, "bf": bf, "key": node.get_key()})
 
-		# 4. Sincronizamos el flag del Observatorio al modo normal
+		# 4. We synchronize the Observatory flag to normal mode
 		self.stress_mode = False
 
-		# 5. Ejecutar auditoría para garantizar el equilibrio restablecido
+		# 5. Execute audit to guarantee restored balance
 		audit_report = self.verify_structure()
 		if any(e.startswith("Error") for e in audit_report):
 			print("Error: Global recovery failed audit. Stress mode remains ON.")
@@ -1665,7 +1663,7 @@ class Observatory:
 				self.tree.stress_mode = True # Revert inner flag
 			return {"success": False, "audit": audit_report}
 
-		# 6. Rotaciones producidas y costo
+		# 6. Rotations produced and cost
 		cases_diff = {}
 		turns_diff = {}
 		if self.metrics is not None:

@@ -68,7 +68,7 @@ class TestQueries(unittest.TestCase):
             self.tree.insert(Node(id=ev.id, event=ev))
 
     # =========================================================================
-    # TESTS PARA CONSULTA 1: Top k pendientes en orden descendente de K
+    # TESTS FOR QUERY 1: Top k pending in descending order of K
     # =========================================================================
 
     def test_top_k_pending_descending_order(self):
@@ -104,7 +104,7 @@ class TestQueries(unittest.TestCase):
         self.assertEqual(examined_zero, 0)
 
     # =========================================================================
-    # TESTS PARA CONSULTA 2: Filtro por magnitud, profundidad y fechas
+    # TESTS FOR QUERY 2: Filter by magnitude, depth and dates
     # =========================================================================
 
     def test_events_by_filters_matching(self):
@@ -134,7 +134,7 @@ class TestQueries(unittest.TestCase):
         self.assertEqual(examined, 0)
 
     # =========================================================================
-    # TESTS PARA CONSULTA 3: Candidatos y referencia elegida
+    # TESTS FOR QUERY 3: Candidates and chosen reference
     # =========================================================================
 
     def test_event_associations_active_and_archived(self):
@@ -185,7 +185,7 @@ class TestQueries(unittest.TestCase):
         self.assertEqual(report, {})
 
     # =========================================================================
-    # TESTS PARA CONSULTA 4: Eventos de prioridad alta con acceso costoso
+    # TESTS FOR QUERY 4: High priority events with costly access
     # =========================================================================
 
     def test_costly_high_priority_events_identification(self):

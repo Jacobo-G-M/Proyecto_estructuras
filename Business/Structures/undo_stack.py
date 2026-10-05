@@ -13,12 +13,12 @@ class Undo_stack:
     def __init__(self) -> None:
         self._actions: list[Action] = []
 
-    # GETTER para _actions
+    # GETTER for _actions
     @property
     def actions(self) -> list[Action]:
         return self._actions
 
-    # SETTER para _actions
+    # SETTER for _actions
     @actions.setter
     def actions(self, new_actions: list[Action]) -> None:
         if isinstance(new_actions, list):

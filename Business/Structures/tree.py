@@ -279,7 +279,7 @@ class Tree(ABC):
             
             # 1. Node found
             if search_key == current_key:
-                # Regla: Altura de árbol vacío es -1
+                # Rule: Height of empty tree is -1
                 left_h = current.left_son.height if current.left_son else -1
                 right_h = current.right_son.height if current.right_son else -1
                 

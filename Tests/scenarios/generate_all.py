@@ -36,15 +36,15 @@ def run_case_1():
     obs.stations = [st1]
     obs.clock_simulation = datetime(2026, 10, 4, 12, 0, 0)
 
-    # Evento B: M=4.5, H=30.0 fuera de zona -> P=2
+    # Event B: M=4.5, H=30.0 outside zone -> P=2
     ev_b = obs.create_event(10, 4.5, 30.0, (200.0, 400.0), datetime(2026, 10, 4, 10, 0, 0), st1)
-    # Evento D: M=5.0, H=40.0, ID=20 -> P=2
+    # Event D: M=5.0, H=40.0, ID=20 -> P=2
     ev_d = obs.create_event(20, 5.0, 40.0, (200.0, 400.0), datetime(2026, 10, 4, 10, 0, 0), st1)
-    # Evento E: M=5.0, H=40.0, ID=35 -> P=2 (desempate con D por ID)
+    # Event E: M=5.0, H=40.0, ID=35 -> P=2 (tiebreaker with D by ID)
     ev_e = obs.create_event(35, 5.0, 40.0, (200.0, 400.0), datetime(2026, 10, 4, 10, 0, 0), st1)
-    # Evento A: M=4.5, H=30.0 exactamente en el borde x=300.0 de zona poblada -> P=3
+    # Event A: M=4.5, H=30.0 exactly on the border x=300.0 of populated zone -> P=3
     ev_a = obs.create_event(50, 4.5, 30.0, (300.0, 400.0), datetime(2026, 10, 4, 10, 0, 0), st1)
-    # Evento C: M=6.0, H=100.0 en cualquier zona -> P=3
+    # Event C: M=6.0, H=100.0 in any zone -> P=3
     ev_c = obs.create_event(60, 6.0, 100.0, (100.0, 100.0), datetime(2026, 10, 4, 10, 0, 0), st1)
 
     assert ev_a.priority == 3, f"Expected P=3, got {ev_a.priority}"
@@ -149,7 +149,7 @@ def run_case_3():
     assert obs.associations[0].chosen_reference.id == 1
     assert [r.id for r in obs.associations[0].referenced_by] == [2]
 
-    # Report for Event 3 (Llega después pero ocurrió ANTES: 09:55, M=6.1, (402.0, 403.0))
+    # Report for Event 3 (Arrives later but occurred BEFORE: 09:55, M=6.1, (402.0, 403.0))
     r3 = Report(
         id=3,
         magnitude=6.1,

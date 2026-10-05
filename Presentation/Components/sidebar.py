@@ -14,7 +14,7 @@ class Sidebar(ctk.CTkFrame):
 
         self.grid_rowconfigure(2, weight=1)
 
-        # 1. Título y Logotipo Oficial
+        # 1. Official Title and Logo
         self.logo_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.logo_frame.grid(row=0, column=0, padx=14, pady=20, sticky="ew")
         
@@ -38,7 +38,7 @@ class Sidebar(ctk.CTkFrame):
         self.subtitle_lbl = ctk.CTkLabel(self.title_frame, text="v1.0", font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0")
         self.subtitle_lbl.pack(anchor="w", pady=0)
 
-        # 2. Menú de Navegación Interactivo
+        # 2. Interactive Navigation Menu
         self.menu_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.menu_frame.grid(row=1, column=0, padx=8, pady=8, sticky="ew")
         self.menu_frame.grid_columnconfigure(0, weight=1)
@@ -49,7 +49,7 @@ class Sidebar(ctk.CTkFrame):
         self._create_nav_item("eventos", "Eventos", row=3)
         self._create_nav_item("consultas", "Consultas", row=4)
 
-        # 3. Balance Global
+        # 3. Global Balance
         self.balance_frame = ctk.CTkFrame(self, fg_color="#0e1620", border_color="#1e2d3d", border_width=1, corner_radius=10)
         self.balance_frame.grid(row=3, column=0, padx=12, pady=18, sticky="ew")
         
@@ -82,20 +82,20 @@ class Sidebar(ctk.CTkFrame):
         container.grid(row=row, column=0, sticky="ew", pady=3, padx=5)
         container.grid_columnconfigure(1, weight=1)
         
-        # Punto indicador
+        # Indicator dot
         dot = ctk.CTkFrame(container, width=6, height=6, corner_radius=3, fg_color="#8a9bb0")
         dot.grid(row=0, column=0, padx=(15, 10), pady=10)
         
-        # Título principal
+        # Main title
         lbl_title = ctk.CTkLabel(container, text=title, font=ctk.CTkFont(family=FONT_MAIN, size=14), text_color="#8a9bb0")
         lbl_title.grid(row=0, column=1, sticky="w", pady=8)
         
-        # Punto derecho
+        # Right dot
         dot_right = ctk.CTkFrame(container, width=4, height=4, corner_radius=2, fg_color="#22d3ee")
         dot_right.grid(row=0, column=2, padx=15)
         dot_right.grid_remove()
 
-        # Guardar referencias
+        # Save references
         self.menu_items[key] = {
             "container": container,
             "dot": dot,
@@ -103,7 +103,7 @@ class Sidebar(ctk.CTkFrame):
             "dot_right": dot_right
         }
 
-        # Enlazar clicks en todos los subelementos
+        # Bind clicks on all sub-elements
         for widget in (container, dot, lbl_title):
             widget.bind("<Button-1>", lambda e, k=key: self._on_item_click(k))
             widget.bind("<Enter>", lambda e, k=key: self._on_item_hover(k, True))
@@ -121,7 +121,7 @@ class Sidebar(ctk.CTkFrame):
             item["container"].configure(fg_color="#101924" if is_hover else "transparent")
 
     def set_active(self, key: str):
-        """Actualiza el estilo visual del elemento activo en el menú."""
+        """Updates the visual style of the active element in the menu."""
         self.active_key = key
         for k, item in self.menu_items.items():
             is_active = (k == key)
@@ -137,7 +137,7 @@ class Sidebar(ctk.CTkFrame):
                 item["dot_right"].grid_remove()
 
     def refresh(self):
-        """Calcula el factor de balance global real del árbol AVL activo."""
+        """Calculates the actual global balance factor of the active AVL tree."""
         if not self.observatory or not self.observatory.tree:
             return
 

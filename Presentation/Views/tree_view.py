@@ -21,20 +21,20 @@ class TreeView(ctk.CTkFrame):
         self.show_costly_halo: bool = True
         self.p_filter = {1: True, 2: True, 3: True}
 
-        # Nodo seleccionado globalmente (sincronizado para comparar AVL vs BST)
+        # Globally selected node (synchronized to compare AVL vs BST)
         self.selected_event_id: int | None = None
 
-        # Estado de Zoom y Paneo para Lienzo AVL
+        # Zoom and Pan State for AVL Canvas
         self.avl_zoom: float = 1.0
         self.avl_pan_x: float = 0.0
         self.avl_pan_y: float = 0.0
 
-        # Estado de Zoom y Paneo para Lienzo BST
+        # Zoom and Pan State for BST Canvas
         self.bst_zoom: float = 1.0
         self.bst_pan_x: float = 0.0
         self.bst_pan_y: float = 0.0
 
-        # Control de arrastre interactivo con ratón
+        # Interactive drag control with mouse
         self._drag_start_x: int = 0
         self._drag_start_y: int = 0
         self._drag_total_move: int = 0
@@ -43,12 +43,12 @@ class TreeView(ctk.CTkFrame):
         self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        # Contenedor principal con márgenes limpios y responsivos
+        # Main container with clean and responsive margins
         self.main_container = ctk.CTkFrame(self, fg_color="transparent")
         self.main_container.pack(fill="both", expand=True, padx=16, pady=10)
         self.main_container.grid_rowconfigure(2, weight=1)
-        self.main_container.grid_columnconfigure(0, weight=3) # Árboles
-        self.main_container.grid_columnconfigure(1, weight=1, minsize=260) # Inspector adaptable
+        self.main_container.grid_columnconfigure(0, weight=3) # Trees
+        self.main_container.grid_columnconfigure(1, weight=1, minsize=260) # Adaptable inspector
 
         self._build_header()
         self._build_metrics_bar()
@@ -65,13 +65,13 @@ class TreeView(ctk.CTkFrame):
             self.selected_event_id = None
 
     # -------------------------------------------------------------------------
-    # 1. CABECERA CON BREADCRUMB Y TOGGLES
+    # 1. HEADER WITH BREADCRUMB AND TOGGLES
     # -------------------------------------------------------------------------
     def _build_header(self):
         self.header_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.header_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         
-        # Título
+        # Title
         title_box = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         title_box.pack(side="left")
         
@@ -80,7 +80,7 @@ class TreeView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_MAIN, size=22, weight="bold"), text_color="#e8eef3"
         ).pack(anchor="w")
 
-        # Toggles a la derecha
+        # Toggles on the right
         toggle_box = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         toggle_box.pack(side="right", anchor="s", pady=2)
         
@@ -100,7 +100,7 @@ class TreeView(ctk.CTkFrame):
         self.btn_side_by_side.pack(side="left", padx=2)
 
     # -------------------------------------------------------------------------
-    # 2. BARRA DE MÉTRICAS (Exacta a la Imagen 4)
+    # 2. METRICS BAR (Exact to Image 4)
     # -------------------------------------------------------------------------
     def _build_metrics_bar(self):
         self.metrics_container = ctk.CTkFrame(
@@ -108,7 +108,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.metrics_container.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         
-        # Fila 1: 5 Columnas divididas por líneas verticales
+        # Row 1: 5 Columns divided by vertical lines
         self.metrics_top = ctk.CTkFrame(self.metrics_container, fg_color="transparent")
         self.metrics_top.pack(fill="x", padx=8, pady=8)
         self.metrics_top.grid_columnconfigure((0, 2, 4, 6, 8), weight=1, uniform="metric_cols")
@@ -140,16 +140,16 @@ class TreeView(ctk.CTkFrame):
             
             self.metric_labels[key] = lbl_val
 
-            # Separador vertical fino
+            # Thin vertical separator
             if idx < len(metric_defs) - 1:
                 sep = ctk.CTkFrame(self.metrics_top, width=1, height=36, fg_color="#1a2736")
                 sep.grid(row=0, column=col + 1, sticky="ns", pady=2)
 
-        # Línea divisoria horizontal
+        # Horizontal dividing line
         h_line = ctk.CTkFrame(self.metrics_container, height=1, fg_color="#1a2736")
         h_line.pack(fill="x")
 
-        # Fila 2: 4 Botones interactivos de recorridos para copiar directamente al portapapeles
+        # Row 2: 4 Interactive traversal buttons to copy directly to clipboard
         self.metrics_bot = ctk.CTkFrame(self.metrics_container, fg_color="transparent")
         self.metrics_bot.pack(fill="x", padx=8, pady=6)
         self.metrics_bot.grid_columnconfigure((0, 1, 2, 3), weight=1)
@@ -174,7 +174,7 @@ class TreeView(ctk.CTkFrame):
             self.trav_buttons[trav] = btn
 
     # -------------------------------------------------------------------------
-    # 3. ZONA DE LIENZOS / ÁRBOLES (Exacta a la Imagen 3)
+    # 3. CANVAS / TREES ZONE (Exact to Image 3)
     # -------------------------------------------------------------------------
     def _build_canvases_area(self):
         self.canvas_container = ctk.CTkFrame(self.main_container, fg_color="transparent")
@@ -183,13 +183,13 @@ class TreeView(ctk.CTkFrame):
         self.canvas_container.grid_columnconfigure(0, weight=1)
         self.canvas_container.grid_columnconfigure(1, weight=1)
 
-        # --- AVL Card (Izquierda) ---
+        # --- AVL Card (Left) ---
         self.avl_frame = ctk.CTkFrame(
             self.canvas_container, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=12
         )
         self.avl_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
 
-        # Header de la tarjeta AVL
+        # AVL card header
         avl_head = ctk.CTkFrame(self.avl_frame, fg_color="transparent")
         avl_head.pack(fill="x", padx=10, pady=6)
         
@@ -199,7 +199,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.lbl_avl_title.pack(side="left")
 
-        # Botones compactos 100% y recentrar a la derecha
+        # 100% compact buttons and recenter to the right
         self.btn_recenter = ctk.CTkButton(
             avl_head, text="↻", width=30, height=24, corner_radius=4,
             fg_color="#101922", border_color="#1a2736", border_width=1,
@@ -216,7 +216,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.btn_zoom_100.pack(side="right", padx=2)
 
-        # Contenedor del Canvas AVL con controles flotantes
+        # AVL Canvas Container with floating controls
         avl_canvas_wrap = ctk.CTkFrame(self.avl_frame, fg_color="transparent")
         avl_canvas_wrap.pack(fill="both", expand=True, padx=8, pady=(0, 4))
 
@@ -224,7 +224,7 @@ class TreeView(ctk.CTkFrame):
         self.avl_canvas.pack(fill="both", expand=True)
         self.avl_canvas.bind("<Configure>", lambda e: self._redraw_trees())
 
-        # Eventos de ratón para Paneo y Zoom en Canvas AVL
+        # Mouse events for Pan and Zoom in AVL Canvas
         self.avl_canvas.bind("<ButtonPress-1>", lambda e: self._on_canvas_press("avl", e))
         self.avl_canvas.bind("<B1-Motion>", lambda e: self._on_canvas_drag("avl", e))
         self.avl_canvas.bind("<ButtonRelease-1>", lambda e: self._on_canvas_release("avl", e))
@@ -234,7 +234,7 @@ class TreeView(ctk.CTkFrame):
         self.avl_canvas.bind("<B3-Motion>", lambda e: self._on_canvas_drag("avl", e))
         self.avl_canvas.bind("<MouseWheel>", lambda e: self._on_canvas_mousewheel("avl", e))
 
-        # Controles flotantes en la esquina superior izquierda del Canvas AVL
+        # Floating controls in the top left corner of the AVL Canvas
         self.zoom_ctrl_frame = ctk.CTkFrame(
             self.avl_canvas, fg_color="#0e1722", border_color="#1a2736", border_width=1, corner_radius=6
         )
@@ -256,7 +256,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.btn_zoom_out.pack(pady=1)
 
-        # Leyenda inferior compacta en la tarjeta AVL
+        # Compact bottom legend on the AVL card
         legend_f = ctk.CTkFrame(self.avl_frame, fg_color="transparent")
         legend_f.pack(fill="x", padx=10, pady=(0, 6))
 
@@ -277,13 +277,13 @@ class TreeView(ctk.CTkFrame):
             font=ctk.CTkFont(family=FONT_MAIN, size=10), text_color="#8a9bb0"
         ).pack(side="right")
 
-        # --- BST Card (Derecha) ---
+        # --- BST Card (Right) ---
         self.bst_frame = ctk.CTkFrame(
             self.canvas_container, fg_color="#0b131c", border_color="#1a2736", border_width=1, corner_radius=12
         )
         self.bst_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
 
-        # Header de BST con título, estado y controles de zoom/recentrado
+        # BST Header with title, status and zoom/recenter controls
         bst_head = ctk.CTkFrame(self.bst_frame, fg_color="transparent")
         bst_head.pack(fill="x", padx=10, pady=6)
         
@@ -298,7 +298,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.lbl_bst_subtitle.pack(side="left", padx=6)
 
-        # Botones compactos 100% y recentrar a la derecha para BST
+        # 100% compact buttons and recenter to the right for BST
         self.btn_bst_recenter = ctk.CTkButton(
             bst_head, text="↻", width=30, height=24, corner_radius=4,
             fg_color="#101922", border_color="#1a2736", border_width=1,
@@ -320,7 +320,7 @@ class TreeView(ctk.CTkFrame):
         self.bst_canvas.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.bst_canvas.bind("<Configure>", lambda e: self._redraw_trees())
 
-        # Controles flotantes en la esquina superior izquierda del Canvas BST
+        # Floating controls in the top left corner of the BST Canvas
         self.bst_zoom_ctrl_frame = ctk.CTkFrame(
             self.bst_canvas, fg_color="#0e1722", border_color="#1a2736", border_width=1, corner_radius=6
         )
@@ -342,7 +342,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.btn_bst_zoom_out.pack(pady=1)
 
-        # Eventos de ratón para Paneo y Zoom en Canvas BST
+        # Mouse events for Pan and Zoom in BST Canvas
         self.bst_canvas.bind("<ButtonPress-1>", lambda e: self._on_canvas_press("bst", e))
         self.bst_canvas.bind("<B1-Motion>", lambda e: self._on_canvas_drag("bst", e))
         self.bst_canvas.bind("<ButtonRelease-1>", lambda e: self._on_canvas_release("bst", e))
@@ -353,7 +353,7 @@ class TreeView(ctk.CTkFrame):
         self.bst_canvas.bind("<MouseWheel>", lambda e: self._on_canvas_mousewheel("bst", e))
 
     # -------------------------------------------------------------------------
-    # 4. INSPECTOR DE NODO (Exacto a la Imagen 2)
+    # 4. NODE INSPECTOR (Exact to Image 2)
     # -------------------------------------------------------------------------
     def _build_inspector(self):
         self.inspector_frame = ctk.CTkScrollableFrame(
@@ -368,7 +368,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.inspector_frame.grid(row=2, column=1, sticky="nsew")
         
-        # Header del inspector con punto rojo
+        # Inspector header with red dot
         h = ctk.CTkFrame(self.inspector_frame, fg_color="transparent")
         h.pack(fill="x", padx=12, pady=(10, 6))
         
@@ -381,7 +381,7 @@ class TreeView(ctk.CTkFrame):
         ).pack(side="left")
         
 
-        # Hero Card de nodo seleccionado
+        # Selected node Hero Card
         self.hero_card = ctk.CTkFrame(
             self.inspector_frame, fg_color="#161217", border_color="#361a22", border_width=1, corner_radius=10
         )
@@ -393,7 +393,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.lbl_hero_tuple.pack(pady=(6, 2))
 
-        # Caja punteada de advertencia
+        # Dotted warning box
         self.hero_badge_box = ctk.CTkFrame(
             self.hero_card, fg_color="#1e1308", border_width=0, corner_radius=6
         )
@@ -405,7 +405,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.lbl_hero_badge.pack(padx=6, pady=2)
 
-        # Tabla densa de 12 propiedades
+        # Dense table of 12 properties
         self.prop_labels = {}
         prop_defs = [
             ("key_K", "K = (P, M, I)", "#22d3ee"),
@@ -441,7 +441,7 @@ class TreeView(ctk.CTkFrame):
             val_lbl.pack(side="right")
             self.prop_labels[key] = val_lbl
 
-        # Sección RESALTADO
+        # HIGHLIGHT Section
         ctk.CTkLabel(
             self.inspector_frame, text="RESALTADO",
             font=ctk.CTkFont(family=FONT_MAIN, size=10, weight="bold"), text_color="#8a9bb0"
@@ -471,7 +471,7 @@ class TreeView(ctk.CTkFrame):
         )
         self.btn_p3.pack(side="left", expand=True, fill="x", padx=1)
 
-        # Toggle halo costoso
+        # Toggle costly halo
         halo_toggle_f = ctk.CTkFrame(
             self.inspector_frame, fg_color="#121a22", border_width=0, corner_radius=8
         )
@@ -495,7 +495,7 @@ class TreeView(ctk.CTkFrame):
             self.switch_halo.deselect()
         self.switch_halo.pack(padx=10, pady=6, anchor="w")
 
-        # Botones de Acción inferior
+        # Bottom Action Buttons
         action_f = ctk.CTkFrame(self.inspector_frame, fg_color="transparent")
         action_f.pack(fill="x", padx=12, pady=(6, 10))
 
@@ -516,10 +516,10 @@ class TreeView(ctk.CTkFrame):
 
 
     # -------------------------------------------------------------------------
-    # LÓGICA DE ACTUALIZACIÓN Y LLAMADAS AL BACKEND
+    # UPDATE LOGIC AND BACKEND CALLS
     # -------------------------------------------------------------------------
     def on_node_click(self, event_id: int):
-        # Si fue un arrastre de lienzo (> 5 px), ignorar la selección para permitir drag fluido
+        # If it was a canvas drag (> 5 px), ignore the selection to allow fluid drag
         if self._drag_total_move >= 5:
             return
         self.selected_event_id = event_id
@@ -562,7 +562,7 @@ class TreeView(ctk.CTkFrame):
                 bst_leaves = sum(1 for n in shadow_bst.inorder() if n.is_leaf())
                 self.lbl_bst_subtitle.configure(text=f"Altura = {bst_h} · Hojas = {bst_leaves}")
 
-        # Formateador para recorrido completo (sin truncar)
+        # Formatter for full traversal (without truncation)
         def fmt_full(nodes_list):
             if not nodes_list:
                 return "--"
@@ -571,7 +571,7 @@ class TreeView(ctk.CTkFrame):
         preorder = self.observatory.tree.preorder()
         postorder = self.observatory.tree.postorder()
 
-        # BFS por niveles
+        # BFS by levels
         bfs_nodes = []
         if self.observatory.tree.root:
             q = deque([self.observatory.tree.root])
@@ -583,7 +583,7 @@ class TreeView(ctk.CTkFrame):
                 if cur.right_son:
                     q.append(cur.right_son)
 
-        # Guardar secuencias completas para el botón de copiar (sin truncar)
+        # Save complete sequences for the copy button (without truncation)
         self.full_traversals = {
             "INORDEN": fmt_full(inorder),
             "PREORDEN": fmt_full(preorder),
@@ -597,11 +597,11 @@ class TreeView(ctk.CTkFrame):
 
         costly_ids = self.observatory.get_costly_access()
 
-        # Actualizar título dinámico de AVL
+        # Update dynamic AVL title
         if hasattr(self, "lbl_avl_title"):
             self.lbl_avl_title.configure(text="AVL · balanceado")
 
-        # Canvas AVL
+        # AVL Canvas
         w_avl = self.avl_canvas.winfo_width()
         h_avl = self.avl_canvas.winfo_height()
         if w_avl > 10 and h_avl > 10:
@@ -725,7 +725,7 @@ class TreeView(ctk.CTkFrame):
                 text_color="#22d3ee"
             )
 
-        # Propiedades exactas
+        # Exact properties
         self.prop_labels["key_K"].configure(text=f"({p}, {m:.1f}, {ev_id})")
         self.prop_labels["event_id"].configure(text=f"EV-{ev_id}")
         self.prop_labels["magnitude"].configure(text=f"M {m:.1f}")
@@ -737,7 +737,7 @@ class TreeView(ctk.CTkFrame):
         state_color = "#ff7a1a" if att_state.lower() == "pending" else "#2ecc71"
         self.prop_labels["status"].configure(text=att_state.upper(), text_color=state_color)
 
-        # Resolver todas las estaciones de origen en el orden en que se agregaron
+        # Resolve all origin stations in the order they were added
         st_names = []
         stations_map = {}
         if self.observatory and hasattr(self.observatory, 'stations'):
@@ -775,7 +775,7 @@ class TreeView(ctk.CTkFrame):
         self.prop_labels["node_depth"].configure(text=depth_str, text_color=depth_color)
 
     # -------------------------------------------------------------------------
-    # ACCIONES DE BOTONES
+    # BUTTON ACTIONS
     # -------------------------------------------------------------------------
     def _toggle_p_filter(self, p: int):
         self.p_filter[p] = not self.p_filter[p]
@@ -809,7 +809,7 @@ class TreeView(ctk.CTkFrame):
         self.clipboard_append(full_text)
         self.update()
 
-        # Feedback visual temporal en el botón
+        # Temporary visual feedback on the button
         if hasattr(self, "trav_buttons") and trav_name in self.trav_buttons:
             btn = self.trav_buttons[trav_name]
             btn.configure(text=f"✓ {trav_name} COPIADO", text_color="#2ecc71", border_color="#1b523e")
@@ -869,7 +869,7 @@ class TreeView(ctk.CTkFrame):
         self.after(50, self._recenter_bst)
 
     # -------------------------------------------------------------------------
-    # GESTIÓN DE ZOOM, PAN Y DRAG INTERACTIVO
+    # INTERACTIVE ZOOM, PAN AND DRAG MANAGEMENT
     # -------------------------------------------------------------------------
     def _zoom_avl(self, factor: float):
         self.avl_zoom = max(0.30, min(2.5, self.avl_zoom * factor))

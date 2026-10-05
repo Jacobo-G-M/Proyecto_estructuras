@@ -1,17 +1,17 @@
 import os
 import sys
 
-# Asegurar que el directorio raíz está en el path para los imports
+# Ensure that the root directory is in the path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from Business.observatory import Observatory
 from Presentation.app import SismoLabApp
 
 def main():
-    # 1. Inicializar la capa de negocio
+    # 1. Initialize the business layer
     observatory = Observatory()
     
-    # 2. Inicializar y ejecutar la capa de presentación
+    # 2. Initialize and execute the presentation layer
     app = SismoLabApp(observatory)
     app.run()
 
