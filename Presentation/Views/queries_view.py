@@ -243,7 +243,7 @@ class QueriesView(ctk.CTkFrame):
         tbl_hdr.pack(fill="x", padx=(0, 16))
         tbl_hdr.pack_propagate(False)
 
-        headers = ["#", "ID", "K=(P,M,T)", "Detalle", "Estado", "Visitados"]
+        headers = ["#", "ID", "K=(P,M,I)", "Detalle", "Estado", "Visitados"]
         col_weights = [1, 2, 3, 3, 2, 2]
         total_w = sum(col_weights)
         rel_widths = [w/total_w for w in col_weights]
@@ -815,7 +815,7 @@ class QueriesView(ctk.CTkFrame):
             lbl_id.place(relx=rel_xs[1], relwidth=rel_widths[1], relheight=1.0)
             lbl_id.bind("<Button-1>", lambda e, eid=ev.id: self._on_row_clicked(eid))
 
-            # Column 2: Key K=(P, M, T)
+            # Column 2: Key K=(P, M, I)
             k_tuple = ev.get_key() if hasattr(ev, 'get_key') else (ev.priority, ev.magnitude, ev.id)
             lbl_k = ctk.CTkLabel(row_frame, text=str(k_tuple), font=ctk.CTkFont(family=FONT_MONO, size=11), text_color=ACCENT_CYAN, anchor="center")
             lbl_k.place(relx=rel_xs[2], relwidth=rel_widths[2], relheight=1.0)

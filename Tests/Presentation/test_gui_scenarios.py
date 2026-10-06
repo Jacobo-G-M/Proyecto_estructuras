@@ -16,7 +16,9 @@ from Business.observatory import Observatory
 from Business.scenario_persistence import ScenarioPersistence
 
 
-SCENARIOS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "saved_versions", "casos_de_prueba"))
+_primary_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "saved_versions", "test_cases"))
+_fallback_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "saved_versions", "casos_de_prueba"))
+SCENARIOS_DIR = _primary_dir if os.path.exists(_primary_dir) else _fallback_dir
 
 
 class TestGUIScenarios(unittest.TestCase):
